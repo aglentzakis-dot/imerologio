@@ -36,8 +36,8 @@ function findProf(id){for(const g of IM_GROUPS)for(const p of g.list)if(p.id===i
 function prof(){return findProf(S.data.settings.prof)||findProf('allo');}
 function profLex(){const{g,p}=prof();return Object.assign({},g.lex,p.lex||{});}
 function LX(k){const L=Object.assign(profLex(),S.data.settings.lex||{});return L[k]||'';}
-function profRoles(){const{g,p}=prof();return(p.roles||g.roles||[]).map(x=>x.slice());}
-function profDur(){const{g,p}=prof();return p.dur||g.dur||60;}
+function profRoles(){const{g,p}=prof();const L=(p.roles||g.roles||[]).map(x=>x.slice());(S.data.settings.customRoles||[]).forEach(r=>{if(!L.some(x=>x[0]===r[0]))L.splice(Math.max(0,L.length-1),0,r.slice());});return L;}
+function profDur(){const{g,p}=prof();return +S.data.settings.dur||p.dur||g.dur||60;}
 const IM_DEF={kind:()=>{const{g,p}=prof();return p.kind||g.kind||'once';},dur:()=>profDur(),
   start:date=>{const c=agCfg();const t=todayISO();if((date||t)===t){const m=Math.ceil((nowMin()+15)/30)*30;if(m>=tmin(c.from)&&m<tmin(c.to))return tstr(m);}return c.from;}};
 function profNotes(){return(prof().p.t||'').split('|').filter(Boolean);}
@@ -72,19 +72,20 @@ function render(){
   S.curHash=location.hash;
   const r=parseRoute();const sec=r.name==='person'?'people':r.name;
   shellHTML(sec);
-  const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,settings:viewSettingsPage}[r.name]||viewToday;
+  const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewMap,settings:viewSettingsPage}[r.name]||viewToday;
   if(!window.AGPOS)window.scrollTo(0,0);
   try{V(r);}catch(e){console.error(e);M().innerHTML=`<div class="card"><h2>Κάτι πήγε στραβά</h2><p class="muted">${esc(e.message)}</p><a class="btn" href="#/agenda">Ραντεβού</a></div>`;}
 }
 function shellHTML(sec){
-  const nav=[['today','home','Σήμερα'],['agenda','l-calendar-clock','Ημερολόγιο'],['people','users',LX('whoPl')||'Πρόσωπα'],['settings','settings','Ρυθμίσεις']];
-  const title={today:'Σήμερα',agenda:'Ημερολόγιο',people:LX('whoPl'),settings:'Ρυθμίσεις'}[sec]||'Ημερολόγιο';
+  const nav=[['today','home','Σήμερα'],['agenda','l-calendar-clock','Ημερολόγιο'],['people','users',LX('whoPl')||'Πρόσωπα'],['map','l-map','Χάρτης'],['settings','settings','Ρυθμίσεις']];
+  const title={today:'Σήμερα',agenda:'Ημερολόγιο',people:LX('whoPl'),map:'Χάρτης',settings:'Ρυθμίσεις'}[sec]||'Ημερολόγιο';
   const a=([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}">${ic(i,19)}<span>${esc(l)}</span></a>`;
   const fab=['today','agenda','people'].includes(sec);
   document.body.innerHTML=`<div class="app"><aside class="side noprint"><a class="brand" href="#/today">${LOGO}<div><b>Ημερολόγιο</b><span>${esc(S.meta.org||prof().p.n)}</span></div></a><nav class="nav">${nav.map(a).join('')}</nav><div class="side-ver tiny muted">Έκδοση ${APP_VERSION}</div></aside>
-  <div class="shell"><header class="topbar noprint"><a class="tbrand" href="#/today">${LOGO}</a><b class="tbtitle">${esc(title)}</b><span class="tbprof">${esc(S.meta.org||prof().p.n)}</span></header><main class="main" id="main"></main></div>
+  <div class="shell"><header class="topbar noprint"><a class="tbrand" href="#/today">${LOGO}</a><b class="tbtitle">${esc(title)}</b><span class="tbprof">${esc(S.meta.org||prof().p.n)}</span></header>${S.data.settings.demo?`<div class="demostrip noprint"><span>🧪 <b>Δοκιμαστική λειτουργία</b> — τα ραντεβού και οι ${esc(LX('whoPlL'))} είναι παραδείγματα</span><button type="button" id="demoEnd">Τέλος δοκιμής</button></div>`:''}<main class="main" id="main"></main></div>
   <nav class="bottomnav noprint">${nav.map(([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}"><span class="bi">${ic(i,22)}</span><span>${esc(l)}</span></a>`).join('')}</nav>
   ${fab?`<button class="fab noprint" id="fab" aria-label="${sec==='people'?'Νέος':'Νέο ραντεβού'}">${ic('plus',26)}</button>`:''}</div>`;
+  const de=$('#demoEnd');if(de)de.onclick=demoClear;
   const f=$('#fab');if(f)f.onclick=()=>sec==='people'?go('person/new'):apptDialog({date:(parseRoute().q.d)||todayISO()});
 }
 addEventListener('hashchange',render);
@@ -116,7 +117,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
   const nst=next&&stOf(next.a.sid);const ph=nst&&(nst.phone||((nst.contacts||[])[0]||{}).phone);
   const closed=isClosed(t)?(holidayOf(t)||'Κλειστά σήμερα'):'';
   M().innerHTML=`
-  ${S.data.settings.demo?`<div class="demobar"><span>Βλέπεις παραδείγματα. Όταν είσαι έτοιμος, σβήσ' τα και βάλε τα δικά σου.</span><button class="btn sm" id="demoX">Σβήσε τα παραδείγματα</button></div>`:''}
+  ${certAlertsHTML()}
   <section class="hero"><div class="hero-in"><div class="hero-hi">${greet()}${first?', '+esc(first):''}</div>
    <div class="hero-date">${WDAYS[wdOf(t)]} ${+t.slice(8)} ${MONTHS_G[+t.slice(5,7)-1]}</div>
    <div class="hero-sum">${closed?esc(closed):act.length?`<b>${act.length}</b> ${act.length===1?'ραντεβού':'ραντεβού'} σήμερα${left?` · <b>${left}</b> ακόμα`:''}`:'Κανένα ραντεβού σήμερα'}</div></div></section>
@@ -130,7 +131,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
    <div class="tmrw"><span><b>${T.length}</b> ${T.length===1?'ραντεβού':'ραντεβού'}${T.length?' — πρώτο στις '+T[0].s:''}</span>${T.length?`<button class="btn sm" id="tRem">${ic('bell',15)} Στείλε υπενθυμίσεις</button>`:''}</div></section>
   ${installCardHTML()}`;
   const n=$('#tNew');if(n)n.onclick=()=>apptDialog({date:t});const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);
-  const dx=$('#demoX');if(dx)dx.onclick=demoClear;bindInstall();}
+  bindInstall();}
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
 function viewAgendaApp(r){viewAgenda(r);
@@ -148,8 +149,8 @@ function demoFill(){const t=todayISO(),c=agCfg(),du=profDur(),notes=profNotes();
   [0,1,2,3,4,5].forEach(off=>{const d=addDays(t,off);if(!c.days.includes(wdOf(d))||isClosed(d))return;const n=off===0?4:2+off%3;for(let i=0;i<n;i++){const m=st+i*Math.max(du,60)+(off%2)*30;if(m+du<=tmin(c.to))add(d,m,'once',ids[(off*2+i)%ids.length],i+off);}});
   add(t,st+5*60,IM_DEF.kind()==='weekly'?'weekly':'once',ids[6],2);
   S.data.settings.demo=true;}
-async function demoClear(){if(!await confirmDlg('Να σβηστούν τα παραδείγματα; Ό,τι έβαλες εσύ μένει.',{ok:'Σβήσε τα',danger:true}))return;
-  const D=new Set(S.data.students.filter(p=>p.demo).map(p=>p.id));S.data.students=S.data.students.filter(p=>!p.demo);S.data.appts=appts().filter(a=>!a.demo&&!D.has(a.sid));S.data.settings.demo=false;save();toast('Τα παραδείγματα σβήστηκαν.','ok');render();}
+async function demoClear(){if(!await confirmDlg('Τέλος δοκιμής: σβήνονται όλα τα παραδείγματα και η εφαρμογή μένει άδεια για τα δικά σου. Ό,τι έβαλες εσύ μένει.',{ok:'Τέλος δοκιμής',danger:true}))return;
+  const D=new Set(S.data.students.filter(p=>p.demo).map(p=>p.id));S.data.students=S.data.students.filter(p=>!p.demo);S.data.appts=appts().filter(a=>!a.demo&&!D.has(a.sid));S.data.settings.demo=false;save();toast('Τέλος δοκιμής. Τώρα βάζεις τα δικά σου.','ok');go('today');render();}
 
 /* ---------- εγκατάσταση στην αρχική οθόνη του κινητού ---------- */
 let INST=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();INST=e;setTimeout(installAsk,1500);if(/^#\/(today)?$/.test(location.hash.replace(/^#\/?$/,'#/today'))&&!topModal())render();});
@@ -157,6 +158,55 @@ const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigat
 function installCardHTML(){if(isStandalone()||S.data.settings.instHide)return'';const ios=/iP(hone|ad|od)/.test(navigator.userAgent);if(!INST&&!ios)return'';
   return`<section class="instcard">${LOGO}<div class="grow"><b>Βάλε το Ημερολόγιο στην αρχική οθόνη</b><span>${INST?'Ανοίγει σαν κανονική εφαρμογή, χωρίς τον φυλλομετρητή.':'Στο Safari πάτα «Κοινή χρήση» και μετά «Προσθήκη στην οθόνη Αφετηρίας».'}</span></div>${INST?`<button class="btn pri" id="instGo">Εγκατάσταση</button>`:''}<button class="iconbtn" id="instX" aria-label="Κλείσιμο">${ic('x',16)}</button></section>`;}
 function bindInstall(){const g=$('#instGo');if(g)g.onclick=async()=>{INST.prompt();try{await INST.userChoice;}catch(e){}INST=null;render();};const x=$('#instX');if(x)x.onclick=()=>{S.data.settings.instHide=true;save();render();};}
+
+/* ---------- επιβεβαίωση με μήνυμα μόλις κλειστεί ραντεβού ---------- */
+const CONF_TPL_DEF='Καλησπέρα{όνομα}! Κλείσαμε ραντεβού {ημέρα} στις {ώρα}. Για αλλαγή στείλτε μου μήνυμα. {επιχείρηση}';
+function confText(a){const p=stOf(a.sid)||{},B=biz();const first=(p.name||'').split(' ')[0];
+  return(S.data.settings.confTpl||CONF_TPL_DEF).replace(/\{όνομα\}/g,first?' '+first:'').replace(/\{ημέρα\}/g,WDAYS[wdOf(a.date)]+' '+fmtShort(a.date)).replace(/\{ώρα\}/g,a.s).replace(/\{επιχείρηση\}/g,(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'').trim();}
+function IM_AFTER_SAVE(list,{edit}){if(edit||S.data.settings.confOff||!list||list.length!==1)return;const a=list[0];const p=stOf(a.sid);const ph=p&&(p.phone||((p.contacts||[])[0]||{}).phone);if(!ph||p.demo)return;
+  location.href=smsHref(ph,confText(a));}
+
+/* ---------- πιστοποιητικά προσωπικού που λήγουν ---------- */
+const CERT_SUGG={'Ομορφιά & περιποίηση':['Πιστοποιητικό υγείας','Βεβαίωση άσκησης επαγγέλματος','Δίπλωμα / πτυχίο ειδικότητας'],
+  'Υγεία & φροντίδα':['Άδεια άσκησης επαγγέλματος','Ασφάλιση αστικής ευθύνης','Εγγραφή στον σύλλογο','Πιστοποιητικό πρώτων βοηθειών'],
+  'Εκπαίδευση & άθληση':['Άδεια διδασκαλίας','Πιστοποιητικό πρώτων βοηθειών','Δίπλωμα οδήγησης / άδεια εκπαιδευτή'],
+  'Γραφεία & νομικά':['Άδεια άσκησης επαγγέλματος','Ασφάλιση αστικής ευθύνης'],
+  'Τεχνίτες & μάστορες':['Άδεια άσκησης επαγγέλματος','Πιστοποίηση ψυκτικού (φθοριούχα αέρια)','Δίπλωμα οδήγησης'],
+  'Υπηρεσίες':['Πιστοποιητικό υγείας','Δίπλωμα οδήγησης','Πιστοποιητικό επαγγελματικής ικανότητας (ΠΕΙ)'],
+  'Άλλο':['Πιστοποιητικό υγείας','Άδεια άσκησης επαγγέλματος']};
+function allCerts(){const B=biz();const L=[];const me={name:S.data.settings.myName||'Εγώ',certs:B.meCerts||[]};[me].concat(B.staff).forEach(x=>(x.certs||[]).forEach(c=>{if(c.until)L.push({who:x.name||'Εγώ',c});}));return L;}
+function certAlertsHTML(){const t=todayISO(),lim=addDays(t,30);const L=allCerts().filter(({c})=>c.until<=lim).sort((a,b)=>a.c.until.localeCompare(b.c.until));if(!L.length)return'';
+  return`<a class="certalert" href="#/settings/staff">${L.map(({who,c})=>{const d=Math.round((new Date(c.until+'T12:00')-new Date(t+'T12:00'))/864e5);return`<div><b>${d<0?'Έληξε':d===0?'Λήγει σήμερα':'Λήγει σε '+d+(d===1?' μέρα':' μέρες')}:</b> ${esc(c.name)} — ${esc(who)} <span class="muted">(${fmtShort(c.until)})</span></div>`;}).join('')}</a>`;}
+
+/* ---------- χάρτης πελατών (ίδιο στυλ με το «Κοντά μου») ---------- */
+let MAP=null,MAPCL=null,PLACE=null;
+function loadCSS(h){if(document.querySelector(`link[href="${h}"]`))return;const l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
+async function loadLeaflet(){loadCSS('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css');loadCSS('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css');
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js');await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js');}
+let GEOQ=Promise.resolve();
+function geocodePerson(p,say){if(!p.loc||!p.loc.addr)return Promise.resolve(false);GEOQ=GEOQ.then(async()=>{try{
+  const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&accept-language=el&countrycodes=gr&q='+encodeURIComponent(p.loc.addr));const j=await r.json();
+  if(j&&j[0]){const a=j[0].address||{};Object.assign(p.loc,{lat:+j[0].lat,lng:+j[0].lon,area:a.suburb||a.city_district||a.neighbourhood||a.town||a.village||a.city||a.municipality||''});save();if(say)toast('Βρέθηκε στον χάρτη: '+(p.loc.area||p.loc.addr),'ok');await new Promise(z=>setTimeout(z,1100));return true;}
+  if(say)toast('Η διεύθυνση δεν βρέθηκε στον χάρτη. Βάλε την πινέζα με το χέρι από τον Χάρτη.','bad');}catch(e){if(say)toast('Χωρίς σύνδεση — ο χάρτης θα ενημερωθεί αργότερα.','bad');}await new Promise(z=>setTimeout(z,1100));return false;});return GEOQ;}
+async function viewMap(){const all=myStudents();const on=all.filter(p=>p.loc&&p.loc.lat!=null),noPin=all.filter(p=>!(p.loc&&p.loc.lat!=null));
+  const areas={};on.forEach(p=>{const k=p.loc.area||'Χωρίς περιοχή';areas[k]=(areas[k]||0)+1;});const AR=Object.entries(areas).sort((a,b)=>b[1]-a[1]);
+  M().innerHTML=`<div class="mapwrap"><div id="imap"></div>${PLACE?`<div class="placebar">📍 Πάτα στον χάρτη πού βρίσκεται: <b>${esc(stuName(getStudent(PLACE)))}</b> <button class="btn sm" id="plx">Άκυρο</button></div>`:''}</div>
+  <section class="mapsheet"><div class="tsec-h"><h2>Από πού έρχονται</h2><span class="small muted">${on.length} από ${all.length} στον χάρτη</span></div>
+   ${AR.length?`<div class="arealist">${AR.map(([a,n])=>`<div class="arow"><span class="grow">${esc(a)}</span><span class="abar"><i style="width:${Math.round(n/AR[0][1]*100)}%"></i></span><b>${n}</b></div>`).join('')}</div>`:`<p class="small muted">Γράψε διεύθυνση στην καρτέλα ${esc(LX('whoGen'))} και θα εμφανιστεί εδώ ως κουκίδα.</p>`}
+   ${noPin.length?`<details class="nopin"><summary class="small"><b>Χωρίς σημείο στον χάρτη</b> (${noPin.length})</summary>${noPin.some(p=>p.loc&&p.loc.addr)?`<button class="btn sm" id="geoAll" style="margin:8px 0">${ic('route',14)} Εντοπισμός από τις διευθύνσεις</button>`:''}<div class="list">${noPin.map(p=>`<div class="rw static"><span class="grow"><b>${esc(stuName(p))}</b><small>${p.loc&&p.loc.addr?esc(p.loc.addr):'χωρίς διεύθυνση'}</small></span><button class="btn sm" data-place="${p.id}">📍 Βάλε</button></div>`).join('')}</div></details>`:''}
+   <p class="tiny muted" style="margin-top:12px">Ο χάρτης φαίνεται μόνο σε αυτή τη συσκευή. Για τον εντοπισμό, η διεύθυνση στέλνεται στην υπηρεσία χαρτών OpenStreetMap.</p></section>`;
+  try{await loadLeaflet();}catch(e){$('#imap').innerHTML='<p class="small muted" style="padding:20px">Ο χάρτης χρειάζεται σύνδεση στο διαδίκτυο.</p>';return;}
+  if(!$('#imap'))return;const Lf=window.L;MAP=Lf.map('imap',{zoomControl:true});Lf.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
+  MAPCL=Lf.markerClusterGroup({showCoverageOnHover:false,maxClusterRadius:46,iconCreateFunction:c=>Lf.divIcon({className:'',html:`<div class="clus" style="background:var(--brand)"><b>${c.getChildCount()}</b></div>`,iconSize:[44,44]})});
+  on.forEach(p=>{const m=Lf.marker([p.loc.lat,p.loc.lng],{icon:Lf.divIcon({className:'',html:`<div class="pinwrap"><div class="pin" style="background:${p.color||'var(--brand)'}"><span>${esc(initial(p.name))}</span></div></div>`,iconSize:[30,30],iconAnchor:[4,30]})});
+    m.bindPopup(`<b>${esc(stuName(p))}</b><br><span class="small">${esc(p.loc.area||p.loc.addr||'')}</span><br><a href="#/person/${p.id}">Καρτέλα</a>`);MAPCL.addLayer(m);});
+  MAP.addLayer(MAPCL);if(on.length)MAP.fitBounds(on.map(p=>[p.loc.lat,p.loc.lng]),{padding:[40,40],maxZoom:14});else MAP.setView([38.2,23.8],6);
+  setTimeout(()=>MAP.invalidateSize(),200);
+  MAP.on('click',e=>{if(!PLACE)return;const p=getStudent(PLACE);PLACE=null;if(!p)return render();p.loc=Object.assign(p.loc||{},{lat:e.latlng.lat,lng:e.latlng.lng});if(!p.loc.addr)p.loc.addr='';
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=el&lat=${e.latlng.lat}&lon=${e.latlng.lng}`).then(r=>r.json()).then(j=>{const a=(j&&j.address)||{};p.loc.area=a.suburb||a.city_district||a.town||a.village||a.city||'';save();render();}).catch(()=>{save();render();});
+    toast('Η πινέζα μπήκε.','ok');});
+  M().onclick=async e=>{const b=e.target.closest('[data-place]');if(b){PLACE=b.dataset.place;render();window.scrollTo(0,0);return;}if(e.target.closest('#plx')){PLACE=null;render();return;}
+    if(e.target.closest('#geoAll')){const L=noPin.filter(p=>p.loc&&p.loc.addr);toast('Εντοπισμός '+L.length+' διευθύνσεων…');let n=0;for(const p of L)if(await geocodePerson(p,false))n++;toast(`Βρέθηκαν ${n} από ${L.length}.`,n?'ok':'bad');render();}};}
 
 /* ---------- πρόσωπα: λίστα ---------- */
 function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
@@ -179,9 +229,9 @@ function viewPerson(r){const isNew=r.id==='new';const p0=isNew?{id:uid(),created
   <div class="grid g2" style="align-items:start"><form class="card" id="pf"><h3>Στοιχεία</h3>
    ${IM_CONTACTS_OK()?`<button type="button" class="btn conpick field" id="p-con">${ic('users',16)} Από τις επαφές του κινητού</button>`:''}
    <div class="field"><label class="f" for="p-n">Ονοματεπώνυμο</label><input class="in" id="p-n" name="name" required autocomplete="off" value="${esc(p.name||'')}"></div>
-   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="p-ph">Τηλέφωνο</label><input class="in" id="p-ph" name="phone" type="tel" inputmode="tel" value="${esc(p.phone||'')}"></div>
+   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="p-ph">Τηλέφωνο</label><div class="phrow"><input class="in" id="p-ph" name="phone" type="tel" inputmode="tel" value="${esc(p.phone||'')}">${p.phone?`<a class="callbtn" href="tel:${telLink(p.phone)}" aria-label="Κλήση">${ic('l-phone',20)}</a><a class="callbtn sms" href="sms:${telLink(p.phone)}" aria-label="Μήνυμα">${ic('l-message-square',20)}</a>`:''}</div></div>
    <div class="field"><label class="f" for="p-em">Email</label><input class="in" id="p-em" name="email" type="email" inputmode="email" autocapitalize="none" value="${esc(p.email||'')}"></div></div>
-   <div class="field"><label class="f" for="p-ad">Διεύθυνση <span class="tiny muted">· αν πηγαίνεις εσύ</span></label><input class="in" id="p-ad" name="addr" value="${esc(p.loc&&p.loc.addr||'')}"></div>
+   <div class="field"><label class="f" for="p-ad">Διεύθυνση <span class="tiny muted">· για τον χάρτη, προαιρετικό</span></label><input class="in" id="p-ad" name="addr" value="${esc(p.loc&&p.loc.addr||'')}"></div>
    <div class="field"><label class="f" for="p-no">Σημειώσεις</label><textarea class="in" id="p-no" name="notes" style="min-height:70px">${esc(p.notes||'')}</textarea></div>
    <div class="field"><label class="f">Χρώμα στο ημερολόγιο</label><div class="scols">${pr.map(c=>`<button type="button" data-pc="${c}" style="background:${c}" class="${p.color===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}<button type="button" data-pc="" class="none ${p.color?'':'on'}" aria-label="Χωρίς χρώμα">${ic('x',12)}</button></div></div>
    <div class="row"><button class="btn pri">${ic('check',16)} Αποθήκευση</button>${isNew?'':`<button type="button" class="btn danger" id="p-del">${ic('trash',16)} Διαγραφή</button>`}</div></form>
@@ -195,8 +245,8 @@ function viewPerson(r){const isNew=r.id==='new';const p0=isNew?{id:uid(),created
   F.onsubmit=e=>{e.preventDefault();const o=fd(F);if(!o.name.trim())return toast('Γράψε όνομα.','bad');
     Object.assign(p0,{name:o.name.trim(),avatar:initial(o.name),phone:o.phone.trim(),email:o.email.trim().toLowerCase(),notes:o.notes.trim(),color:col||undefined,updated:new Date().toISOString()});
     p0.contacts=(p0.phone||p0.email)?[{name:p0.name,role:'',phone:p0.phone,email:p0.email}]:[];
-    if(o.addr.trim())p0.loc=Object.assign({},p0.loc&&p0.loc.addr===o.addr.trim()?p0.loc:{},{addr:o.addr.trim(),home:true});else delete p0.loc;
-    if(isNew)S.data.students.push(p0);save();toast('Αποθηκεύτηκε.','ok');
+    const newAddr=o.addr.trim()&&!(p0.loc&&p0.loc.addr===o.addr.trim()&&p0.loc.lat!=null);if(o.addr.trim())p0.loc=Object.assign({},p0.loc&&p0.loc.addr===o.addr.trim()?p0.loc:{},{addr:o.addr.trim(),home:true});else delete p0.loc;
+    if(isNew)S.data.students.push(p0);save();toast('Αποθηκεύτηκε.','ok');if(newAddr)geocodePerson(p0,true);
     if(isNew&&sessionStorage.getItem('im-after-person')){sessionStorage.removeItem('im-after-person');go('today');setTimeout(()=>apptDialog({date:todayISO(),sids:[p0.id]}),200);return;}
     go('person/'+p0.id);};
   const dl=$('#p-del');if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.sid===p0.id).length;if(!await confirmDlg(`Διαγραφή «${esc(stuName(p0))}»${n?` και ${n===1?'του ραντεβού του':'των '+n+' ραντεβού του'}`:''}; Δεν αναιρείται.`,{ok:'Διαγραφή',danger:true}))return;
@@ -212,6 +262,7 @@ const SET_SECS=()=>[
   ['staff','',`👥`,'Προσωπικό',(providers().length===1?'1 άτομο κάνει ραντεβού':providers().length+' άτομα κάνουν ραντεβού')],
   ['hours','','🕘','Ωράριο και αργίες',agCfg().from+'–'+agCfg().to],
   ['look','','🎨','Χρώμα και λέξεις','Το χρώμα της εφαρμογής, πώς λέγονται οι '+LX('whoPlL')],
+  ['msgs','','💬','Μηνύματα στους πελάτες',S.data.settings.confOff?'Χωρίς αυτόματη επιβεβαίωση':'Επιβεβαίωση με SMS μόλις κλείνεις ραντεβού'],
   ['backup','','🛟','Αντίγραφα ασφαλείας',bkStatusShort()],
   ['about','','ℹ️','Εγκατάσταση και έκδοση','Έκδοση '+APP_VERSION]];
 function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_SECS();const sec=L.find(x=>x[0]===id);
@@ -232,7 +283,7 @@ const SETP={
    <button class="btn pri">${ic('check',16)} Αποθήκευση</button></form>`;
   $$('[data-kind]',el).forEach(b=>b.onclick=()=>{B.kind=b.dataset.kind;save();render();});
   $('#inf',el).onsubmit=e=>{e.preventDefault();const o=fd(e.target);S.data.settings.myName=o.me.trim();if(!isPrivate()){B.name=(o.name||'').trim();B.afm=(o.afm||'').trim();B.web=(o.web||'').trim();}B.phone=o.phone.trim();B.email=o.email.trim();B.addr=o.addr.trim();save();toast('Αποθηκεύτηκε.','ok');render();};},
- staff(el){const B=biz();const row=(x,me)=>{const pv=me?provById('me'):x;return`<div class="staffrow"><i class="pvb" style="background:${pv.color}">${provIni(me?{id:'me'}:x)}</i><div class="grow"><b>${esc(me?(S.user.name||'Εγώ')+' (εγώ)':x.name)}</b><div class="small muted">${esc(roleName(me?B.meRole:x.role,me?B.meCustom:x.custom))}${!me&&x.phone?' · '+esc(x.phone):''}</div><div class="row" style="margin-top:4px;gap:4px">${(me?B.meTeaches:x.appts)?`<span class="chip ok">${ic('calendar',13)} Κάνει ραντεβού</span>`:`<span class="chip">Χωρίς ραντεβού</span>`}</div></div><button class="iconbtn" data-stf="${me?'me':x.id}" aria-label="Αλλαγή">${ic('edit',16)}</button></div>`;};
+ staff(el){const B=biz();const row=(x,me)=>{const pv=me?provById('me'):x;return`<div class="staffrow"><i class="pvb" style="background:${pv.color}">${provIni(me?{id:'me'}:x)}</i><div class="grow"><b>${esc(me?(S.user.name||'Εγώ')+' (εγώ)':x.name)}</b><div class="small muted">${esc(roleName(me?B.meRole:x.role,me?B.meCustom:x.custom))}${!me&&x.phone?' · '+esc(x.phone):''}</div><div class="row" style="margin-top:4px;gap:4px">${(me?B.meTeaches:x.appts)?`<span class="chip ok">${ic('calendar',13)} Κάνει ραντεβού</span>`:`<span class="chip">Χωρίς ραντεβού</span>`}${((me?B.meCerts:x.certs)||[]).filter(c=>c.until).map(c=>{const d=Math.round((new Date(c.until+'T12:00')-new Date(todayISO()+'T12:00'))/864e5);return d<=30?`<span class="chip ${d<0?'bad':'y'}">${esc(c.name)}: ${d<0?'έληξε':'λήγει '+fmtShort(c.until)}</span>`:'';}).join('')}</div></div><button class="iconbtn" data-stf="${me?'me':x.id}" aria-label="Αλλαγή">${ic('edit',16)}</button></div>`;};
   el.innerHTML=`<div class="card"><p class="small muted" style="margin-top:0">Όσοι «κάνουν ραντεβού» έχουν δικό τους χρώμα στο ημερολόγιο και μετράνε στα ελεύθερα κενά.</p>${row(null,1)}${B.staff.map(x=>row(x)).join('')}<button class="btn pri" id="st-add" style="margin-top:12px">${ic('plus',16)} Προσθήκη προσωπικού</button></div>`;
   $('#st-add',el).onclick=()=>staffDialog();$$('[data-stf]',el).forEach(b=>b.onclick=()=>staffDialog(b.dataset.stf));},
  hours(el){const B=biz(),c=agCfg(),y=+todayISO().slice(0,4),HL=holList(y),t=todayISO();
@@ -247,25 +298,46 @@ const SETP={
   <div class="card"><h3>Οι λέξεις της εφαρμογής</h3><p class="small muted" style="margin-top:0">Άλλαξέ τες αν θέλεις κάτι πιο δικό σου. Κενό = η λέξη του επαγγέλματος.</p><div class="grid g2" style="gap:8px">${lx('who','Το πρόσωπο')}${lx('whoAcc','«Διάλεξε …»')}${lx('whoGen','«Καρτέλα …»')}${lx('whoPl','Πληθυντικός')}${lx('whoPlL','Πληθυντικός με μικρά')}${lx('one','Τίτλος στο κινητό')}</div><button class="btn pri" id="st-lx">${ic('check',15)} Αποθήκευση λέξεων</button></div>`;
   $$('[data-th]',el).forEach(b=>b.onclick=()=>{S.data.settings.color=b.dataset.th;save();render();});$('#th-own',el).onchange=e=>{S.data.settings.color=e.target.value;save();render();};$('#th-def',el).onclick=()=>{delete S.data.settings.color;save();render();};
   $('#st-lx',el).onclick=()=>{const o={};$$('[data-lx]',el).forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};},
+ msgs(el){el.innerHTML=`<div class="card section"><label class="switch"><span><b>Επιβεβαίωση με μήνυμα μόλις κλείνεις ραντεβού</b><small>Με την «Αποθήκευση» ανοίγει έτοιμο μήνυμα προς τον πελάτη (αν έχει τηλέφωνο). Εσύ πατάς μόνο «Αποστολή».</small></span><input type="checkbox" id="cf-on" ${S.data.settings.confOff?'':'checked'}></label>
+   <div class="field" style="margin-top:12px"><label class="f" for="cf-t">Κείμενο επιβεβαίωσης</label><textarea class="in" id="cf-t" style="min-height:80px">${esc(S.data.settings.confTpl||CONF_TPL_DEF)}</textarea><div class="tiny muted" style="margin-top:4px">Λέξεις που αλλάζουν μόνες τους: {όνομα} {ημέρα} {ώρα} {επιχείρηση}</div></div>
+   <div class="row"><button class="btn pri" id="cf-s">${ic('check',16)} Αποθήκευση</button><button class="btn ghost" id="cf-d">Αρχικό κείμενο</button></div></div>
+   <div class="card"><h3>Υπενθυμίσεις την προηγούμενη μέρα</h3><p class="small muted" style="margin-top:0">Από το «Σήμερα» → «Αύριο» → «Στείλε υπενθυμίσεις», ή από το Ημερολόγιο → ⋯ → «Υπενθυμίσεις».</p></div>`;
+  $('#cf-on',el).onchange=e=>{S.data.settings.confOff=!e.target.checked;save();};$('#cf-s',el).onclick=()=>{S.data.settings.confTpl=$('#cf-t',el).value.trim()||CONF_TPL_DEF;save();toast('Αποθηκεύτηκε.','ok');};$('#cf-d',el).onclick=()=>{delete S.data.settings.confTpl;save();render();};},
  backup(el){backupPage(el);},
  about(el){el.innerHTML=`<div class="card section"><h3>Εγκατάσταση</h3>${isStandalone()?'<p class="small muted" style="margin:0">Η εφαρμογή είναι εγκατεστημένη σε αυτή τη συσκευή.</p>':INST?`<p class="small muted" style="margin-top:0">Βάλ' την στην αρχική οθόνη για να ανοίγει σαν κανονική εφαρμογή.</p><button class="btn pri" id="ab-in">${ic('download',16)} Εγκατάσταση</button>`:`<p class="small muted" style="margin:0">Από τις τρεις τελείες του Chrome: «Προσθήκη στην αρχική οθόνη» → «Εγκατάσταση». Αν γράφει «έχει ήδη εγκατασταθεί», ψάξε «Ημερολόγιο» στη λίστα εφαρμογών του κινητού.</p>`}</div>
   <div class="card"><h3>Έκδοση ${esc(APP_VERSION)}</h3><button class="btn" id="up-chk">${ic('refresh',16)} Έλεγχος αναβάθμισης</button><p class="tiny muted" style="margin:12px 0 0">© 2026 Ανδρέας Μ. Γλεντζάκης. Με την επιφύλαξη παντός δικαιώματος.</p></div>`;
   const ai=$('#ab-in',el);if(ai)ai.onclick=installNow;$('#up-chk',el).onclick=checkUpdate;}
 };
-function staffDialog(id){const B=biz();const me=id==='me';const x=me?{name:S.user.name,role:B.meRole,custom:B.meCustom,color:B.meColor,appts:B.meTeaches}:id?B.staff.find(y=>y.id===id):{id:uid(),name:'',role:(ROLES.find(r=>r[2])||ROLES[0])[0],color:STAFF_COLORS[(B.staff.length+1)%STAFF_COLORS.length],appts:true,phone:'',created:new Date().toISOString()};if(!x)return;let col=x.color;
-  const md=modal(`<h3 style="margin-top:0">${me?'Εγώ':id?'Αλλαγή προσωπικού':'Νέο μέλος προσωπικού'}</h3><form id="sf">
-   ${me?'':`<div class="field"><label class="f" for="sf-n">Όνομα</label><input class="in" id="sf-n" name="name" required value="${esc(x.name||'')}"></div><div class="field"><label class="f" for="sf-ph">Τηλέφωνο</label><input class="in" id="sf-ph" name="phone" type="tel" value="${esc(x.phone||'')}"></div>`}
-   <div class="field"><label class="f" for="sf-r">Ειδικότητα</label><select class="in" id="sf-r" name="role">${ROLES.map(r=>opt(r[0],r[1],x.role)).join('')}</select></div>
+function staffDialog(id){const B=biz();const me=id==='me';const x=me?{name:S.data.settings.myName||'',role:B.meRole,custom:B.meCustom,color:B.meColor,appts:B.meTeaches,certs:B.meCerts||[],phone:B.mePhone||'',email:B.meEmail||'',hired:B.meHired||'',afm:B.meAfm||'',amka:B.meAmka||'',notes:B.meNotes||''}
+   :id?B.staff.find(y=>y.id===id):{id:uid(),name:'',role:(ROLES.find(r=>r[2])||ROLES[0])[0],color:STAFF_COLORS[(B.staff.length+1)%STAFF_COLORS.length],appts:true,phone:'',certs:[],created:new Date().toISOString()};if(!x)return;let col=x.color;let certs=(x.certs||[]).map(c=>Object.assign({},c));
+  const sugg=(CERT_SUGG[prof().g.g]||CERT_SUGG['Άλλο']);
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${me?'Τα δικά μου στοιχεία':id?esc(x.name):'Νέο μέλος προσωπικού'}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div><form id="sf">
+   ${me?'':`<div class="field"><label class="f" for="sf-n">Ονοματεπώνυμο</label><input class="in" id="sf-n" name="name" required value="${esc(x.name||'')}"></div>`}
+   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="sf-r">Ειδικότητα</label><select class="in" id="sf-r" name="role">${ROLES.map(r=>opt(r[0],r[1],x.role)).join('')}<option value="__new">+ Νέα ειδικότητα…</option></select></div>
+    <div class="field"><label class="f" for="sf-hd">Ημερομηνία πρόσληψης</label><input class="in" id="sf-hd" name="hired" type="date" value="${esc(x.hired||'')}"></div></div>
    <div class="field" id="sf-cw" ${x.role==='other'?'':'hidden'}><label class="f" for="sf-c">Ποια ειδικότητα</label><input class="in" id="sf-c" name="custom" value="${esc(x.custom||'')}"></div>
+   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="sf-ph">Τηλέφωνο</label><input class="in" id="sf-ph" name="phone" type="tel" value="${esc(x.phone||'')}"></div><div class="field"><label class="f" for="sf-em">Email</label><input class="in" id="sf-em" name="email" type="email" value="${esc(x.email||'')}"></div>
+    <div class="field"><label class="f" for="sf-afm">ΑΦΜ</label><input class="in" id="sf-afm" name="afm" inputmode="numeric" maxlength="9" value="${esc(x.afm||'')}"></div><div class="field"><label class="f" for="sf-amka">ΑΜΚΑ</label><input class="in" id="sf-amka" name="amka" inputmode="numeric" maxlength="11" value="${esc(x.amka||'')}"></div></div>
+   <label class="f">Πιστοποιητικά και άδειες <span class="tiny muted">· σε ειδοποιεί 30 μέρες πριν λήξουν</span></label><div id="sf-certs"></div>
+   <div class="chips" style="margin:4px 0 12px">${sugg.map(n=>`<button type="button" class="chipt" data-cadd="${esc(n)}">${ic('plus',12)} ${esc(n)}</button>`).join('')}<button type="button" class="chipt" data-cadd="">${ic('plus',12)} Άλλο</button></div>
+   <div class="field"><label class="f" for="sf-no">Σημειώσεις</label><textarea class="in" id="sf-no" name="notes" style="min-height:56px">${esc(x.notes||'')}</textarea></div>
    <label class="switch field"><span><b>Κάνει ραντεβού</b><small>Εμφανίζεται στο ημερολόγιο με δικό του χρώμα.</small></span><input type="checkbox" name="appts" ${x.appts!==false?'checked':''}></label>
    <div class="field"><label class="f">Χρώμα</label><div class="scols">${STAFF_COLORS.map(c=>`<button type="button" data-sc="${c}" style="background:${c}" class="${col===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}</div></div>
+   <p class="tiny muted">Τα στοιχεία (ΑΦΜ, ΑΜΚΑ κ.λπ.) μένουν μόνο σε αυτή τη συσκευή. Ενημέρωσε τον εργαζόμενο ότι τα κρατάς.</p>
    <div class="row" style="justify-content:space-between">${!me&&id?`<button type="button" class="btn danger" id="sf-del">${ic('trash',16)}</button>`:'<span></span>'}<span class="row"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">${ic('check',16)} Αποθήκευση</button></span></div></form>`);
-  const f=$('#sf',md.el);f.onclick=e=>{const b=e.target.closest('[data-sc]');if(b){col=b.dataset.sc;$$('[data-sc]',f).forEach(z=>z.classList.toggle('on',z===b));}};
-  $('#sf-r',md.el).onchange=e=>{$('#sf-cw',md.el).hidden=e.target.value!=='other';};
-  f.onsubmit=e=>{e.preventDefault();const o=fd(f);const ap=!!f.appts.checked;
-    if(me){Object.assign(B,{meRole:o.role,meCustom:o.custom||'',meColor:col,meTeaches:ap});}
-    else{if(!o.name.trim())return toast('Γράψε όνομα.','bad');Object.assign(x,{name:o.name.trim(),phone:(o.phone||'').trim(),role:o.role,custom:o.custom||'',color:col,appts:ap});if(!B.staff.includes(x))B.staff.push(x);}
-    save();md.close();render();};
+  const f=$('#sf',md.el);const t=todayISO();
+  const drawC=()=>{$('#sf-certs',md.el).innerHTML=certs.length?certs.map((c,i)=>{const d=c.until?Math.round((new Date(c.until+'T12:00')-new Date(t+'T12:00'))/864e5):null;return`<div class="certrow ${d!=null&&d<0?'exp':d!=null&&d<=30?'soon':''}"><input class="in" data-ci="${i}" data-ck="name" value="${esc(c.name||'')}" placeholder="Όνομα πιστοποιητικού"><label class="tiny muted">Λήγει<input class="in" type="date" data-ci="${i}" data-ck="until" value="${esc(c.until||'')}"></label><button type="button" class="iconbtn" data-cdel="${i}" aria-label="Αφαίρεση">${ic('x',15)}</button>${d!=null?`<small class="cst">${d<0?'έληξε':d<=30?'λήγει σε '+d+' μέρες':'σε ισχύ'}</small>`:''}</div>`;}).join(''):'<p class="tiny muted" style="margin:0 0 4px">Κανένα ακόμα — πάτα μια πρόταση από κάτω.</p>';};drawC();
+  md.el.addEventListener('input',e=>{const c=e.target.closest('[data-ci]');if(c)certs[+c.dataset.ci][c.dataset.ck]=c.value;});
+  md.el.addEventListener('change',e=>{if(e.target.matches('[data-ck=until]'))drawC();});
+  f.onclick=async e=>{const b=e.target.closest('[data-sc]');if(b){col=b.dataset.sc;$$('[data-sc]',f).forEach(z=>z.classList.toggle('on',z===b));return;}
+    const a=e.target.closest('[data-cadd]');if(a){certs.push({id:uid(),name:a.dataset.cadd,until:''});drawC();const ins=$$('[data-ck=until]',md.el);if(a.dataset.cadd)ins[ins.length-1].focus();else $$('[data-ck=name]',md.el).pop().focus();return;}
+    const d=e.target.closest('[data-cdel]');if(d){certs.splice(+d.dataset.cdel,1);drawC();}};
+  $('#sf-r',md.el).onchange=async e=>{if(e.target.value==='__new'){const n=((await promptDlg('Νέα ειδικότητα'))||'').trim();if(!n){e.target.value=x.role;return;}const idr='c_'+uid().slice(0,6);S.data.settings.customRoles=(S.data.settings.customRoles||[]).concat([[idr,n,1]]);ROLES=profRoles();save();e.target.insertAdjacentHTML('afterbegin',opt(idr,n,idr));e.target.value=idr;}$('#sf-cw',md.el).hidden=e.target.value!=='other';};
+  f.onsubmit=e=>{e.preventDefault();const o=fd(f);const ap=!!f.appts.checked;const C=certs.filter(c=>(c.name||'').trim()).map(c=>Object.assign(c,{name:c.name.trim()}));
+    if(o.afm&&!/^\d{9}$/.test(o.afm))return toast('Ο ΑΦΜ έχει 9 ψηφία.','bad');if(o.amka&&!/^\d{11}$/.test(o.amka))return toast('Ο ΑΜΚΑ έχει 11 ψηφία.','bad');
+    if(me){Object.assign(B,{meRole:o.role,meCustom:o.custom||'',meColor:col,meTeaches:ap,meCerts:C,mePhone:o.phone,meEmail:o.email,meHired:o.hired,meAfm:o.afm,meAmka:o.amka,meNotes:o.notes});}
+    else{if(!o.name.trim())return toast('Γράψε όνομα.','bad');Object.assign(x,{name:o.name.trim(),phone:(o.phone||'').trim(),email:o.email||'',role:o.role,custom:o.custom||'',color:col,appts:ap,certs:C,hired:o.hired,afm:o.afm,amka:o.amka,notes:o.notes});if(!B.staff.includes(x))B.staff.push(x);}
+    save();md.close();toast('Αποθηκεύτηκε.','ok');render();};
   const dl=$('#sf-del',md.el);if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.by===x.id).length;if(!await confirmDlg(`Αφαίρεση «${esc(x.name)}»;${n?` Τα ${n} ραντεβού του περνούν σε σένα.`:''}`,{ok:'Αφαίρεση',danger:true}))return;appts().forEach(a=>{if(a.by===x.id)delete a.by;});B.staff=B.staff.filter(y=>y.id!==x.id);save();md.close();render();};}
 
 /* ---------- αντίγραφα ασφαλείας (ίδιο στήσιμο με το Δρομολόγιο) ----------
