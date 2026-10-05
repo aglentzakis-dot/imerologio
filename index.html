@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.0">
+<meta name="app-version" content="1.1">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -1270,23 +1270,101 @@ ol.howto{display:block;padding-left:20px;margin:6px 0}ol.howto li{display:list-i
 
 body{background:#fff}.wsheet{page-break-after:always;box-shadow:none;border:0}
 
-/* ===== Ημερολόγιο: προσαρμογές κελύφους ===== */
-:root{--lilac-d:#2F5F8F;--lilac:#E1EAF4}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--lilac-d:#8EB6E8;--lilac:#1E2B3C}}
+/* ===== Ημερολόγιο: ταυτότητα — καθαρό, δροσερό χαρτί και το χρώμα του επαγγέλματος ===== */
+:root{--brand:#17324D;--brand-d:#112538;--brand-soft:#E3E8EE;--brand-soft2:#F0F3F6;
+  --cream:#F2F4F8;--paper:#FFFFFF;--field:#FFFFFF;--raise:#F8F9FB;--ink:#15202E;--ink2:#5A6678;--ink3:#8D97A6;--line:#E1E5EC;--line2:#EDF0F4;
+  --lilac-d:var(--brand);--lilac:var(--brand-soft);--head:var(--font);--sh:0 1px 2px rgba(21,32,46,.05),0 6px 20px rgba(21,32,46,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cream:#11161D;--paper:#19202A;--field:#1F2733;--raise:#1C2430;--ink:#E8EDF3;--ink2:#A7B1BE;--ink3:#7D8896;--line:#2A3340;--line2:#232B36;
+  --lilac:color-mix(in srgb,var(--brand) 30%,#19202A);--lilac-d:color-mix(in srgb,var(--brand) 55%,#fff)}}
+h1,h2,h3{font-family:var(--font);font-weight:800;letter-spacing:-.015em}
+h1{font-size:1.55rem}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.pri:hover{background:var(--brand-d)}
+a{color:var(--lilac-d)}
 .brand svg,.tbrand svg{border-radius:10px}
 .side-ver{margin-top:auto;padding:10px 12px}
-.tbprof{font-size:.82rem;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45vw}
+.side .nav a.on{background:var(--brand);color:#fff}
+.side .nav a.on .ic{color:#fff}
+
+/* μπάρα κορυφής στο κινητό: γεμάτο χρώμα */
+.topbar{background:var(--brand);border-bottom:0;color:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;gap:10px;height:auto;min-height:56px;padding-top:env(safe-area-inset-top,0px)}
+.topbar .tbrand{flex:none}.topbar .tbrand svg{width:30px;height:30px;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+.tbtitle{flex:1;font-size:1.12rem;font-weight:800;letter-spacing:-.01em}
+.tbprof{font-size:.8rem;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
 @media (min-width:961px){.topbar{display:none}}
-.pgrp{font-size:.78rem;font-weight:700;color:var(--ink2);margin:14px 2px 6px;text-transform:uppercase;letter-spacing:.04em}
+@media (max-width:960px){.side{display:none}.main{padding-top:18px;padding-bottom:120px}}
+
+/* κάτω πλοήγηση + κουμπί προσθήκης */
+.bottomnav a.on{color:var(--brand)}
+.bottomnav a.on .bi{background:var(--brand-soft);color:var(--brand)}
+.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:55;width:60px;height:60px;border-radius:20px;border:0;background:var(--brand);color:#fff;display:grid;place-items:center;box-shadow:0 10px 24px color-mix(in srgb,var(--brand) 45%,transparent);cursor:pointer}
+.fab:active{transform:scale(.96)}
+@media (min-width:961px){.fab{bottom:28px;right:32px}}
+
+/* «Σήμερα» */
+.hero{position:relative;overflow:hidden;background:var(--brand);color:#fff;border-radius:24px;padding:22px 22px 24px;margin-bottom:16px;display:flex;align-items:flex-end}
+.hero::after{content:"";position:absolute;right:-60px;top:-70px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.08)}
+.hero>svg{position:absolute;right:18px;top:18px;width:46px;height:46px;border-radius:13px;opacity:.95;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+.hero-in{position:relative;z-index:1}
+.hero-hi{font-size:.95rem;opacity:.85}
+.hero-date{font-size:clamp(1.9rem,8vw,2.6rem);font-weight:800;line-height:1.05;letter-spacing:-.03em;margin:4px 0 10px}
+.hero-sum{font-size:1rem;opacity:.95}.hero-sum b{font-size:1.15rem}
+.nextcard{width:100%;display:flex;align-items:center;gap:14px;text-align:left;background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:18px;padding:14px 14px 14px 12px;box-shadow:var(--sh);cursor:pointer;color:var(--ink);font:inherit}
+.nextcard.live{border-left-color:#E0A100;background:color-mix(in srgb,#E0A100 7%,var(--paper))}
+.nc-time{display:flex;flex-direction:column;align-items:center;min-width:62px;padding-right:12px;border-right:1px solid var(--line)}
+.nc-time b{font-size:1.45rem;font-weight:800;letter-spacing:-.02em;color:var(--brand)}.nc-time small{color:var(--ink2)}
+.nextcard.live .nc-time b{color:#B07E00}
+.nc-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.nc-main small{font-size:.78rem;font-weight:700;color:var(--brand)}
+.nextcard.live .nc-main small{color:#B07E00}
+.nc-main b{font-size:1.1rem}.nc-main span{color:var(--ink2);font-size:.9rem}
+.ncact{display:flex;gap:8px;margin:10px 0 4px}.ncact .btn{flex:1;justify-content:center}
+.tsec{margin-top:22px}
+.tsec-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.tsec-h h2{margin:0;font-size:1.05rem}.tsec-h a{font-size:.88rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:2px}
+.tlist{display:flex;flex-direction:column;gap:8px}
+.trow{display:flex;align-items:stretch;gap:10px}
+.tr-t{width:46px;flex:none;font-weight:800;font-size:.95rem;padding-top:12px;color:var(--ink)}
+.trow .appt{flex:1;margin:0}
+.trow.past .tr-t,.trow.done .tr-t{color:var(--ink3)}
+.trow.past .appt{opacity:.6}
+.tempty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:28px 16px;background:var(--paper);border:1.5px dashed var(--line);border-radius:18px;color:var(--ink2)}
+.tempty .ic{color:var(--brand)}.tempty b{color:var(--ink);font-size:1.05rem}.tempty .btn{margin-top:8px}
+.chipt.free{border-color:color-mix(in srgb,var(--ok) 45%,var(--line));color:var(--ok);font-weight:700}
+.tmrw{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.demobar{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap;background:color-mix(in srgb,#E0A100 14%,var(--paper));border:1px solid color-mix(in srgb,#E0A100 40%,var(--line));border-radius:14px;padding:10px 12px;margin-bottom:14px;font-size:.9rem}
+.instcard{display:flex;align-items:center;gap:12px;margin-top:24px;background:var(--brand-soft2);border:1px solid var(--brand-soft);border-radius:18px;padding:14px}
+.instcard>svg{width:42px;height:42px;border-radius:12px;flex:none}
+.instcard b{display:block}.instcard span{font-size:.85rem;color:var(--ink2)}
+
+/* ημερολόγιο: στο κινητό μόνο τα βασικά — τα υπόλοιπα στο «Περισσότερα» */
+@media (max-width:960px){
+  #agNew,#agBlk,#agCfg,#agPdf{display:none}
+  .agbar #agRem,.agbar #agWait,.agbar #agCopyW,.agbar #agLock{display:none}
+  main>.aglegend,#main .aglegend,#main .kpis.kmini{display:none}
+  .legendbox .aglegend{display:flex!important}
+  .page-head{margin-bottom:12px;flex-wrap:nowrap;align-items:center}
+  .page-head h1{font-size:1.25rem}
+  .page-head>div:first-child{flex:1}
+  .page-head .actions{flex-wrap:nowrap}
+}
+.legendbox{margin-top:14px}
+.appt.live .av{background:#fff;color:var(--brand)}
+.hero{min-height:150px}
+.agbar .seg a.on{background:var(--brand);color:#fff}
+
+/* επιλογή επαγγέλματος */
+.pgrp{font-size:.82rem;font-weight:800;color:var(--ink2);margin:16px 2px 6px}
 .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
-.plist button{border:1.5px solid var(--line);background:var(--field);border-radius:12px;padding:10px;text-align:left;font-weight:600;cursor:pointer}
-.plist button:hover{border-color:var(--lilac-d)}
-.plist button.on{border-color:var(--lilac-d);background:var(--lilac)}
+.plist button{border:1.5px solid var(--line);background:var(--field);border-radius:12px;padding:11px 10px;text-align:left;font-weight:600;cursor:pointer;color:var(--ink)}
+.plist button:hover{border-color:var(--brand)}
+.plist button.on{border-color:var(--brand);background:var(--brand-soft)}
 .fr-head{display:flex;gap:12px;align-items:center;margin-bottom:14px}.fr-head svg{width:48px;height:48px;border-radius:13px;flex:none}
+.frdemo{display:flex;gap:8px;align-items:flex-start;margin:6px 0 4px;font-size:.92rem}
 .rprow.rpnew{border-style:dashed}
 .search{display:flex;align-items:center;gap:8px}.search .in{flex:1}
-@media (max-width:960px){.side{display:none}}
-
+.scols.big button{width:38px;height:38px}
+@media (prefers-reduced-motion:reduce){.fab:active{transform:none}}
 </style>
 </head>
 <body>

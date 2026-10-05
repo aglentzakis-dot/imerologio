@@ -36,6 +36,13 @@ const IM_DEF={kind:()=>{const{g,p}=prof();return p.kind||g.kind||'once';},dur:()
   start:date=>{const c=agCfg();const t=todayISO();if((date||t)===t){const m=Math.ceil((nowMin()+15)/30)*30;if(m>=tmin(c.from)&&m<tmin(c.to))return tstr(m);}return c.from;}};
 function profNotes(){return(prof().p.t||'').split('|').filter(Boolean);}
 
+/* ---------- χρώμα: της κατηγορίας επαγγέλματος ή δικό σου ---------- */
+const THEME_COLORS=['#B4235F','#0F7B72','#4F46C8','#24476E','#C2501A','#2F7D3A','#17324D','#8A3FB0','#B8860B','#C0392B'];
+function hexMix(h,w,t){const n=x=>parseInt(x,16);const a=[n(h.slice(1,3)),n(h.slice(3,5)),n(h.slice(5,7))];const b=w==='w'?[255,255,255]:[0,0,0];return'#'+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,'0')).join('');}
+function themeColor(){return S.data.settings.color||prof().g.color||'#17324D';}
+function applyTheme(){const c=themeColor(),R=document.documentElement.style;R.setProperty('--brand',c);R.setProperty('--brand-d',hexMix(c,'k',.25));R.setProperty('--brand-soft',hexMix(c,'w',.88));R.setProperty('--brand-soft2',hexMix(c,'w',.94));
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=c;}
+
 /* ---------- λογότυπο ---------- */
 const LOGO=`<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#17324D"/><rect x="20" y="27" width="60" height="55" rx="9" fill="#fff"/><path d="M20 36a9 9 0 0 1 9-9h42a9 9 0 0 1 9 9v6H20z" fill="#F2B632"/><rect x="33" y="18" width="6" height="16" rx="3" fill="#fff" stroke="#17324D" stroke-width="2"/><rect x="61" y="18" width="6" height="16" rx="3" fill="#fff" stroke="#17324D" stroke-width="2"/><g fill="#D6DEE3"><rect x="28" y="50" width="10" height="8" rx="2"/><rect x="45" y="50" width="10" height="8" rx="2"/><rect x="28" y="64" width="10" height="8" rx="2"/><rect x="45" y="64" width="10" height="8" rx="2"/><rect x="62" y="64" width="10" height="8" rx="2"/></g><rect x="62" y="50" width="10" height="8" rx="2" fill="#2E7D5B"/></svg>`;
 async function markPNG(){return null;}
@@ -50,23 +57,27 @@ addEventListener('popstate',async e=>{if(HSKIP){HSKIP--;e.stopImmediatePropagati
 addEventListener('keydown',e=>{if(e.key!=='Escape')return;const t=topModal();if(t&&S.data.settings.prof)t.ov.dispatchEvent(new MouseEvent('click',{bubbles:true}));});
 
 /* ---------- πλοήγηση ---------- */
-function parseRoute(){const h=location.hash.replace(/^#\/?/,'');const[p,q]=h.split('?');const parts=p.split('/').filter(Boolean);return{name:parts[0]||'agenda',id:parts[1]||null,q:Object.fromEntries(new URLSearchParams(q||''))};}
+function parseRoute(){const h=location.hash.replace(/^#\/?/,'');const[p,q]=h.split('?');const parts=p.split('/').filter(Boolean);return{name:parts[0]||'today',id:parts[1]||null,q:Object.fromEntries(new URLSearchParams(q||''))};}
 function render(){
-  if(!S.data.settings.prof){shellHTML('agenda');M().innerHTML='';return firstRun();}
+  applyTheme();if(!S.data.settings.prof){shellHTML('today');M().innerHTML='';return firstRun();}
   window.AGPOS=null;if(/^#\/agenda/.test(S.curHash||'')&&/^#\/agenda/.test(location.hash)&&typeof agPosSave==='function')agPosSave();
   S.curHash=location.hash;
   const r=parseRoute();const sec=r.name==='person'?'people':r.name;
   shellHTML(sec);
-  const V={agenda:viewAgenda,people:viewPeople,person:viewPerson,settings:viewSettingsPage}[r.name]||viewAgenda;
+  const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,settings:viewSettingsPage}[r.name]||viewToday;
   if(!window.AGPOS)window.scrollTo(0,0);
   try{V(r);}catch(e){console.error(e);M().innerHTML=`<div class="card"><h2>Κάτι πήγε στραβά</h2><p class="muted">${esc(e.message)}</p><a class="btn" href="#/agenda">Ραντεβού</a></div>`;}
 }
 function shellHTML(sec){
-  const nav=[['agenda','l-calendar-clock','Ραντεβού'],['people','users',LX('whoPl')||'Πρόσωπα'],['settings','settings','Ρυθμίσεις']];
+  const nav=[['today','home','Σήμερα'],['agenda','l-calendar-clock','Ημερολόγιο'],['people','users',LX('whoPl')||'Πρόσωπα'],['settings','settings','Ρυθμίσεις']];
+  const title={today:'Σήμερα',agenda:'Ημερολόγιο',people:LX('whoPl'),settings:'Ρυθμίσεις'}[sec]||'Ημερολόγιο';
   const a=([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}">${ic(i,19)}<span>${esc(l)}</span></a>`;
-  document.body.innerHTML=`<div class="app"><aside class="side noprint"><a class="brand" href="#/agenda">${LOGO}<div><b>Ημερολόγιο</b><span>${esc(S.meta.org||prof().p.n)}</span></div></a><nav class="nav">${nav.map(a).join('')}</nav><div class="side-ver tiny muted">Έκδοση ${APP_VERSION}</div></aside>
-  <div class="shell"><header class="topbar noprint"><a class="tbrand" href="#/agenda">${LOGO}<b>Ημερολόγιο</b></a><span class="tbprof">${esc(prof().p.n)}</span></header><main class="main" id="main"></main></div>
-  <nav class="bottomnav noprint">${nav.map(([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}"><span class="bi">${ic(i,22)}</span><span>${esc(l)}</span></a>`).join('')}</nav></div>`;
+  const fab=['today','agenda','people'].includes(sec);
+  document.body.innerHTML=`<div class="app"><aside class="side noprint"><a class="brand" href="#/today">${LOGO}<div><b>Ημερολόγιο</b><span>${esc(S.meta.org||prof().p.n)}</span></div></a><nav class="nav">${nav.map(a).join('')}</nav><div class="side-ver tiny muted">Έκδοση ${APP_VERSION}</div></aside>
+  <div class="shell"><header class="topbar noprint"><a class="tbrand" href="#/today">${LOGO}</a><b class="tbtitle">${esc(title)}</b><span class="tbprof">${esc(S.meta.org||prof().p.n)}</span></header><main class="main" id="main"></main></div>
+  <nav class="bottomnav noprint">${nav.map(([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}"><span class="bi">${ic(i,22)}</span><span>${esc(l)}</span></a>`).join('')}</nav>
+  ${fab?`<button class="fab noprint" id="fab" aria-label="${sec==='people'?'Νέος':'Νέο ραντεβού'}">${ic('plus',26)}</button>`:''}</div>`;
+  const f=$('#fab');if(f)f.onclick=()=>sec==='people'?go('person/new'):apptDialog({date:(parseRoute().q.d)||todayISO()});
 }
 addEventListener('hashchange',render);
 
@@ -77,13 +88,67 @@ function firstRun(){
    <div class="field"><label class="f" for="fr-n">Το όνομά σου</label><input class="in" id="fr-n" autocomplete="name" placeholder="π.χ. Μαρία Παπαδοπούλου"></div>
    <div class="field"><label class="f" for="fr-b">Επωνυμία επιχείρησης <span class="tiny muted">· προαιρετικό</span></label><input class="in" id="fr-b" placeholder="π.χ. Κομμωτήριο Μαρία"></div>
    <label class="f">Τι δουλειά κάνεις;</label><p class="tiny muted" style="margin:0 0 6px">Ανάλογα με το επάγγελμα αλλάζουν οι λέξεις (πελάτης, ασθενής, μαθητής…), οι ειδικότητες του προσωπικού και η συνηθισμένη διάρκεια. Αλλάζει όποτε θέλεις από τις Ρυθμίσεις.</p>
+   <label class="check frdemo"><input type="checkbox" id="fr-d" checked> Βάλε μερικά παραδείγματα για να δω πώς δουλεύει <span class="tiny muted">(σβήνονται με ένα κουμπί)</span></label>
    <div id="fr-p">${profPickerHTML(null)}</div>`,{noHist:true,guard:false});
   md.el.parentElement.onclick=null;
   md.el.addEventListener('click',e=>{const b=e.target.closest('[data-pf]');if(!b)return;
     S.data.settings.prof=b.dataset.pf;S.data.settings.myName=$('#fr-n',md.el).value.trim();biz().name=$('#fr-b',md.el).value.trim();
-    const c=agCfg();c.step=Math.min(60,profDur()>=60?60:profDur()>=30?30:15);
-    save();md.close();render();toast('Έτοιμο! Πάτα «+ Ραντεβού» ή σε κενή ώρα για να ξεκινήσεις.','ok');});
+    const c=agCfg();c.step=Math.min(60,profDur()>=60?60:profDur()>=30?30:15);applyIdentity();
+    if($('#fr-d',md.el).checked)demoFill();
+    save();md.close();go('today');render();toast('Έτοιμο! Το + κλείνει νέο ραντεβού.','ok');});
 }
+
+/* ---------- «Σήμερα»: η αρχική οθόνη ---------- */
+function greet(){const h=new Date().getHours();return h<12?'Καλημέρα':h<18?'Καλό απόγευμα':'Καλησπέρα';}
+function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
+  const L=occ(t,t,{withCancel:true,by:''});const act=L.filter(o=>o.st!=='cancel');
+  const next=act.find(o=>o.st===''&&tmin(o.e)>now);const live=next&&tmin(next.s)<=now;
+  const T=occ(tm,tm,{by:''});const F=freeSlots(t).filter(x=>tmin(x)>now).slice(0,8);
+  const left=act.filter(o=>o.st===''&&tmin(o.s)>now).length;const first=(S.data.settings.myName||'').split(' ')[0];
+  const nst=next&&stOf(next.a.sid);const ph=nst&&(nst.phone||((nst.contacts||[])[0]||{}).phone);
+  const closed=isClosed(t)?(holidayOf(t)||'Κλειστά σήμερα'):'';
+  M().innerHTML=`
+  ${S.data.settings.demo?`<div class="demobar"><span>Βλέπεις παραδείγματα. Όταν είσαι έτοιμος, σβήσ' τα και βάλε τα δικά σου.</span><button class="btn sm" id="demoX">Σβήσε τα παραδείγματα</button></div>`:''}
+  <section class="hero"><div class="hero-in"><div class="hero-hi">${greet()}${first?', '+esc(first):''}</div>
+   <div class="hero-date">${WDAYS[wdOf(t)]} ${+t.slice(8)} ${MONTHS_G[+t.slice(5,7)-1]}</div>
+   <div class="hero-sum">${closed?esc(closed):act.length?`<b>${act.length}</b> ${act.length===1?'ραντεβού':'ραντεβού'} σήμερα${left?` · <b>${left}</b> ακόμα`:''}`:'Κανένα ραντεβού σήμερα'}</div></div></section>
+  ${next?`<button class="nextcard ${live?'live':''}" data-ap="${next.key}"><span class="nc-time"><b>${next.s}</b><small>${next.e}</small></span><span class="nc-main"><small>${live?'Τώρα':'Επόμενο'}</small><b>${esc(stuName(nst))}</b>${next.a.note?`<span>${esc(next.a.note)}</span>`:''}${pvBadge(next,1)}</span>${ic('right',20)}</button>
+    ${ph?`<div class="ncact"><a class="btn" href="tel:${telLink(ph)}">${ic('l-message-square',16)} Κλήση</a><a class="btn" href="${smsHref(ph,remText(next))}">${ic('send',16)} Υπενθύμιση</a></div>`:''}`:''}
+  <section class="tsec"><div class="tsec-h"><h2>Το πρόγραμμα της ημέρας</h2><a href="#/agenda?view=day&d=${t}">Ημέρα ${ic('right',14)}</a></div>
+   ${act.length||L.length?`<div class="tlist">${L.map(o=>`<div class="trow ${o.st==='done'?'done':''} ${tmin(o.e)<=now&&o.st===''?'past':''}"><span class="tr-t">${o.s}</span>${apptCard(o,{compact:true})}</div>`).join('')}</div>`
+    :`<div class="tempty">${ic('l-calendar-clock',34)}<b>Η μέρα είναι ελεύθερη</b><span>Κλείσε ραντεβού με το κουμπί + ή διάλεξε μια ελεύθερη ώρα.</span><button class="btn pri" id="tNew">${ic('plus',16)} Νέο ραντεβού</button></div>`}</section>
+  ${F.length?`<section class="tsec"><div class="tsec-h"><h2>Ελεύθερες ώρες σήμερα</h2></div><div class="chips">${F.map(x=>`<button class="chipt free" data-new="${t}|${x}">${x}</button>`).join('')}</div></section>`:''}
+  <section class="tsec"><div class="tsec-h"><h2>Αύριο</h2><a href="#/agenda?view=day&d=${tm}">Άνοιγμα ${ic('right',14)}</a></div>
+   <div class="tmrw"><span><b>${T.length}</b> ${T.length===1?'ραντεβού':'ραντεβού'}${T.length?' — πρώτο στις '+T[0].s:''}</span>${T.length?`<button class="btn sm" id="tRem">${ic('bell',15)} Στείλε υπενθυμίσεις</button>`:''}</div></section>
+  ${installCardHTML()}`;
+  const n=$('#tNew');if(n)n.onclick=()=>apptDialog({date:t});const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);
+  const dx=$('#demoX');if(dx)dx.onclick=demoClear;bindInstall();}
+
+/* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
+function viewAgendaApp(r){viewAgenda(r);
+  const h=$('.page-head .actions');if(!h)return;
+  const more=document.createElement('button');more.className='iconbtn agmore';more.setAttribute('aria-label','Περισσότερα');more.innerHTML=ic('more',20);h.appendChild(more);
+  const items=[['agBlk','l-flag','Δέσμευση (ώρες που δεν είσαι διαθέσιμος)'],['agRem','bell','Υπενθυμίσεις'],['agWait','users','Λίστα αναμονής'],['agCopyW','copy','Αντιγραφή εβδομάδας'],['agLock','clock','Ποιες ώρες φαίνονται'],['agCfg','settings','Ωράριο λειτουργίας'],['agPdf','printer','Εκτύπωση / PDF']].filter(([id])=>$('#'+id));
+  more.onclick=()=>{const md=modal(`<div class="spread" style="margin-bottom:8px"><h3 style="margin:0">Περισσότερα</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div><div class="list">${items.map(([id,i,l])=>`<button class="rw" data-go="${id}"><span class="ricon">${ic(i,17)}</span><span class="grow"><b>${l}</b></span></button>`).join('')}</div>
+    <details class="legendbox"><summary class="small"><b>Τι σημαίνουν τα χρώματα</b></summary>${($('.aglegend')||{}).outerHTML||''}</details>`,{guard:false});
+    md.el.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(!b)return;md.close();setTimeout(()=>{const x=$('#'+b.dataset.go);if(x)x.click();},150);});};}
+
+/* ---------- παραδείγματα για να φανεί αμέσως πώς δουλεύει ---------- */
+const DEMO_NAMES=['Ελένη Παπαδάκη','Γιώργος Νικολάου','Κατερίνα Βλάχου','Νίκος Αντωνίου','Σοφία Μιχαηλίδη','Δημήτρης Καραλής','Μαρία Ζαφειρίου'];
+function demoFill(){const t=todayISO(),c=agCfg(),du=profDur(),notes=profNotes();const ids=DEMO_NAMES.map((n,i)=>{const p={id:uid(),name:n,avatar:initial(n),phone:'69'+String(40000000+i*1234567).slice(0,8),color:PERS_COLORS[i%PERS_COLORS.length],contacts:[],demo:true,created:new Date().toISOString()};p.contacts=[{name:n,phone:p.phone}];S.data.students.push(p);return p.id;});
+  const st=Math.max(tmin(c.from),9*60);const add=(d,m,k,sid,i)=>appts().push({id:uid(),sid,kind:k,date:d,d:wdOf(d),s:tstr(m),e:tstr(m+du),note:notes[i%notes.length]||'',ex:{},demo:true,created:new Date().toISOString()});
+  [0,1,2,3,4,5].forEach(off=>{const d=addDays(t,off);if(!c.days.includes(wdOf(d))||isClosed(d))return;const n=off===0?4:2+off%3;for(let i=0;i<n;i++){const m=st+i*Math.max(du,60)+(off%2)*30;if(m+du<=tmin(c.to))add(d,m,'once',ids[(off*2+i)%ids.length],i+off);}});
+  add(t,st+5*60,IM_DEF.kind()==='weekly'?'weekly':'once',ids[6],2);
+  S.data.settings.demo=true;}
+async function demoClear(){if(!await confirmDlg('Να σβηστούν τα παραδείγματα; Ό,τι έβαλες εσύ μένει.',{ok:'Σβήσε τα',danger:true}))return;
+  const D=new Set(S.data.students.filter(p=>p.demo).map(p=>p.id));S.data.students=S.data.students.filter(p=>!p.demo);S.data.appts=appts().filter(a=>!a.demo&&!D.has(a.sid));S.data.settings.demo=false;save();toast('Τα παραδείγματα σβήστηκαν.','ok');render();}
+
+/* ---------- εγκατάσταση στην αρχική οθόνη του κινητού ---------- */
+let INST=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();INST=e;if(/^#\/(today)?$/.test(location.hash.replace(/^#\/?$/,'#/today'))&&!topModal())render();});
+const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+function installCardHTML(){if(isStandalone()||S.data.settings.instHide)return'';const ios=/iP(hone|ad|od)/.test(navigator.userAgent);if(!INST&&!ios)return'';
+  return`<section class="instcard">${LOGO}<div class="grow"><b>Βάλε το Ημερολόγιο στην αρχική οθόνη</b><span>${INST?'Ανοίγει σαν κανονική εφαρμογή, χωρίς τον φυλλομετρητή.':'Στο Safari πάτα «Κοινή χρήση» και μετά «Προσθήκη στην οθόνη Αφετηρίας».'}</span></div>${INST?`<button class="btn pri" id="instGo">Εγκατάσταση</button>`:''}<button class="iconbtn" id="instX" aria-label="Κλείσιμο">${ic('x',16)}</button></section>`;}
+function bindInstall(){const g=$('#instGo');if(g)g.onclick=async()=>{INST.prompt();try{await INST.userChoice;}catch(e){}INST=null;render();};const x=$('#instX');if(x)x.onclick=()=>{S.data.settings.instHide=true;save();render();};}
 
 /* ---------- πρόσωπα: λίστα ---------- */
 function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
@@ -122,7 +187,7 @@ function viewPerson(r){const isNew=r.id==='new';const p0=isNew?{id:uid(),created
     p0.contacts=(p0.phone||p0.email)?[{name:p0.name,role:'',phone:p0.phone,email:p0.email}]:[];
     if(o.addr.trim())p0.loc=Object.assign({},p0.loc&&p0.loc.addr===o.addr.trim()?p0.loc:{},{addr:o.addr.trim(),home:true});else delete p0.loc;
     if(isNew)S.data.students.push(p0);save();toast('Αποθηκεύτηκε.','ok');
-    if(isNew&&sessionStorage.getItem('im-after-person')){sessionStorage.removeItem('im-after-person');go('agenda');setTimeout(()=>apptDialog({date:todayISO(),sids:[p0.id]}),200);return;}
+    if(isNew&&sessionStorage.getItem('im-after-person')){sessionStorage.removeItem('im-after-person');go('today');setTimeout(()=>apptDialog({date:todayISO(),sids:[p0.id]}),200);return;}
     go('person/'+p0.id);};
   const dl=$('#p-del');if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.sid===p0.id).length;if(!await confirmDlg(`Διαγραφή «${esc(stuName(p0))}»${n?` και ${n===1?'του ραντεβού του':'των '+n+' ραντεβού του'}`:''}; Δεν αναιρείται.`,{ok:'Διαγραφή',danger:true}))return;
     S.data.students=S.data.students.filter(x=>x.id!==p0.id);S.data.appts=appts().filter(a=>a.sid!==p0.id);S.data.waitlist=(S.data.waitlist||[]).filter(w=>w.sid!==p0.id);save();toast('Διαγράφηκε.');go('people');};
@@ -138,6 +203,7 @@ function viewSettingsPage(r){const B=biz();const c=agCfg();const PV=providers();
   <div class="grid g2" style="align-items:start"><div>
   <div class="card section"><div class="card-h"><h3>Επάγγελμα</h3></div><button class="rw" id="st-prof" style="width:100%"><span class="grow"><b>${esc(p.n)}</b><small>${esc(g.g)}</small></span>${ic('right',16)}</button>
    <details style="margin-top:12px"><summary class="small"><b>Οι λέξεις της εφαρμογής</b> — άλλαξέ τες αν θέλεις κάτι πιο δικό σου</summary><div class="grid g2" style="gap:8px;margin-top:8px">${lx('who','Το πρόσωπο')}${lx('whoAcc','…διάλεξε (αιτιατική)')}${lx('whoGen','…καρτέλα (γενική)')}${lx('whoPl','Πληθυντικός')}${lx('whoPlL','Πληθυντικός με μικρά')}${lx('one','Τίτλος στο κινητό')}</div><button class="btn sm" id="st-lx">${ic('check',15)} Αποθήκευση λέξεων</button><p class="tiny muted" style="margin:6px 0 0">Κενό = η λέξη του επαγγέλματος.</p></details></div>
+  <div class="card section"><div class="card-h"><h3>Χρώμα εφαρμογής</h3></div><div class="scols big">${THEME_COLORS.map(c=>`<button type="button" data-th="${c}" style="background:${c}" class="${themeColor()===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}</div><button class="btn sm ghost" id="th-def" style="margin-top:8px">Το χρώμα του επαγγέλματος</button></div>
   <div class="card section"><div class="card-h"><h3>Στοιχεία</h3></div>
    <div class="field"><label class="f" for="st-me">Το όνομά σου</label><input class="in" id="st-me" value="${esc(S.data.settings.myName||'')}"></div>
    <div class="field"><label class="f" for="st-bn">Επωνυμία</label><input class="in" id="st-bn" value="${esc(B.name||'')}"></div>
@@ -152,7 +218,7 @@ function viewSettingsPage(r){const B=biz();const c=agCfg();const PV=providers();
    <div class="row"><button class="btn pri" id="bk-now">${ic('cloud',16)} Αντίγραφο τώρα</button><button class="btn" id="bk-rs">${ic('history',16)} Επαναφορά</button></div><p class="tiny muted" id="bk-f" style="margin:8px 0 0"></p><input type="file" id="bk-file" accept="application/json,.json" hidden></div>
   <div class="card section"><div class="card-h"><h3>Έκδοση ${esc(APP_VERSION)}</h3></div><button class="btn" id="up-chk">${ic('refresh',16)} Έλεγχος αναβάθμισης</button><p class="tiny muted" style="margin:10px 0 0">© 2026 Ανδρέας Μ. Γλεντζάκης. Με την επιφύλαξη παντός δικαιώματος.</p></div>
   </div></div>`;
-  $('#st-prof').onclick=profDialog;
+  $('#st-prof').onclick=profDialog;$$('[data-th]').forEach(b=>b.onclick=()=>{S.data.settings.color=b.dataset.th;save();render();});$('#th-def').onclick=()=>{delete S.data.settings.color;save();render();};
   $('#st-lx').onclick=()=>{const o={};$$('[data-lx]').forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};
   $('#st-sv').onclick=()=>{S.data.settings.myName=$('#st-me').value.trim();B.name=$('#st-bn').value.trim();B.phone=$('#st-ph').value.trim();B.email=$('#st-em').value.trim();save();toast('Αποθηκεύτηκε.','ok');render();};
   $('#st-add').onclick=()=>staffDialog();$$('[data-stf]').forEach(b=>b.onclick=()=>staffDialog(b.dataset.stf));
@@ -217,6 +283,6 @@ setTimeout(async()=>{try{const k='imer-upchk';if(localStorage.getItem(k)===today
 
 /* ---------- έναρξη ---------- */
 S.data=loadData();applyIdentity();
-if(!location.hash)history.replaceState(null,'','#/agenda');
+if(!location.hash)history.replaceState(null,'','#/today');
 render();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&/^#\/agenda/.test(location.hash)&&!topModal())render();});
