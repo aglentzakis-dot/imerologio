@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.1">
+<meta name="app-version" content="1.2">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -1343,7 +1343,8 @@ a{color:var(--lilac-d)}
   .agbar #agRem,.agbar #agWait,.agbar #agCopyW,.agbar #agLock{display:none}
   main>.aglegend,#main .aglegend,#main .kpis.kmini{display:none}
   .legendbox .aglegend{display:flex!important}
-  .page-head{margin-bottom:12px;flex-wrap:nowrap;align-items:center}
+  .page-head{margin-bottom:12px;display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .page-head .sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .page-head h1{font-size:1.25rem}
   .page-head>div:first-child{flex:1}
   .page-head .actions{flex-wrap:nowrap}
