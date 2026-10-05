@@ -23,7 +23,13 @@ function getStudent(id){return S.data.students.find(x=>x.id===id)||null;}
 function myStudents(){return S.data.students.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','el'));}
 const stuName=s=>s?(s.name||'—'):'—';
 const initial=n=>((n||'?').trim()[0]||'?').toUpperCase();
-function IM_NEWPERSON(name){const p={id:uid(),name:name.trim(),avatar:initial(name),contacts:[],created:new Date().toISOString()};S.data.students.push(p);save();return p.id;}
+function IM_NEWPERSON(name,c){c=c||{};const p={id:uid(),name:name.trim(),avatar:initial(name),phone:c.phone||'',email:c.email||'',contacts:(c.phone||c.email)?[{name:name.trim(),phone:c.phone||'',email:c.email||''}]:[],created:new Date().toISOString()};S.data.students.push(p);save();return p.id;}
+
+/* ---------- επαφές του κινητού (Chrome σε Android) ---------- */
+const IM_CONTACTS_OK=()=>!!(navigator.contacts&&window.ContactsManager);
+async function IM_PICKCONTACTS(multi){try{const L=await navigator.contacts.select(['name','tel','email'],{multiple:!!multi});
+  return(L||[]).map(x=>({name:((x.name||[])[0]||(x.tel||[])[0]||'').trim(),phone:((x.tel||[])[0]||'').replace(/\s+/g,' ').trim(),email:((x.email||[])[0]||'').trim()})).filter(x=>x.name);}
+  catch(e){if(e&&e.name!=='AbortError')toast('Δεν ήταν δυνατή η πρόσβαση στις επαφές.','bad');return[];}}
 
 /* ---------- επάγγελμα και λέξεις ---------- */
 function findProf(id){for(const g of IM_GROUPS)for(const p of g.list)if(p.id===id)return{g,p};return null;}
@@ -37,10 +43,12 @@ const IM_DEF={kind:()=>{const{g,p}=prof();return p.kind||g.kind||'once';},dur:()
 function profNotes(){return(prof().p.t||'').split('|').filter(Boolean);}
 
 /* ---------- χρώμα: της κατηγορίας επαγγέλματος ή δικό σου ---------- */
-const THEME_COLORS=['#B4235F','#0F7B72','#4F46C8','#24476E','#C2501A','#2F7D3A','#17324D','#8A3FB0','#B8860B','#C0392B'];
+const THEME_COLORS=[['Βαθιά',['#B4235F','#0F7B72','#4F46C8','#24476E','#C2501A','#2F7D3A','#17324D','#8A3FB0','#B8860B','#C0392B']],
+  ['Απαλά',['#E57399','#F48FB1','#4DB6AC','#80CBC4','#7986CB','#9FA8DA','#64B5F6','#90CAF9','#81C784','#AED581','#FFB74D','#FFD54F','#BA68C8','#CE93D8','#A1887F','#90A4AE']]];
 function hexMix(h,w,t){const n=x=>parseInt(x,16);const a=[n(h.slice(1,3)),n(h.slice(3,5)),n(h.slice(5,7))];const b=w==='w'?[255,255,255]:[0,0,0];return'#'+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,'0')).join('');}
 function themeColor(){return S.data.settings.color||prof().g.color||'#17324D';}
-function applyTheme(){const c=themeColor(),R=document.documentElement.style;R.setProperty('--brand',c);R.setProperty('--brand-d',hexMix(c,'k',.25));R.setProperty('--brand-soft',hexMix(c,'w',.88));R.setProperty('--brand-soft2',hexMix(c,'w',.94));
+function lum(h){const f=x=>{x=parseInt(x,16)/255;return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};return .2126*f(h.slice(1,3))+.7152*f(h.slice(3,5))+.0722*f(h.slice(5,7));}
+function applyTheme(){const c=themeColor(),R=document.documentElement.style;R.setProperty('--brand',c);const light=lum(c)>.36;R.setProperty('--on-brand',light?'#15202E':'#fff');R.setProperty('--brand-txt',light?hexMix(c,'k',.45):c);R.setProperty('--brand-d',hexMix(c,'k',.25));R.setProperty('--brand-soft',hexMix(c,'w',.88));R.setProperty('--brand-soft2',hexMix(c,'w',.94));
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=c;}
 
 /* ---------- λογότυπο ---------- */
@@ -82,13 +90,13 @@ function shellHTML(sec){
 addEventListener('hashchange',render);
 
 /* ---------- πρώτη χρήση: επάγγελμα και όνομα ---------- */
-function profPickerHTML(cur){return IM_GROUPS.map(g=>`<div class="pgrp">${esc(g.g)}</div><div class="plist">${g.list.map(p=>`<button type="button" data-pf="${p.id}" class="${p.id===cur?'on':''}">${esc(p.n)}</button>`).join('')}</div>`).join('');}
+function profPickerHTML(cur){return IM_GROUPS.map(g=>`<div class="pgrp"><i style="background:${g.color}"></i>${esc(g.g)}</div><div class="ptiles">${g.list.map(p=>`<button type="button" data-pf="${p.id}" class="ptile ${p.id===cur?'on':''}" style="--gc:${g.color}"><span class="pti">${p.i||'✨'}</span><span class="ptn">${esc(p.n)}</span></button>`).join('')}</div>`).join('');}
 function firstRun(){
   const md=modal(`<div class="fr-head">${LOGO}<div><h2 style="margin:0">Καλώς ήρθες!</h2><div class="small muted">Ημερολόγιο ραντεβού για κάθε επάγγελμα</div></div></div>
    <div class="field"><label class="f" for="fr-n">Το όνομά σου</label><input class="in" id="fr-n" autocomplete="name" placeholder="π.χ. Μαρία Παπαδοπούλου"></div>
    <div class="field"><label class="f" for="fr-b">Επωνυμία επιχείρησης <span class="tiny muted">· προαιρετικό</span></label><input class="in" id="fr-b" placeholder="π.χ. Κομμωτήριο Μαρία"></div>
    <label class="f">Τι δουλειά κάνεις;</label><p class="tiny muted" style="margin:0 0 6px">Ανάλογα με το επάγγελμα αλλάζουν οι λέξεις (πελάτης, ασθενής, μαθητής…), οι ειδικότητες του προσωπικού και η συνηθισμένη διάρκεια. Αλλάζει όποτε θέλεις από τις Ρυθμίσεις.</p>
-   <label class="check frdemo"><input type="checkbox" id="fr-d" checked> Βάλε μερικά παραδείγματα για να δω πώς δουλεύει <span class="tiny muted">(σβήνονται με ένα κουμπί)</span></label>
+   <label class="check frdemo"><input type="checkbox" id="fr-d" checked><span>Βάλε μερικά παραδείγματα για να δω πώς δουλεύει<br><small class="tiny muted">Σβήνονται με ένα κουμπί.</small></span></label>
    <div id="fr-p">${profPickerHTML(null)}</div>`,{noHist:true,guard:false});
   md.el.parentElement.onclick=null;
   md.el.addEventListener('click',e=>{const b=e.target.closest('[data-pf]');if(!b)return;
@@ -144,7 +152,7 @@ async function demoClear(){if(!await confirmDlg('Να σβηστούν τα πα
   const D=new Set(S.data.students.filter(p=>p.demo).map(p=>p.id));S.data.students=S.data.students.filter(p=>!p.demo);S.data.appts=appts().filter(a=>!a.demo&&!D.has(a.sid));S.data.settings.demo=false;save();toast('Τα παραδείγματα σβήστηκαν.','ok');render();}
 
 /* ---------- εγκατάσταση στην αρχική οθόνη του κινητού ---------- */
-let INST=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();INST=e;if(/^#\/(today)?$/.test(location.hash.replace(/^#\/?$/,'#/today'))&&!topModal())render();});
+let INST=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();INST=e;setTimeout(installAsk,1500);if(/^#\/(today)?$/.test(location.hash.replace(/^#\/?$/,'#/today'))&&!topModal())render();});
 const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 function installCardHTML(){if(isStandalone()||S.data.settings.instHide)return'';const ios=/iP(hone|ad|od)/.test(navigator.userAgent);if(!INST&&!ios)return'';
   return`<section class="instcard">${LOGO}<div class="grow"><b>Βάλε το Ημερολόγιο στην αρχική οθόνη</b><span>${INST?'Ανοίγει σαν κανονική εφαρμογή, χωρίς τον φυλλομετρητή.':'Στο Safari πάτα «Κοινή χρήση» και μετά «Προσθήκη στην οθόνη Αφετηρίας».'}</span></div>${INST?`<button class="btn pri" id="instGo">Εγκατάσταση</button>`:''}<button class="iconbtn" id="instX" aria-label="Κλείσιμο">${ic('x',16)}</button></section>`;}
@@ -169,6 +177,7 @@ function viewPerson(r){const isNew=r.id==='new';const p0=isNew?{id:uid(),created
   const pr=PERS_COLORS;
   M().innerHTML=`${pageHead(isNew?'Νέος '+esc(LX('who')).toLowerCase():esc(stuName(p)),isNew?'':esc(LX('who')),`<a class="btn" href="#/people">Πίσω</a>`)}
   <div class="grid g2" style="align-items:start"><form class="card" id="pf"><h3>Στοιχεία</h3>
+   ${IM_CONTACTS_OK()?`<button type="button" class="btn conpick field" id="p-con">${ic('users',16)} Από τις επαφές του κινητού</button>`:''}
    <div class="field"><label class="f" for="p-n">Ονοματεπώνυμο</label><input class="in" id="p-n" name="name" required autocomplete="off" value="${esc(p.name||'')}"></div>
    <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="p-ph">Τηλέφωνο</label><input class="in" id="p-ph" name="phone" type="tel" inputmode="tel" value="${esc(p.phone||'')}"></div>
    <div class="field"><label class="f" for="p-em">Email</label><input class="in" id="p-em" name="email" type="email" inputmode="email" autocapitalize="none" value="${esc(p.email||'')}"></div></div>
@@ -181,6 +190,7 @@ function viewPerson(r){const isNew=r.id==='new';const p0=isNew?{id:uid(),created
    ${fut.length?`<div class="aglist">${fut.slice(0,6).map(o=>`<div class="small muted" style="margin:8px 0 2px">${WDAYS[wdOf(o.date)]} ${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div>${fut.length>6?`<p class="small muted" style="margin:8px 0 0">και ${fut.length-6} ακόμα μέσα στους επόμενους 6 μήνες.</p>`:''}`:'<p class="small muted">Κανένα επόμενο ραντεβού.</p>'}
    ${past.length?`<details style="margin-top:12px"><summary class="small"><b>Προηγούμενα</b> (${past.length})</summary><div class="aglist" style="margin-top:6px">${past.map(o=>`<div class="small muted" style="margin:8px 0 2px">${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div></details>`:''}</div>`}</div>`;
   const F=$('#pf');let col=p.color||'';
+  const pc=$('#p-con');if(pc)pc.onclick=async()=>{const L=await IM_PICKCONTACTS(false);const c=L[0];if(!c)return;F.name.value=c.name;if(c.phone)F.phone.value=c.phone;if(c.email)F.email.value=c.email;toast('Μπήκαν τα στοιχεία από τις επαφές.','ok');};
   F.onclick=e=>{const b=e.target.closest('[data-pc]');if(!b)return;col=b.dataset.pc;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x===b));};
   F.onsubmit=e=>{e.preventDefault();const o=fd(F);if(!o.name.trim())return toast('Γράψε όνομα.','bad');
     Object.assign(p0,{name:o.name.trim(),avatar:initial(o.name),phone:o.phone.trim(),email:o.email.trim().toLowerCase(),notes:o.notes.trim(),color:col||undefined,updated:new Date().toISOString()});
@@ -194,40 +204,54 @@ function viewPerson(r){const isNew=r.id==='new';const p0=isNew?{id:uid(),created
   const nb=$('#p-new');if(nb)nb.onclick=()=>apptDialog({date:todayISO(),sids:[p0.id]});}
 const PERS_COLORS=['#7462B4','#3A8A61','#2F7FA8','#C77A3A','#B4527A','#8A7A2E','#C46A7A','#5A6ACF','#2E8C8C','#9C5BB5'];
 
-/* ---------- ρυθμίσεις ---------- */
-function viewSettingsPage(r){const B=biz();const c=agCfg();const PV=providers();const{g,p}=prof();const base=profLex();const L=S.data.settings.lex||{};
+/* ---------- ρυθμίσεις: λίστα κατηγοριών, κάθε κατηγορία σε δική της σελίδα ---------- */
+function isPrivate(){return biz().kind==='private';}
+const SET_SECS=()=>[
+  ['prof','',prof().p.i||'✨','Επάγγελμα',prof().p.n],
+  ['info','',isPrivate()?'👤':'🏢',isPrivate()?'Προσωπικά στοιχεία':'Στοιχεία επιχείρησης',isPrivate()?(S.data.settings.myName||'Όνομα, τηλέφωνο'):(biz().name||'Επωνυμία, τηλέφωνο, ΑΦΜ')],
+  ['staff','',`👥`,'Προσωπικό',(providers().length===1?'1 άτομο κάνει ραντεβού':providers().length+' άτομα κάνουν ραντεβού')],
+  ['hours','','🕘','Ωράριο και αργίες',agCfg().from+'–'+agCfg().to],
+  ['look','','🎨','Χρώμα και λέξεις','Το χρώμα της εφαρμογής, πώς λέγονται οι '+LX('whoPlL')],
+  ['backup','','🛟','Αντίγραφα ασφαλείας',bkStatusShort()],
+  ['about','','ℹ️','Εγκατάσταση και έκδοση','Έκδοση '+APP_VERSION]];
+function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_SECS();const sec=L.find(x=>x[0]===id);
+  if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}<div class="setlist">${L.map(([k,,i,t,d])=>`<a class="setrow" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div><p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
+  M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
+const SETP={
+ prof(el){el.innerHTML=`<p class="small muted" style="margin-top:0">Αλλάζουν οι λέξεις, οι ειδικότητες του προσωπικού, η διάρκεια ραντεβού και το χρώμα. Τα ραντεβού και τα πρόσωπα μένουν όπως είναι.</p>${profPickerHTML(S.data.settings.prof)}`;
+  el.onclick=e=>{const b=e.target.closest('[data-pf]');if(!b)return;S.data.settings.prof=b.dataset.pf;S.data.settings.lex={};save();toast('Επάγγελμα: '+prof().p.n,'ok');render();};},
+ info(el){const B=biz();const pv=isPrivate();
+  el.innerHTML=`<div class="seg kindseg field"><button type="button" data-kind="biz" class="${pv?'':'on'}">🏢 Επιχείρηση</button><button type="button" data-kind="private" class="${pv?'on':''}">👤 Ιδιώτης</button></div>
+  <p class="small muted" style="margin-top:0">${pv?'Για προσωπική χρήση: μόνο τα δικά σου στοιχεία.':'Μπαίνουν στις υπενθυμίσεις προς τους πελάτες και στα PDF.'}</p>
+  <form class="card" id="inf">
+   <div class="field"><label class="f" for="i-me">Το όνομά σου</label><input class="in" id="i-me" name="me" value="${esc(S.data.settings.myName||'')}" autocomplete="name"></div>
+   ${pv?'':`<div class="field"><label class="f" for="i-bn">Επωνυμία</label><input class="in" id="i-bn" name="name" value="${esc(B.name||'')}" placeholder="π.χ. ${esc(prof().p.n)} Μαρία"></div>`}
+   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="i-ph">Τηλέφωνο</label><input class="in" id="i-ph" name="phone" type="tel" value="${esc(B.phone||'')}"></div><div class="field"><label class="f" for="i-em">Email</label><input class="in" id="i-em" name="email" type="email" value="${esc(B.email||'')}"></div></div>
+   <div class="field"><label class="f" for="i-ad">Διεύθυνση</label><input class="in" id="i-ad" name="addr" value="${esc(B.addr||'')}"></div>
+   ${pv?'':`<div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="i-afm">ΑΦΜ <span class="tiny muted">· προαιρετικό</span></label><input class="in" id="i-afm" name="afm" inputmode="numeric" value="${esc(B.afm||'')}"></div><div class="field"><label class="f" for="i-web">Ιστοσελίδα <span class="tiny muted">· προαιρετικό</span></label><input class="in" id="i-web" name="web" value="${esc(B.web||'')}"></div></div>`}
+   <button class="btn pri">${ic('check',16)} Αποθήκευση</button></form>`;
+  $$('[data-kind]',el).forEach(b=>b.onclick=()=>{B.kind=b.dataset.kind;save();render();});
+  $('#inf',el).onsubmit=e=>{e.preventDefault();const o=fd(e.target);S.data.settings.myName=o.me.trim();if(!isPrivate()){B.name=(o.name||'').trim();B.afm=(o.afm||'').trim();B.web=(o.web||'').trim();}B.phone=o.phone.trim();B.email=o.email.trim();B.addr=o.addr.trim();save();toast('Αποθηκεύτηκε.','ok');render();};},
+ staff(el){const B=biz();const row=(x,me)=>{const pv=me?provById('me'):x;return`<div class="staffrow"><i class="pvb" style="background:${pv.color}">${provIni(me?{id:'me'}:x)}</i><div class="grow"><b>${esc(me?(S.user.name||'Εγώ')+' (εγώ)':x.name)}</b><div class="small muted">${esc(roleName(me?B.meRole:x.role,me?B.meCustom:x.custom))}${!me&&x.phone?' · '+esc(x.phone):''}</div><div class="row" style="margin-top:4px;gap:4px">${(me?B.meTeaches:x.appts)?`<span class="chip ok">${ic('calendar',13)} Κάνει ραντεβού</span>`:`<span class="chip">Χωρίς ραντεβού</span>`}</div></div><button class="iconbtn" data-stf="${me?'me':x.id}" aria-label="Αλλαγή">${ic('edit',16)}</button></div>`;};
+  el.innerHTML=`<div class="card"><p class="small muted" style="margin-top:0">Όσοι «κάνουν ραντεβού» έχουν δικό τους χρώμα στο ημερολόγιο και μετράνε στα ελεύθερα κενά.</p>${row(null,1)}${B.staff.map(x=>row(x)).join('')}<button class="btn pri" id="st-add" style="margin-top:12px">${ic('plus',16)} Προσθήκη προσωπικού</button></div>`;
+  $('#st-add',el).onclick=()=>staffDialog();$$('[data-stf]',el).forEach(b=>b.onclick=()=>staffDialog(b.dataset.stf));},
+ hours(el){const B=biz(),c=agCfg(),y=+todayISO().slice(0,4),HL=holList(y),t=todayISO();
+  el.innerHTML=`<div class="card section"><dl class="kv"><dt>Ώρες</dt><dd>${c.from}–${c.to}</dd><dt>Μέρες</dt><dd>${DAY_ORDER.filter(d=>c.days.includes(d)).map(d=>WDAYS_S[d]).join(', ')||'—'}</dd><dt>Διάστημα</dt><dd>${c.step} λεπτά</dd></dl><button class="btn pri" id="st-hr">${ic('clock',16)} Αλλαγή ωραρίου</button></div>
+  <div class="card"><label class="switch"><span><b>Κλειστά στις επίσημες αργίες</b><small>Βγαίνουν αυτόματα κλειστές κάθε χρόνο — και οι κινητές (Καθαρά Δευτέρα, Πάσχα, Αγίου Πνεύματος).</small></span><input type="checkbox" id="hl-on" ${B.holOff?'':'checked'}></label>
+   <div style="margin-top:10px;${B.holOff?'opacity:.5;pointer-events:none':''}">${HL.map(h=>`<label class="holrow ${h.date<t?'past':''}"><span class="hd">${WDAYS_S[wdOf(h.date)]} ${fmtShort(h.date)}</span><span class="grow">${esc(h.name)}</span><input type="checkbox" data-hol="${h.id}" ${holOn(h)?'checked':''}></label>`).join('')}</div></div>`;
+  $('#st-hr',el).onclick=agendaCfgDialog;$('#hl-on',el).onchange=e=>{B.holOff=!e.target.checked;save();render();};$$('[data-hol]',el).forEach(x=>x.onchange=()=>{B.hol=B.hol||{};B.hol[x.dataset.hol]=x.checked;save();});},
+ look(el){const base=profLex(),L=S.data.settings.lex||{},cur=themeColor();
   const lx=(k,l)=>`<div class="field"><label class="f" for="lx-${k}">${l}</label><input class="in" id="lx-${k}" data-lx="${k}" value="${esc(L[k]||'')}" placeholder="${esc(base[k]||'')}"></div>`;
-  const staffRow=(x,me)=>{const pv=me?provById('me'):x;return`<div class="staffrow"><i class="pvb" style="background:${pv.color}">${provIni(me?{id:'me'}:x)}</i><div class="grow"><b>${esc(me?(S.user.name||'Εγώ')+' (εγώ)':x.name)}</b><div class="small muted">${esc(roleName(me?B.meRole:x.role,me?B.meCustom:x.custom))}${!me&&x.phone?' · '+esc(x.phone):''}</div><div class="row" style="margin-top:4px;gap:4px">${(me?B.meTeaches:x.appts)?`<span class="chip ok">${ic('calendar',13)} Κάνει ραντεβού</span>`:`<span class="chip">Χωρίς ραντεβού</span>`}</div></div><button class="iconbtn" data-stf="${me?'me':x.id}" aria-label="Αλλαγή">${ic('edit',16)}</button></div>`;};
-  const y=+todayISO().slice(0,4),HL=holList(y),t=todayISO();
-  M().innerHTML=`${pageHead('Ρυθμίσεις','')}
-  <div class="grid g2" style="align-items:start"><div>
-  <div class="card section"><div class="card-h"><h3>Επάγγελμα</h3></div><button class="rw" id="st-prof" style="width:100%"><span class="grow"><b>${esc(p.n)}</b><small>${esc(g.g)}</small></span>${ic('right',16)}</button>
-   <details style="margin-top:12px"><summary class="small"><b>Οι λέξεις της εφαρμογής</b> — άλλαξέ τες αν θέλεις κάτι πιο δικό σου</summary><div class="grid g2" style="gap:8px;margin-top:8px">${lx('who','Το πρόσωπο')}${lx('whoAcc','…διάλεξε (αιτιατική)')}${lx('whoGen','…καρτέλα (γενική)')}${lx('whoPl','Πληθυντικός')}${lx('whoPlL','Πληθυντικός με μικρά')}${lx('one','Τίτλος στο κινητό')}</div><button class="btn sm" id="st-lx">${ic('check',15)} Αποθήκευση λέξεων</button><p class="tiny muted" style="margin:6px 0 0">Κενό = η λέξη του επαγγέλματος.</p></details></div>
-  <div class="card section"><div class="card-h"><h3>Χρώμα εφαρμογής</h3></div><div class="scols big">${THEME_COLORS.map(c=>`<button type="button" data-th="${c}" style="background:${c}" class="${themeColor()===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}</div><button class="btn sm ghost" id="th-def" style="margin-top:8px">Το χρώμα του επαγγέλματος</button></div>
-  <div class="card section"><div class="card-h"><h3>Στοιχεία</h3></div>
-   <div class="field"><label class="f" for="st-me">Το όνομά σου</label><input class="in" id="st-me" value="${esc(S.data.settings.myName||'')}"></div>
-   <div class="field"><label class="f" for="st-bn">Επωνυμία</label><input class="in" id="st-bn" value="${esc(B.name||'')}"></div>
-   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="st-ph">Τηλέφωνο</label><input class="in" id="st-ph" type="tel" value="${esc(B.phone||'')}"></div><div class="field"><label class="f" for="st-em">Email</label><input class="in" id="st-em" type="email" value="${esc(B.email||'')}"></div></div>
-   <button class="btn pri" id="st-sv">${ic('check',16)} Αποθήκευση</button><div class="tiny muted" style="margin-top:8px">Μπαίνουν στις υπενθυμίσεις και στα PDF.</div></div>
-  <div class="card section"><div class="card-h"><h3>Προσωπικό</h3></div><p class="small muted" style="margin-top:0">Όσοι «κάνουν ραντεβού» έχουν δικό τους χρώμα και μετράνε στα ελεύθερα κενά.</p>${staffRow(null,1)}${B.staff.map(x=>staffRow(x)).join('')}<button class="btn" id="st-add" style="margin-top:10px">${ic('plus',16)} Προσθήκη προσωπικού</button></div>
-  </div><div>
-  <div class="card section"><div class="card-h"><h3>Ωράριο λειτουργίας</h3></div><dl class="kv"><dt>Ώρες</dt><dd>${c.from}–${c.to}</dd><dt>Μέρες</dt><dd>${DAY_ORDER.filter(d=>c.days.includes(d)).map(d=>WDAYS_S[d]).join(', ')||'—'}</dd><dt>Διάστημα</dt><dd>${c.step} λεπτά</dd><dt>Χωρητικότητα</dt><dd>${PV.length} ${PV.length===1?'άτομο':'άτομα'}</dd></dl><button class="btn" id="st-hr">${ic('clock',16)} Αλλαγή ωραρίου</button></div>
-  <div class="card section"><div class="card-h"><h3>Αργίες</h3></div><label class="switch"><span><b>Κλειστά στις επίσημες αργίες</b><small>Βγαίνουν αυτόματα κλειστές κάθε χρόνο — και οι κινητές (Καθαρά Δευτέρα, Πάσχα, Αγίου Πνεύματος).</small></span><input type="checkbox" id="hl-on" ${B.holOff?'':'checked'}></label>
-   <details style="margin-top:10px"><summary class="small"><b>Αργίες ${y}</b></summary><div style="${B.holOff?'opacity:.5;pointer-events:none':''}">${HL.map(h=>`<label class="holrow ${h.date<t?'past':''}"><span class="hd">${WDAYS_S[wdOf(h.date)]} ${fmtShort(h.date)}</span><span class="grow">${esc(h.name)}</span><input type="checkbox" data-hol="${h.id}" ${holOn(h)?'checked':''}></label>`).join('')}</div></details></div>
-  <div class="card section"><div class="card-h"><h3>Αντίγραφα ασφαλείας</h3></div><p class="small muted" style="margin-top:0">Τα δεδομένα μένουν μόνο σε αυτή τη συσκευή. ${S.data.meta.lastBackup?'Τελευταίο αντίγραφο: '+fmtDate(new Date(S.data.meta.lastBackup).toISOString())+'.':'<b>Δεν έχεις κρατήσει ακόμα αντίγραφο.</b>'}</p>
-   <div class="row"><button class="btn pri" id="bk-now">${ic('cloud',16)} Αντίγραφο τώρα</button><button class="btn" id="bk-rs">${ic('history',16)} Επαναφορά</button></div><p class="tiny muted" id="bk-f" style="margin:8px 0 0"></p><input type="file" id="bk-file" accept="application/json,.json" hidden></div>
-  <div class="card section"><div class="card-h"><h3>Έκδοση ${esc(APP_VERSION)}</h3></div><button class="btn" id="up-chk">${ic('refresh',16)} Έλεγχος αναβάθμισης</button><p class="tiny muted" style="margin:10px 0 0">© 2026 Ανδρέας Μ. Γλεντζάκης. Με την επιφύλαξη παντός δικαιώματος.</p></div>
-  </div></div>`;
-  $('#st-prof').onclick=profDialog;$$('[data-th]').forEach(b=>b.onclick=()=>{S.data.settings.color=b.dataset.th;save();render();});$('#th-def').onclick=()=>{delete S.data.settings.color;save();render();};
-  $('#st-lx').onclick=()=>{const o={};$$('[data-lx]').forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};
-  $('#st-sv').onclick=()=>{S.data.settings.myName=$('#st-me').value.trim();B.name=$('#st-bn').value.trim();B.phone=$('#st-ph').value.trim();B.email=$('#st-em').value.trim();save();toast('Αποθηκεύτηκε.','ok');render();};
-  $('#st-add').onclick=()=>staffDialog();$$('[data-stf]').forEach(b=>b.onclick=()=>staffDialog(b.dataset.stf));
-  $('#st-hr').onclick=agendaCfgDialog;
-  $('#hl-on').onchange=e=>{B.holOff=!e.target.checked;save();render();};$$('[data-hol]').forEach(x=>x.onchange=()=>{B.hol=B.hol||{};B.hol[x.dataset.hol]=x.checked;save();});
-  $('#bk-now').onclick=backupNow;$('#bk-rs').onclick=restoreMenu;$('#bk-file').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(restoreFrom).catch(()=>toast('Δεν διαβάστηκε το αρχείο.','bad'));e.target.value='';};
-  folderNote();$('#up-chk').onclick=checkUpdate;}
-function profDialog(){const md=modal(`<div class="spread"><h3 style="margin:0">Επάγγελμα</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div><p class="small muted">Αλλάζουν οι λέξεις και οι ειδικότητες. Τα ραντεβού και τα πρόσωπα μένουν όπως είναι.</p>${profPickerHTML(S.data.settings.prof)}`,{guard:false});
-  md.el.addEventListener('click',e=>{const b=e.target.closest('[data-pf]');if(!b)return;S.data.settings.prof=b.dataset.pf;S.data.settings.lex={};save();md.close();render();toast('Το επάγγελμα άλλαξε.','ok');});}
+  el.innerHTML=`<div class="card section"><h3>Χρώμα εφαρμογής</h3>${THEME_COLORS.map(([n,cs])=>`<div class="small muted" style="margin:10px 0 6px">${n}</div><div class="thgrid">${cs.map(c=>`<button type="button" data-th="${c}" style="background:${c}" class="${cur===c?'on':''}" aria-label="Χρώμα ${c}">${cur===c?ic('check',18):''}</button>`).join('')}</div>`).join('')}
+   <div class="row" style="margin-top:12px;align-items:center"><label class="small" for="th-own">Δικό μου χρώμα</label><input type="color" id="th-own" value="${cur}"><button class="btn sm ghost" id="th-def">Το χρώμα του επαγγέλματος</button></div></div>
+  <div class="card"><h3>Οι λέξεις της εφαρμογής</h3><p class="small muted" style="margin-top:0">Άλλαξέ τες αν θέλεις κάτι πιο δικό σου. Κενό = η λέξη του επαγγέλματος.</p><div class="grid g2" style="gap:8px">${lx('who','Το πρόσωπο')}${lx('whoAcc','«Διάλεξε …»')}${lx('whoGen','«Καρτέλα …»')}${lx('whoPl','Πληθυντικός')}${lx('whoPlL','Πληθυντικός με μικρά')}${lx('one','Τίτλος στο κινητό')}</div><button class="btn pri" id="st-lx">${ic('check',15)} Αποθήκευση λέξεων</button></div>`;
+  $$('[data-th]',el).forEach(b=>b.onclick=()=>{S.data.settings.color=b.dataset.th;save();render();});$('#th-own',el).onchange=e=>{S.data.settings.color=e.target.value;save();render();};$('#th-def',el).onclick=()=>{delete S.data.settings.color;save();render();};
+  $('#st-lx',el).onclick=()=>{const o={};$$('[data-lx]',el).forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};},
+ backup(el){backupPage(el);},
+ about(el){el.innerHTML=`<div class="card section"><h3>Εγκατάσταση</h3>${isStandalone()?'<p class="small muted" style="margin:0">Η εφαρμογή είναι εγκατεστημένη σε αυτή τη συσκευή.</p>':INST?`<p class="small muted" style="margin-top:0">Βάλ' την στην αρχική οθόνη για να ανοίγει σαν κανονική εφαρμογή.</p><button class="btn pri" id="ab-in">${ic('download',16)} Εγκατάσταση</button>`:`<p class="small muted" style="margin:0">Από τις τρεις τελείες του Chrome: «Προσθήκη στην αρχική οθόνη» → «Εγκατάσταση». Αν γράφει «έχει ήδη εγκατασταθεί», ψάξε «Ημερολόγιο» στη λίστα εφαρμογών του κινητού.</p>`}</div>
+  <div class="card"><h3>Έκδοση ${esc(APP_VERSION)}</h3><button class="btn" id="up-chk">${ic('refresh',16)} Έλεγχος αναβάθμισης</button><p class="tiny muted" style="margin:12px 0 0">© 2026 Ανδρέας Μ. Γλεντζάκης. Με την επιφύλαξη παντός δικαιώματος.</p></div>`;
+  const ai=$('#ab-in',el);if(ai)ai.onclick=installNow;$('#up-chk',el).onclick=checkUpdate;}
+};
 function staffDialog(id){const B=biz();const me=id==='me';const x=me?{name:S.user.name,role:B.meRole,custom:B.meCustom,color:B.meColor,appts:B.meTeaches}:id?B.staff.find(y=>y.id===id):{id:uid(),name:'',role:(ROLES.find(r=>r[2])||ROLES[0])[0],color:STAFF_COLORS[(B.staff.length+1)%STAFF_COLORS.length],appts:true,phone:'',created:new Date().toISOString()};if(!x)return;let col=x.color;
   const md=modal(`<h3 style="margin-top:0">${me?'Εγώ':id?'Αλλαγή προσωπικού':'Νέο μέλος προσωπικού'}</h3><form id="sf">
    ${me?'':`<div class="field"><label class="f" for="sf-n">Όνομα</label><input class="in" id="sf-n" name="name" required value="${esc(x.name||'')}"></div><div class="field"><label class="f" for="sf-ph">Τηλέφωνο</label><input class="in" id="sf-ph" name="phone" type="tel" value="${esc(x.phone||'')}"></div>`}
@@ -244,32 +268,95 @@ function staffDialog(id){const B=biz();const me=id==='me';const x=me?{name:S.use
     save();md.close();render();};
   const dl=$('#sf-del',md.el);if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.by===x.id).length;if(!await confirmDlg(`Αφαίρεση «${esc(x.name)}»;${n?` Τα ${n} ραντεβού του περνούν σε σένα.`:''}`,{ok:'Αφαίρεση',danger:true}))return;appts().forEach(a=>{if(a.by===x.id)delete a.by;});B.staff=B.staff.filter(y=>y.id!==x.id);save();md.close();render();};}
 
-/* ---------- αντίγραφα: κοινός φάκελος όλων των εφαρμογών GlenApps ---------- */
-function idb(){return new Promise((ok,no)=>{const r=indexedDB.open('shared-backups',1);r.onupgradeneeded=()=>r.result.createObjectStore('handles');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});}
-async function idbGet(k){const db=await idb();return new Promise(ok=>{const r=db.transaction('handles').objectStore('handles').get(k);r.onsuccess=()=>ok(r.result||null);r.onerror=()=>ok(null);});}
-async function idbSet(k,v){const db=await idb();return new Promise(ok=>{const t=db.transaction('handles','readwrite');v===null?t.objectStore('handles').delete(k):t.objectStore('handles').put(v,k);t.oncomplete=()=>ok();t.onerror=()=>ok();});}
-const folderOK=()=>'showDirectoryPicker' in window;
-async function rootDir(pick){if(!folderOK())return null;let h=null;try{h=await idbGet('root');}catch(e){}
-  if(h){try{let p=await h.queryPermission({mode:'readwrite'});if(p!=='granted'&&pick)p=await h.requestPermission({mode:'readwrite'});if(p==='granted')return h;}catch(e){}}
-  if(!pick)return null;try{h=await window.showDirectoryPicker({id:'backups',mode:'readwrite',startIn:'downloads'});await idbSet('root',h);return h;}catch(e){return null;}}
-async function folderNote(){const el=$('#bk-f');if(!el)return;if(!folderOK()){el.textContent='Σε αυτή τη συσκευή τα αντίγραφα κατεβαίνουν ως αρχείο.';return;}
-  let h=null;try{h=await idbGet('root');}catch(e){}
-  el.innerHTML=h?`Κοινός φάκελος: <b>${esc(h.name)}</b> / ${BACKUP_SUB} <button class="btn sm ghost" id="bk-x" aria-label="Αποσύνδεση φακέλου">${ic('x',13)}</button>`:'Την πρώτη φορά θα σε ρωτήσει σε ποιον φάκελο να κρατά τα αντίγραφα — ο ίδιος κοινός φάκελος με τις άλλες εφαρμογές σου.';
-  const x=$('#bk-x');if(x)x.onclick=async()=>{await idbSet('root',null);folderNote();toast('Ο φάκελος αποσυνδέθηκε. Τα αρχεία δεν σβήστηκαν.');};}
+/* ---------- αντίγραφα ασφαλείας (ίδιο στήσιμο με το Δρομολόγιο) ----------
+   1. μέσα στην εφαρμογή: γίνεται μόνο του, κρατά τα 10 νεότερα
+   2. φάκελος στο κινητό: δικός του φάκελος (όχι ο φάκελος άλλης εφαρμογής), μόνο του μία φορά τη μέρα
+   3. σύννεφο: Drive / OneDrive / Dropbox μέσα από την κοινοποίηση
+   4. αρχείο με το χέρι
+*/
+const FS_DB='shared-backups',FS_STORE='handles',FS_KEY='imerologio-root',BK_KEEP=10;
+const fsOK=()=>typeof window.showDirectoryPicker==='function'&&window.isSecureContext;
+function fsIdb(){return new Promise((ok,no)=>{const r=indexedDB.open(FS_DB,1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains(FS_STORE))d.createObjectStore(FS_STORE);};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});}
+async function fsDo(mode,fn){try{const db=await fsIdb();return await new Promise((ok,no)=>{const q=fn(db.transaction(FS_STORE,mode).objectStore(FS_STORE));q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error);});}catch(e){return null;}}
+const fsGet=()=>fsDo('readonly',st=>st.get(FS_KEY)),fsPut=h=>fsDo('readwrite',st=>st.put(h,FS_KEY)),fsDel=()=>fsDo('readwrite',st=>st.delete(FS_KEY));
+async function fsPerm(h,ask){try{let p=await h.queryPermission({mode:'readwrite'});if(p==='granted')return true;if(!ask)return false;p=await h.requestPermission({mode:'readwrite'});return p==='granted';}catch(e){return false;}}
+const normT=t=>String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+const fsOtherApp=n=>/(fish|ψαρ|δρομολογ|dromolog|υγει|ygei|ταμει|tameia|lumio|identify|brewtopia|οχημ|φωτομετρ|fotometr)/.test(normT(n));
+async function fsRoot(ask){if(!fsOK())return null;let h=await fsGet();if(h&&await fsPerm(h,ask))return h;return null;}
+async function fsChoose(){if(!fsOK())return toast('Αυτή η συσκευή δεν επιτρέπει επιλογή φακέλου. Χρησιμοποίησε το σύννεφο ή το αρχείο.','bad');
+  let h;try{h=await window.showDirectoryPicker({id:'imerologio',mode:'readwrite',startIn:'documents'});}catch(e){return;}
+  if(!await fsPerm(h,true))return toast('Δεν δόθηκε άδεια εγγραφής στον φάκελο.','bad');
+  if(fsOtherApp(h.name)&&!await confirmDlg(`Ο φάκελος «${esc(h.name)}» μοιάζει να ανήκει σε άλλη εφαρμογή. Να μπαίνουν σίγουρα εκεί τα αντίγραφα του Ημερολογίου;`,{ok:'Ναι, εκεί',cancel:'Διάλεξε άλλον'}))return fsChoose();
+  await fsPut(h);const ok=await fsSave(h);toast(ok?'Ο φάκελος ορίστηκε και μπήκε το πρώτο αντίγραφο.':'Ο φάκελος ορίστηκε.','ok');render();}
+async function fsDir(root){try{return await root.getDirectoryHandle(BACKUP_SUB,{create:true});}catch(e){return null;}}
+async function fsSave(root){root=root||await fsRoot(false);if(!root)return false;const d=await fsDir(root);if(!d)return false;
+  try{const fh=await d.getFileHandle('imerologio-'+todayISO()+'.json',{create:true});const w=await fh.createWritable();await w.write(backupText());await w.close();
+    const names=[];for await(const[n,h]of d.entries())if(h.kind==='file'&&/^imerologio-\d{4}-\d{2}-\d{2}\.json$/.test(n))names.push(n);names.sort().reverse().slice(30).forEach(n=>d.removeEntry(n).catch(()=>{}));
+    S.data.meta.folderLast=Date.now();return true;}catch(e){return false;}}
+async function fsList(){const root=await fsRoot(false);if(!root)return[];const d=await fsDir(root);if(!d)return[];const L=[];try{for await(const[n,h]of d.entries())if(h.kind==='file'&&n.endsWith('.json'))L.push([n,h]);}catch(e){}return L.sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10);}
+// μέσα στην εφαρμογή (ιδιωτικός χώρος του φυλλομετρητή)
+async function opfsDir(){try{const r=await navigator.storage.getDirectory();return await r.getDirectoryHandle('imerologio-antigrafa',{create:true});}catch(e){return null;}}
+async function opfsSave(){const d=await opfsDir();if(!d)return false;try{const fh=await d.getFileHandle('imerologio-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.json',{create:true});const w=await fh.createWritable();await w.write(backupText());await w.close();
+  const L=[];for await(const[n,h]of d.entries())if(h.kind==='file')L.push(n);L.sort().reverse().slice(BK_KEEP).forEach(n=>d.removeEntry(n).catch(()=>{}));S.data.meta.opfsLast=Date.now();return true;}catch(e){return false;}}
+async function opfsList(){const d=await opfsDir();if(!d)return[];const L=[];try{for await(const[n,h]of d.entries())if(h.kind==='file')L.push([n,h]);}catch(e){}return L.sort((a,b)=>b[0].localeCompare(a[0]));}
 function backupText(){return JSON.stringify({app:'imerologio',version:APP_VERSION,savedAt:new Date().toISOString(),data:S.data});}
+const bkName=()=>'imerologio-'+todayISO()+'.json';
+function bkWays(){return Object.assign({folder:false,cloud:false},S.data.settings.bkWays||{});}
 function markBacked(){S.data.meta.lastBackup=Date.now();S.data.meta.changes=0;try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){}}
-async function backupNow(){const name='imerologio-'+todayISO()+'.json',txt=backupText();const root=await rootDir(true);
-  if(root){try{const d=await root.getDirectoryHandle(BACKUP_SUB,{create:true});const fh=await d.getFileHandle(name,{create:true});const w=await fh.createWritable();await w.write(txt);await w.close();markBacked();toast('Το αντίγραφο μπήκε στον φάκελο «'+BACKUP_SUB+'».','ok');return render();}catch(e){}}
-  downloadText(name,txt,'application/json');markBacked();toast('Το αντίγραφο κατέβηκε ως αρχείο.','ok');render();}
-async function restoreMenu(){const root=await rootDir(false);let files=[];
-  if(root){try{const d=await root.getDirectoryHandle(BACKUP_SUB,{create:false});for await(const[n,h]of d.entries())if(h.kind==='file'&&n.endsWith('.json'))files.push([n,h]);files.sort((a,b)=>b[0].localeCompare(a[0]));files=files.slice(0,10);}catch(e){}}
-  if(!files.length)return $('#bk-file').click();
-  const md=modal(`<h3 style="margin-top:0">Επαναφορά από αντίγραφο</h3><p class="small muted">Θα αντικαταστήσει ό,τι υπάρχει τώρα.</p><div class="list">${files.map(([n],i)=>`<button class="rw" data-bf="${i}"><span class="grow"><b>${esc(n.replace('imerologio-','').replace('.json',''))}</b>${i===0?'<small>νεότερο</small>':''}</span></button>`).join('')}<button class="rw" data-bf="file"><span class="grow"><b>Από άλλο αρχείο…</b></span></button></div>`,{guard:false});
-  md.el.addEventListener('click',async e=>{const b=e.target.closest('[data-bf]');if(!b)return;md.close();if(b.dataset.bf==='file')return $('#bk-file').click();const h=files[+b.dataset.bf][1];restoreFrom(await(await h.getFile()).text());});}
-async function restoreFrom(txt){let o;try{o=JSON.parse(txt);}catch(e){}const d=o&&o.app==='imerologio'&&o.data;
+function bkStatusShort(){const m=S.data.meta;return m.lastBackup?'Τελευταίο: '+fmtShort(new Date(m.lastBackup).toISOString().slice(0,10))+(m.changes?' · '+m.changes+' αλλαγές από τότε':''):'Δεν έχει κρατηθεί ακόμα';}
+async function cloudShare(){const f=new File([backupText()],bkName(),{type:'application/json'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Αντίγραφο Ημερολογίου'});S.data.meta.cloudLast=Date.now();markBacked();toast('Έτοιμο. Αν διάλεξες το σύννεφο, το αρχείο ανέβηκε εκεί.','ok');return true;}catch(e){if(e&&e.name==='AbortError'){toast('Ακυρώθηκε· δεν ανέβηκε τίποτα.');return false;}}}
+  downloadText(bkName(),backupText(),'application/json');markBacked();toast('Το αρχείο κατέβηκε στις λήψεις. Ανέβασέ το στο σύννεφό σου.','ok');return true;}
+async function backupAllNow(){const W=bkWays(),ok=[],no=[];await opfsSave();ok.push('μέσα στην εφαρμογή');
+  if(W.folder){(await fsSave(await fsRoot(true)))?ok.push('φάκελος'):no.push('φάκελος');}
+  if(W.cloud){(await cloudShare())?ok.push('σύννεφο'):no.push('σύννεφο');}
+  markBacked();toast('✓ Αντίγραφο σε: '+ok.join(', ')+'.'+(no.length?' Δεν έγινε σε: '+no.join(', ')+'.':'')+(!W.folder&&!W.cloud?' Διάλεξε και έναν τρόπο έξω από την εφαρμογή.':''),no.length?'bad':'ok');render();}
+// αυτόματο: μία φορά τη μέρα μέσα στην εφαρμογή και στον φάκελο (αν έχει ήδη άδεια)
+async function autoBackup(){const m=S.data.meta;if(!S.data.students.length&&!(S.data.appts||[]).length)return;const day=24*36e5;
+  if(Date.now()-(m.opfsLast||0)>day)await opfsSave();if(bkWays().folder&&Date.now()-(m.folderLast||0)>day)await fsSave();try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){}}
+async function backupPage(el){const W=bkWays(),m=S.data.meta;const root=fsOK()?await fsGet():null;const ago=t=>t?fmtShort(new Date(t).toISOString().slice(0,10)):'ποτέ';
+  el.innerHTML=`<div class="card section bkhead"><p class="small" style="margin:0 0 10px">${m.lastBackup?'Τελευταίο αντίγραφο: <b>'+fmtDate(new Date(m.lastBackup).toISOString())+'</b>.':'<b>Δεν έχει κρατηθεί ακόμα αντίγραφο.</b>'} Αλλαγές από τότε: ${m.changes||0}.</p>
+   <button class="btn pri wide" id="bk-all">🛟 Κράτα αντίγραφο τώρα</button>
+   <p class="tiny muted" style="margin:8px 0 0">Μέσα στην εφαρμογή κρατιέται πάντα αντίγραφο μόνο του. Για ασφάλεια διάλεξε και έναν τρόπο έξω από αυτήν.</p></div>
+  <details class="bkcard" open><summary><span class="bkic">📁</span><span class="grow"><b>Φάκελος στο κινητό</b><small>${!fsOK()?'δεν υποστηρίζεται σε αυτή τη συσκευή':root?'«'+esc(root.name)+'» / '+BACKUP_SUB+' · '+ago(m.folderLast):'δεν έχει οριστεί'}</small></span></summary>
+   ${fsOK()?`<label class="check"><input type="checkbox" data-way="folder" ${W.folder?'checked':''}> Να γίνεται με το «Κράτα αντίγραφο τώρα» και μόνο του κάθε μέρα</label>
+   <div class="row" style="margin-top:10px"><button class="btn" id="fs-pick">${ic('folder',16)} ${root?'Άλλαξε φάκελο':'Διάλεξε φάκελο'}</button>${root?`<button class="btn ghost" id="fs-x">${ic('x',15)} Αποσύνδεση</button>`:''}</div>
+   <p class="tiny muted" style="margin:8px 0 0">Διάλεξε ή φτιάξε έναν φάκελο μόνο για αντίγραφα (π.χ. «Αντίγραφα»), όχι τον φάκελο άλλης εφαρμογής. Μέσα του μπαίνει ο υποφάκελος «${BACKUP_SUB}».</p>
+   <div id="fs-list"></div>`:`<p class="small muted">Χρησιμοποίησε το σύννεφο ή το αρχείο πιο κάτω.</p>`}</details>
+  <details class="bkcard"><summary><span class="bkic">☁️</span><span class="grow"><b>Σύννεφο</b><small>${m.cloudLast?'τελευταίο '+ago(m.cloudLast):'Drive, OneDrive, Dropbox, iCloud'}</small></span></summary>
+   <label class="check"><input type="checkbox" data-way="cloud" ${W.cloud?'checked':''}> Να γίνεται με το «Κράτα αντίγραφο τώρα»</label>
+   <button class="btn pri wide" id="bk-cloud" style="margin-top:10px">☁️ Ανέβασμα στο σύννεφο τώρα</button>
+   <details class="det"><summary class="small"><b>Οδηγίες βήμα βήμα</b></summary><ol class="howto small">
+    <li>Βεβαιώσου ότι στο κινητό υπάρχει η εφαρμογή του σύννεφού σου (Google Drive, OneDrive, Dropbox) και ότι έχεις μπει με τον λογαριασμό σου.</li>
+    <li>Πάτα «☁️ Ανέβασμα στο σύννεφο τώρα».</li>
+    <li>Στη λίστα «Κοινοποίηση» διάλεξε «Drive» (ή «OneDrive», «Dropbox»). Στο iPhone «Αποθήκευση στα Αρχεία» → «iCloud Drive».</li>
+    <li>Την πρώτη φορά φτιάξε φάκελο «Ημερολόγιο αντίγραφα» και πάτα «Αποθήκευση». Τις επόμενες φορές το σύννεφο τον θυμάται.</li></ol></details></details>
+  <details class="bkcard"><summary><span class="bkic">📱</span><span class="grow"><b>Μέσα στην εφαρμογή</b><small>γίνεται μόνο του · ${ago(m.opfsLast)}</small></span></summary><div id="op-list"><p class="small muted">Φόρτωση…</p></div></details>
+  <details class="bkcard"><summary><span class="bkic">📤</span><span class="grow"><b>Αρχείο με το χέρι</b><small>κοινοποίηση ή αποθήκευση στις λήψεις</small></span></summary>
+   <div class="row"><button class="btn" id="bk-share">${ic('send',16)} Κοινοποίηση</button><button class="btn" id="bk-dl">${ic('download',16)} Αποθήκευση αρχείου</button></div></details>
+  <details class="bkcard bkdanger"><summary><span class="bkic">⚠️</span><span class="grow"><b>Επαναφορά</b><small>από αρχείο</small></span></summary>
+   <p class="small muted" style="margin-top:0">Η επαναφορά αντικαθιστά ό,τι υπάρχει τώρα. Για επαναφορά από τον φάκελο ή από την εφαρμογή, πάτα ένα αρχείο στις κάρτες πιο πάνω.</p>
+   <label class="btn danger">${ic('history',16)} Επαναφορά από αρχείο<input type="file" id="bk-file" accept="application/json,.json,.txt" hidden></label></details>`;
+  const fileRows=(L,attr)=>L.length?`<div class="list" style="margin-top:10px">${L.map(([n],i)=>`<button class="rw" ${attr}="${i}"><span class="ricon">${ic('history',16)}</span><span class="grow"><b>${esc(n.replace('imerologio-','').replace('.json',''))}</b><small>${i===0?'νεότερο · ':''}πάτα για επαναφορά</small></span></button>`).join('')}</div>`:'<p class="small muted">Δεν υπάρχουν ακόμα αντίγραφα.</p>';
+  $('#bk-all',el).onclick=backupAllNow;$('#bk-cloud',el).onclick=async()=>{await cloudShare();render();};
+  $('#bk-share',el).onclick=cloudShare;$('#bk-dl',el).onclick=()=>{downloadText(bkName(),backupText(),'application/json');markBacked();toast('Το αρχείο αποθηκεύτηκε στις λήψεις.','ok');};
+  $('#bk-file',el).onchange=e=>{const f=e.target.files[0];if(f)f.text().then(restoreFrom).catch(()=>toast('Δεν διαβάστηκε το αρχείο.','bad'));e.target.value='';};
+  $$('[data-way]',el).forEach(x=>x.onchange=async()=>{const w=bkWays();w[x.dataset.way]=x.checked;S.data.settings.bkWays=w;save();if(x.dataset.way==='folder'&&x.checked&&!await fsGet())fsChoose();});
+  const fp=$('#fs-pick',el);if(fp)fp.onclick=async()=>{const w=bkWays();w.folder=true;S.data.settings.bkWays=w;save();fsChoose();};
+  const fx=$('#fs-x',el);if(fx)fx.onclick=async()=>{await fsDel();const w=bkWays();w.folder=false;S.data.settings.bkWays=w;save();toast('Ο φάκελος αποσυνδέθηκε. Τα αρχεία του δεν σβήστηκαν.');render();};
+  if(fsOK()&&root){const FL=await fsList();const box=$('#fs-list',el);if(box){box.innerHTML=fileRows(FL,'data-fsr');box.onclick=async e=>{const b=e.target.closest('[data-fsr]');if(b)restoreFrom(await(await FL[+b.dataset.fsr][1].getFile()).text());};}}
+  const OL=await opfsList();const ob=$('#op-list',el);if(ob){ob.innerHTML=fileRows(OL,'data-opr');ob.onclick=async e=>{const b=e.target.closest('[data-opr]');if(b)restoreFrom(await(await OL[+b.dataset.opr][1].getFile()).text());};}}
+async function restoreFrom(txt){let o=null;try{const t=String(txt||'');o=JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1));}catch(e){}const d=o&&o.app==='imerologio'&&o.data;
   if(!d||!Array.isArray(d.students))return toast('Το αρχείο δεν είναι αντίγραφο του Ημερολογίου.','bad');
   if(!await confirmDlg(`Επαναφορά αντιγράφου με ${d.students.length} πρόσωπα και ${(d.appts||[]).length} ραντεβού; Ό,τι υπάρχει τώρα θα αντικατασταθεί.`,{ok:'Επαναφορά',danger:true}))return;
-  localStorage.setItem(STORE,JSON.stringify(d));S.data=loadData();applyIdentity();toast('Έγινε επαναφορά.','ok');go('agenda');render();}
+  await opfsSave();localStorage.setItem(STORE,JSON.stringify(d));S.data=loadData();applyIdentity();toast('Έγινε επαναφορά.','ok');go('today');render();}
+
+/* ---------- εγκατάσταση: παράθυρο που βγαίνει μόνο του ---------- */
+async function installNow(){if(!INST)return;INST.prompt();let r=null;try{r=await INST.userChoice;}catch(e){}INST=null;if(r&&r.outcome==='accepted')toast('Η εφαρμογή μπαίνει στην αρχική οθόνη.','ok');render();}
+function installAsk(){if(!INST||isStandalone()||topModal()||!S.data.settings.prof)return;const k='imer-instask';try{if(Date.now()-(+localStorage.getItem(k)||0)<3*864e5)return;localStorage.setItem(k,Date.now());}catch(e){}
+  const md=modal(`<div class="instpop">${LOGO}<h3>Βάλε το Ημερολόγιο στο κινητό</h3><p class="small muted">Ανοίγει από την αρχική οθόνη σαν κανονική εφαρμογή, γρήγορα και χωρίς τον φυλλομετρητή.</p>
+   <div class="row" style="justify-content:center"><button class="btn" data-close>Όχι τώρα</button><button class="btn pri" id="ip-go">${ic('download',16)} Εγκατάσταση</button></div></div>`,{guard:false});
+  $('#ip-go',md.el).onclick=()=>{md.close();installNow();};}
 
 /* ---------- αναβάθμιση ---------- */
 let swReg=null;
@@ -285,4 +372,5 @@ setTimeout(async()=>{try{const k='imer-upchk';if(localStorage.getItem(k)===today
 S.data=loadData();applyIdentity();
 if(!location.hash)history.replaceState(null,'','#/today');
 render();
+setTimeout(autoBackup,5000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&/^#\/agenda/.test(location.hash)&&!topModal())render();});

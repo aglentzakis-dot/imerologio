@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.2">
+<meta name="app-version" content="1.3">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -235,6 +235,31 @@ textarea.in{min-height:96px;resize:vertical}
 .loading .sun{width:56px;height:56px;animation:pulse 1.6s ease-in-out infinite}
 .loading .sun svg{width:56px;height:56px;border-radius:16px}
 @keyframes pulse{50%{transform:scale(1.08);opacity:.75}}
+/* ρυθμίσεις */
+.setlist{display:flex;flex-direction:column;gap:8px}
+.setrow{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:16px;color:var(--ink);text-decoration:none}
+.setrow:hover{border-color:var(--brand)}
+.setrow b{display:block}.setrow small{color:var(--ink2);font-size:.82rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setrow .grow,.bkcard>summary .grow{flex:1;min-width:0}
+.seti{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:22px;background:var(--brand-soft);flex:none}
+.setback{display:inline-flex;align-items:center;gap:4px;font-size:.9rem;font-weight:600;text-decoration:none;margin-bottom:10px}
+.kindseg{display:flex;gap:6px}.kindseg button{flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);font-weight:700;cursor:pointer;color:var(--ink)}
+.kindseg button.on{border-color:var(--brand);background:var(--brand-soft)}
+.thgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:8px}
+.thgrid button{aspect-ratio:1;border-radius:12px;border:2px solid transparent;cursor:pointer;display:grid;place-items:center;color:#fff}
+.thgrid button.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--paper) inset}
+input[type=color]{width:44px;height:36px;border:1px solid var(--line);border-radius:10px;background:none;padding:2px}
+.conpick{width:100%;justify-content:center;border-style:dashed}
+.bkcard{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:10px}
+.bkcard>summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
+.bkcard>summary::-webkit-details-marker{display:none}
+.bkcard>summary small{display:block;color:var(--ink2);font-size:.82rem}
+.bkcard[open]>summary{margin-bottom:10px}
+.bkic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:var(--brand-soft);flex:none}
+.bkdanger .bkic{background:var(--badbg)}
+.btn.wide{width:100%;justify-content:center}
+.howto{padding-left:20px;margin:8px 0}.howto li{margin-bottom:6px}
+.instpop{text-align:center;padding:6px 4px}.instpop svg{width:64px;height:64px;border-radius:18px;margin:4px auto 10px;display:block}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 /* διάλογοι */
 .ov{position:fixed;inset:0;background:rgba(20,18,25,.4);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;animation:fade .15s}
@@ -1271,23 +1296,23 @@ ol.howto{display:block;padding-left:20px;margin:6px 0}ol.howto li{display:list-i
 body{background:#fff}.wsheet{page-break-after:always;box-shadow:none;border:0}
 
 /* ===== Ημερολόγιο: ταυτότητα — καθαρό, δροσερό χαρτί και το χρώμα του επαγγέλματος ===== */
-:root{--brand:#17324D;--brand-d:#112538;--brand-soft:#E3E8EE;--brand-soft2:#F0F3F6;
+:root{--brand:#17324D;--on-brand:#fff;--brand-txt:#17324D;--brand-d:#112538;--brand-soft:#E3E8EE;--brand-soft2:#F0F3F6;
   --cream:#F2F4F8;--paper:#FFFFFF;--field:#FFFFFF;--raise:#F8F9FB;--ink:#15202E;--ink2:#5A6678;--ink3:#8D97A6;--line:#E1E5EC;--line2:#EDF0F4;
-  --lilac-d:var(--brand);--lilac:var(--brand-soft);--head:var(--font);--sh:0 1px 2px rgba(21,32,46,.05),0 6px 20px rgba(21,32,46,.06)}
+  --lilac-d:var(--brand-txt);--lilac:var(--brand-soft);--head:var(--font);--sh:0 1px 2px rgba(21,32,46,.05),0 6px 20px rgba(21,32,46,.06)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--cream:#11161D;--paper:#19202A;--field:#1F2733;--raise:#1C2430;--ink:#E8EDF3;--ink2:#A7B1BE;--ink3:#7D8896;--line:#2A3340;--line2:#232B36;
   --lilac:color-mix(in srgb,var(--brand) 30%,#19202A);--lilac-d:color-mix(in srgb,var(--brand) 55%,#fff)}}
 h1,h2,h3{font-family:var(--font);font-weight:800;letter-spacing:-.015em}
 h1{font-size:1.55rem}
-.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
 .btn.pri:hover{background:var(--brand-d)}
 a{color:var(--lilac-d)}
 .brand svg,.tbrand svg{border-radius:10px}
 .side-ver{margin-top:auto;padding:10px 12px}
-.side .nav a.on{background:var(--brand);color:#fff}
-.side .nav a.on .ic{color:#fff}
+.side .nav a.on{background:var(--brand);color:var(--on-brand)}
+.side .nav a.on .ic{color:var(--on-brand)}
 
 /* μπάρα κορυφής στο κινητό: γεμάτο χρώμα */
-.topbar{background:var(--brand);border-bottom:0;color:#fff;backdrop-filter:none;-webkit-backdrop-filter:none;gap:10px;height:auto;min-height:56px;padding-top:env(safe-area-inset-top,0px)}
+.topbar{background:var(--brand);border-bottom:0;color:var(--on-brand);backdrop-filter:none;-webkit-backdrop-filter:none;gap:10px;height:auto;min-height:56px;padding-top:env(safe-area-inset-top,0px)}
 .topbar .tbrand{flex:none}.topbar .tbrand svg{width:30px;height:30px;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
 .tbtitle{flex:1;font-size:1.12rem;font-weight:800;letter-spacing:-.01em}
 .tbprof{font-size:.8rem;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:42vw}
@@ -1295,14 +1320,14 @@ a{color:var(--lilac-d)}
 @media (max-width:960px){.side{display:none}.main{padding-top:18px;padding-bottom:120px}}
 
 /* κάτω πλοήγηση + κουμπί προσθήκης */
-.bottomnav a.on{color:var(--brand)}
-.bottomnav a.on .bi{background:var(--brand-soft);color:var(--brand)}
-.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:55;width:60px;height:60px;border-radius:20px;border:0;background:var(--brand);color:#fff;display:grid;place-items:center;box-shadow:0 10px 24px color-mix(in srgb,var(--brand) 45%,transparent);cursor:pointer}
+.bottomnav a.on{color:var(--brand-txt)}
+.bottomnav a.on .bi{background:var(--brand-soft);color:var(--brand-txt)}
+.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:55;width:60px;height:60px;border-radius:20px;border:0;background:var(--brand);color:var(--on-brand);display:grid;place-items:center;box-shadow:0 10px 24px color-mix(in srgb,var(--brand) 45%,transparent);cursor:pointer}
 .fab:active{transform:scale(.96)}
 @media (min-width:961px){.fab{bottom:28px;right:32px}}
 
 /* «Σήμερα» */
-.hero{position:relative;overflow:hidden;background:var(--brand);color:#fff;border-radius:24px;padding:22px 22px 24px;margin-bottom:16px;display:flex;align-items:flex-end}
+.hero{position:relative;overflow:hidden;background:var(--brand);color:var(--on-brand);border-radius:24px;padding:22px 22px 24px;margin-bottom:16px;display:flex;align-items:flex-end}
 .hero::after{content:"";position:absolute;right:-60px;top:-70px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.08)}
 .hero>svg{position:absolute;right:18px;top:18px;width:46px;height:46px;border-radius:13px;opacity:.95;box-shadow:0 0 0 2px rgba(255,255,255,.25)}
 .hero-in{position:relative;z-index:1}
@@ -1312,10 +1337,10 @@ a{color:var(--lilac-d)}
 .nextcard{width:100%;display:flex;align-items:center;gap:14px;text-align:left;background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--brand);border-radius:18px;padding:14px 14px 14px 12px;box-shadow:var(--sh);cursor:pointer;color:var(--ink);font:inherit}
 .nextcard.live{border-left-color:#E0A100;background:color-mix(in srgb,#E0A100 7%,var(--paper))}
 .nc-time{display:flex;flex-direction:column;align-items:center;min-width:62px;padding-right:12px;border-right:1px solid var(--line)}
-.nc-time b{font-size:1.45rem;font-weight:800;letter-spacing:-.02em;color:var(--brand)}.nc-time small{color:var(--ink2)}
+.nc-time b{font-size:1.45rem;font-weight:800;letter-spacing:-.02em;color:var(--brand-txt)}.nc-time small{color:var(--ink2)}
 .nextcard.live .nc-time b{color:#B07E00}
 .nc-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-.nc-main small{font-size:.78rem;font-weight:700;color:var(--brand)}
+.nc-main small{font-size:.78rem;font-weight:700;color:var(--brand-txt)}
 .nextcard.live .nc-main small{color:#B07E00}
 .nc-main b{font-size:1.1rem}.nc-main span{color:var(--ink2);font-size:.9rem}
 .ncact{display:flex;gap:8px;margin:10px 0 4px}.ncact .btn{flex:1;justify-content:center}
@@ -1352,19 +1377,48 @@ a{color:var(--lilac-d)}
 .legendbox{margin-top:14px}
 .appt.live .av{background:#fff;color:var(--brand)}
 .hero{min-height:150px}
-.agbar .seg a.on{background:var(--brand);color:#fff}
+.agbar .seg a.on{background:var(--brand);color:var(--on-brand)}
 
-/* επιλογή επαγγέλματος */
-.pgrp{font-size:.82rem;font-weight:800;color:var(--ink2);margin:16px 2px 6px}
-.plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
-.plist button{border:1.5px solid var(--line);background:var(--field);border-radius:12px;padding:11px 10px;text-align:left;font-weight:600;cursor:pointer;color:var(--ink)}
-.plist button:hover{border-color:var(--brand)}
-.plist button.on{border-color:var(--brand);background:var(--brand-soft)}
+/* επιλογή επαγγέλματος: πλακίδια με εικονίδιο, ομαδοποιημένα με το χρώμα της κατηγορίας */
+.pgrp{display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:800;color:var(--ink);margin:18px 2px 8px}
+.pgrp i{width:10px;height:10px;border-radius:3px;flex:none}
+.ptiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px}
+.ptile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px 10px;border:1.5px solid var(--line);border-radius:16px;background:var(--paper);cursor:pointer;color:var(--ink);font:inherit;text-align:center;min-height:104px}
+.ptile .pti{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:26px;background:color-mix(in srgb,var(--gc) 14%,var(--paper))}
+.ptile .ptn{font-size:.8rem;font-weight:600;line-height:1.25}
+.ptile:hover{border-color:var(--gc)}
+.ptile.on{border-color:var(--gc);background:color-mix(in srgb,var(--gc) 8%,var(--paper));box-shadow:0 0 0 2px color-mix(in srgb,var(--gc) 30%,transparent)}
+.ptile.on .pti{background:var(--gc)}
 .fr-head{display:flex;gap:12px;align-items:center;margin-bottom:14px}.fr-head svg{width:48px;height:48px;border-radius:13px;flex:none}
 .frdemo{display:flex;gap:8px;align-items:flex-start;margin:6px 0 4px;font-size:.92rem}
 .rprow.rpnew{border-style:dashed}
 .search{display:flex;align-items:center;gap:8px}.search .in{flex:1}
 .scols.big button{width:38px;height:38px}
+/* ρυθμίσεις */
+.setlist{display:flex;flex-direction:column;gap:8px}
+.setrow{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:16px;color:var(--ink);text-decoration:none}
+.setrow:hover{border-color:var(--brand)}
+.setrow b{display:block}.setrow small{color:var(--ink2);font-size:.82rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setrow .grow,.bkcard>summary .grow{flex:1;min-width:0}
+.seti{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:22px;background:var(--brand-soft);flex:none}
+.setback{display:inline-flex;align-items:center;gap:4px;font-size:.9rem;font-weight:600;text-decoration:none;margin-bottom:10px}
+.kindseg{display:flex;gap:6px}.kindseg button{flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);font-weight:700;cursor:pointer;color:var(--ink)}
+.kindseg button.on{border-color:var(--brand);background:var(--brand-soft)}
+.thgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:8px}
+.thgrid button{aspect-ratio:1;border-radius:12px;border:2px solid transparent;cursor:pointer;display:grid;place-items:center;color:#fff}
+.thgrid button.on{border-color:var(--ink);box-shadow:0 0 0 2px var(--paper) inset}
+input[type=color]{width:44px;height:36px;border:1px solid var(--line);border-radius:10px;background:none;padding:2px}
+.conpick{width:100%;justify-content:center;border-style:dashed}
+.bkcard{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:10px}
+.bkcard>summary{display:flex;align-items:center;gap:12px;cursor:pointer;list-style:none}
+.bkcard>summary::-webkit-details-marker{display:none}
+.bkcard>summary small{display:block;color:var(--ink2);font-size:.82rem}
+.bkcard[open]>summary{margin-bottom:10px}
+.bkic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:var(--brand-soft);flex:none}
+.bkdanger .bkic{background:var(--badbg)}
+.btn.wide{width:100%;justify-content:center}
+.howto{padding-left:20px;margin:8px 0}.howto li{margin-bottom:6px}
+.instpop{text-align:center;padding:6px 4px}.instpop svg{width:64px;height:64px;border-radius:18px;margin:4px auto 10px;display:block}
 @media (prefers-reduced-motion:reduce){.fab:active{transform:none}}
 </style>
 </head>
