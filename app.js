@@ -282,6 +282,7 @@ const SET_SECS=()=>[
   ['look','','🎨','Χρώμα, φόντο και λέξεις','Το χρώμα, το υδατογράφημα, πώς λέγονται οι '+LX('whoPlL')],
   ['msgs','','💬','Μηνύματα στους πελάτες',S.data.settings.confOff?'Χωρίς αυτόματη επιβεβαίωση':'Επιβεβαίωση με SMS μόλις κλείνεις ραντεβού'],
   ['backup','','🛟','Αντίγραφα ασφαλείας',bkStatusShort()],
+  ['demo','','🧪','Δοκιμαστική λειτουργία',S.data.settings.demo?'Ενεργή — βλέπεις παραδείγματα':'Δες την εφαρμογή με παραδείγματα'],
   ['about','','ℹ️','Εγκατάσταση και έκδοση','Έκδοση '+APP_VERSION]];
 function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_SECS();const sec=L.find(x=>x[0]===id);
   if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}<div class="setlist">${L.map(([k,,i,t,d])=>`<a class="setrow" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div><p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
@@ -330,6 +331,11 @@ const SETP={
    <div class="row"><button class="btn pri" id="cf-s">${ic('check',16)} Αποθήκευση</button><button class="btn ghost" id="cf-d">Αρχικό κείμενο</button></div></div>
    <div class="card"><h3>Υπενθυμίσεις την προηγούμενη μέρα</h3><p class="small muted" style="margin-top:0">Από το «Σήμερα» → «Αύριο» → «Στείλε υπενθυμίσεις», ή από το Ημερολόγιο → ⋯ → «Υπενθυμίσεις».</p></div>`;
   $('#cf-on',el).onchange=e=>{S.data.settings.confOff=!e.target.checked;save();};$('#cf-s',el).onclick=()=>{S.data.settings.confTpl=$('#cf-t',el).value.trim()||CONF_TPL_DEF;save();toast('Αποθηκεύτηκε.','ok');};$('#cf-d',el).onclick=()=>{delete S.data.settings.confTpl;save();render();};},
+ demo(el){const on=!!S.data.settings.demo;
+  el.innerHTML=`<div class="card"><p class="small" style="margin-top:0">Γεμίζει την εφαρμογή με ${DEMO_NAMES.length} ${esc(LX('whoPlL'))}-παραδείγματα και ραντεβού για τις επόμενες μέρες, για να δεις πώς δουλεύει ή να τη δείξεις σε κάποιον. Όσο είναι ενεργή, φαίνεται η κίτρινη ταινία «Δοκιμαστική λειτουργία» πάνω πάνω.</p>
+   <p class="small muted">Τα δικά σου ραντεβού και ${esc(LX('whoPlL'))} δεν πειράζονται. Με το «Τέλος δοκιμής» σβήνονται μόνο τα παραδείγματα.</p>
+   ${on?`<button class="btn danger wide" id="dm-off">Τέλος δοκιμής — σβήσε τα παραδείγματα</button>`:`<button class="btn pri wide" id="dm-on">🧪 Ξεκίνα δοκιμαστική λειτουργία</button>`}</div>`;
+  const a=$('#dm-on',el);if(a)a.onclick=()=>{demoFill();save();toast('Μπήκαν τα παραδείγματα.','ok');go('today');};const b=$('#dm-off',el);if(b)b.onclick=demoClear;},
  backup(el){backupPage(el);},
  about(el){el.innerHTML=`<div class="card section"><h3>Εγκατάσταση</h3>${isStandalone()?'<p class="small muted" style="margin:0">Η εφαρμογή είναι εγκατεστημένη σε αυτή τη συσκευή.</p>':INST?`<p class="small muted" style="margin-top:0">Βάλ' την στην αρχική οθόνη για να ανοίγει σαν κανονική εφαρμογή.</p><button class="btn pri" id="ab-in">${ic('download',16)} Εγκατάσταση</button>`:`<p class="small muted" style="margin:0">Από τις τρεις τελείες του Chrome: «Προσθήκη στην αρχική οθόνη» → «Εγκατάσταση». Αν γράφει «έχει ήδη εγκατασταθεί», ψάξε «Ημερολόγιο» στη λίστα εφαρμογών του κινητού.</p>`}</div>
   <div class="card"><h3>Έκδοση ${esc(APP_VERSION)}</h3><button class="btn" id="up-chk">${ic('refresh',16)} Έλεγχος αναβάθμισης</button><p class="tiny muted" style="margin:12px 0 0">© 2026 Ανδρέας Μ. Γλεντζάκης. Με την επιφύλαξη παντός δικαιώματος.</p></div>`;

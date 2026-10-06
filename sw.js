@@ -1,5 +1,5 @@
 /* Ημερολόγιο — © 2026 Ανδρέας Μ. Γλεντζάκης. Άλλαξε το VER σε κάθε νέα έκδοση. */
-const VER="imerologio-1.8";
+const VER="imerologio-1.9";
 const FILES=["./","index.html","epaggelmata.js","imerologio.js","app.js","manifest.json","icon-192.png","icon-512.png"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(VER).then(c=>c.addAll(FILES)));self.skipWaiting();});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith("imerologio-")&&k!==VER).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
