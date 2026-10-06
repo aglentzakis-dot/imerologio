@@ -35,7 +35,7 @@ const IM_WHO={
   prosopo:{who:"Πρόσωπο",whoAcc:"πρόσωπο",whoGen:"προσώπου",whoPl:"Πρόσωπα",whoPlL:"πρόσωπα"}
 };
 const IM_GROUPS=[
-{g:"Ομορφιά & περιποίηση",color:"#B4235F",dur:45,lex:Object.assign({one:"Ραντεβού"},IM_WHO.pelatis),
+{g:"Ομορφιά & περιποίηση",color:"#F48FB1",dur:45,lex:Object.assign({one:"Ραντεβού"},IM_WHO.pelatis),
  roles:[["owner","Ιδιοκτήτης / Υπεύθυνος",1],["hair","Κομμωτής",1],["beauty","Αισθητικός",1],["nails","Τεχνίτρια νυχιών",1],["assistant","Βοηθός",1],["reception","Υποδοχή",0],["other","Άλλη ειδικότητα",1]],
  list:[
   {id:"kommotis",i:"💇",n:"Κομμωτήριο",t:"Κούρεμα|Βαφή|Ανταύγειες|Χτένισμα|Λούσιμο και στέγνωμα|Θεραπεία μαλλιών"},
@@ -45,7 +45,7 @@ const IM_GROUPS=[
   {id:"makigiaz",i:"💄",n:"Μακιγιάζ",t:"Μακιγιάζ εκδήλωσης|Νυφικό μακιγιάζ|Δοκιμή μακιγιάζ"},
   {id:"katoikidia",i:"🐩",n:"Περιποίηση κατοικιδίων",lex:IM_WHO.idioktitis,t:"Κούρεμα|Μπάνιο|Νύχια|Φύλαξη"}
  ]},
-{g:"Υγεία & φροντίδα",color:"#0F7B72",dur:30,lex:Object.assign({one:"Ραντεβού"},IM_WHO.asthenis),
+{g:"Υγεία & φροντίδα",color:"#4DB6AC",dur:30,lex:Object.assign({one:"Ραντεβού"},IM_WHO.asthenis),
  roles:[["doctor","Ιατρός",1],["dentist","Οδοντίατρος",1],["physio","Φυσικοθεραπευτής",1],["psych","Ψυχολόγος",1],["nurse","Νοσηλευτής",1],["assistant","Βοηθός",1],["secretary","Γραμματεία",0],["other","Άλλη ειδικότητα",1]],
  list:[
   {id:"iatros",i:"🩺",n:"Ιατρείο",t:"Εξέταση|Επανεξέταση|Αποτελέσματα εξετάσεων|Συνταγογράφηση|Κατ' οίκον επίσκεψη"},
@@ -56,7 +56,7 @@ const IM_GROUPS=[
   {id:"diaitologos",i:"🥗",n:"Διαιτολόγος",lex:IM_WHO.pelatis,t:"Πρώτη επίσκεψη|Ζύγισμα και παρακολούθηση|Νέο πρόγραμμα"},
   {id:"ktiniatros",i:"🐾",n:"Κτηνίατρος",lex:IM_WHO.idioktitis,t:"Εξέταση|Εμβόλιο|Αποπαρασίτωση|Στείρωση|Επανέλεγχος"}
  ]},
-{g:"Εκπαίδευση & άθληση",color:"#4F46C8",dur:60,kind:"weekly",lex:Object.assign({one:"Μάθημα"},IM_WHO.mathitis),
+{g:"Εκπαίδευση & άθληση",color:"#9FA8DA",dur:60,kind:"weekly",lex:Object.assign({one:"Μάθημα"},IM_WHO.mathitis),
  roles:[["teacher","Καθηγητής",1],["assistant","Βοηθός καθηγητή",1],["coach","Προπονητής",1],["secretary","Γραμματεία",0],["other","Άλλη ειδικότητα",1]],
  list:[
   {id:"idiaitera",i:"📚",n:"Ιδιαίτερα / Φροντιστήριο",t:"Μαθηματικά|Φυσική|Χημεία|Έκθεση|Αγγλικά|Επανάληψη|Διαγώνισμα"},
@@ -65,7 +65,7 @@ const IM_GROUPS=[
   {id:"gymnastis",i:"🏋️",n:"Γυμναστής / Προσωπικός εκπαιδευτής",lex:Object.assign({one:"Προπόνηση"},IM_WHO.askoumenos),t:"Προπόνηση|Αξιολόγηση|Πρόγραμμα διατροφής|Ομαδική προπόνηση"},
   {id:"odigisi",i:"🚗",n:"Σχολή οδηγών",dur:45,t:"Μάθημα οδήγησης|Θεωρία|Εξετάσεις"}
  ]},
-{g:"Γραφεία & νομικά",color:"#24476E",dur:60,lex:Object.assign({one:"Ραντεβού"},IM_WHO.pelatis),
+{g:"Γραφεία & νομικά",color:"#90CAF9",dur:60,lex:Object.assign({one:"Ραντεβού"},IM_WHO.pelatis),
  roles:[["owner","Υπεύθυνος",1],["partner","Συνεργάτης",1],["assistant","Βοηθός",1],["secretary","Γραμματεία",0],["other","Άλλη ειδικότητα",1]],
  list:[
   {id:"dikigoros",i:"⚖️",n:"Δικηγόρος",lex:IM_WHO.entoleas,t:"Συνάντηση με εντολέα|Δικάσιμος|Προθεσμία κατάθεσης|Υπογραφή συμβολαίου"},
@@ -73,7 +73,7 @@ const IM_GROUPS=[
   {id:"mesitis",i:"🏠",n:"Μεσίτης",lex:Object.assign({one:"Επίδειξη"},IM_WHO.endiaf),t:"Επίδειξη ακινήτου|Φωτογράφιση ακινήτου|Υπογραφή μισθωτηρίου|Συνάντηση με ιδιοκτήτη"},
   {id:"mixanikos",i:"📐",n:"Μηχανικός",t:"Αυτοψία|Ηλεκτρονική ταυτότητα κτιρίου|Ενεργειακό πιστοποιητικό|Επίβλεψη"}
  ]},
-{g:"Τεχνίτες & μάστορες",color:"#C2501A",dur:120,lex:Object.assign({one:"Δουλειά"},IM_WHO.pelatis),
+{g:"Τεχνίτες & μάστορες",color:"#FFB74D",dur:120,lex:Object.assign({one:"Δουλειά"},IM_WHO.pelatis),
  roles:[["owner","Μάστορας / Υπεύθυνος",1],["tech","Τεχνίτης",1],["helper","Βοηθός",1],["office","Γραφείο",0],["other","Άλλη ειδικότητα",1]],
  list:[
   {id:"ilektrologos",i:"💡",n:"Ηλεκτρολόγος",t:"Αυτοψία|Βλάβη ρεύματος|Αλλαγή πίνακα|Φωτιστικά|Πιστοποιητικό ΥΔΕ"},
@@ -81,7 +81,7 @@ const IM_GROUPS=[
   {id:"psyktikos",i:"❄️",n:"Ψυκτικός / Κλιματισμός",t:"Εγκατάσταση κλιματιστικού|Συντήρηση κλιματιστικού|Βλάβη ψυγείου"},
   {id:"texnitis-allo",i:"🛠️",n:"Άλλος τεχνίτης",t:"Αυτοψία|Επισκευή|Εγκατάσταση|Συντήρηση|Έλεγχος"}
  ]},
-{g:"Υπηρεσίες",color:"#2F7D3A",dur:60,lex:Object.assign({one:"Ραντεβού"},IM_WHO.pelatis),
+{g:"Υπηρεσίες",color:"#AED581",dur:60,lex:Object.assign({one:"Ραντεβού"},IM_WHO.pelatis),
  roles:[["owner","Υπεύθυνος",1],["staff","Συνεργάτης",1],["assistant","Βοηθός",1],["office","Γραφείο",0],["other","Άλλη ειδικότητα",1]],
  list:[
   {id:"katharismos",i:"🧽",n:"Καθαρισμός χώρων",dur:180,t:"Γενικός καθαρισμός|Εβδομαδιαίος καθαρισμός|Μετά από ανακαίνιση|Τζάμια"},
@@ -89,7 +89,7 @@ const IM_GROUPS=[
   {id:"metafores",i:"🚕",n:"Μεταφορές / Ταξί",lex:Object.assign({one:"Διαδρομή"},IM_WHO.epivatis),t:"Αεροδρόμιο|Λιμάνι|Σταθμός|Μετακόμιση"},
   {id:"estiasi",i:"🍽️",n:"Εστίαση",dur:120,lex:Object.assign({one:"Κράτηση"},IM_WHO.pelatis),t:"Κράτηση τραπεζιού|Εκδήλωση|Κέτερινγκ"}
  ]},
-{g:"Άλλο",color:"#17324D",dur:60,lex:Object.assign({one:"Ραντεβού"},IM_WHO.prosopo),
+{g:"Άλλο",color:"#B39DDB",dur:60,lex:Object.assign({one:"Ραντεβού"},IM_WHO.prosopo),
  roles:[["owner","Υπεύθυνος",1],["staff","Συνεργάτης",1],["assistant","Βοηθός",1],["office","Γραφείο",0],["other","Άλλη ειδικότητα",1]],
  list:[{id:"allo",i:"✨",n:"Άλλο (δικό μου επάγγελμα)",t:"Συνάντηση|Επίσκεψη|Τηλεφώνημα"}]}
 ];

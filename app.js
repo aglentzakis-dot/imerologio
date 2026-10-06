@@ -43,12 +43,14 @@ const IM_DEF={kind:()=>{const{g,p}=prof();return p.kind||g.kind||'once';},dur:()
 function profNotes(){return(prof().p.t||'').split('|').filter(Boolean);}
 
 /* ---------- χρώμα: της κατηγορίας επαγγέλματος ή δικό σου ---------- */
-const THEME_COLORS=[['Βαθιά',['#B4235F','#0F7B72','#4F46C8','#24476E','#C2501A','#2F7D3A','#17324D','#8A3FB0','#B8860B','#C0392B']],
-  ['Απαλά',['#E57399','#F48FB1','#4DB6AC','#80CBC4','#7986CB','#9FA8DA','#64B5F6','#90CAF9','#81C784','#AED581','#FFB74D','#FFD54F','#BA68C8','#CE93D8','#A1887F','#90A4AE']]];
+const THEME_COLORS=[['Απαλά',['#E57399','#F48FB1','#4DB6AC','#80CBC4','#7986CB','#9FA8DA','#64B5F6','#90CAF9','#81C784','#AED581','#FFB74D','#FFD54F','#BA68C8','#CE93D8','#A1887F','#90A4AE']],
+  ['Βαθιά',['#B4235F','#0F7B72','#4F46C8','#24476E','#C2501A','#2F7D3A','#17324D','#8A3FB0','#B8860B','#C0392B']]];
 function hexMix(h,w,t){const n=x=>parseInt(x,16);const a=[n(h.slice(1,3)),n(h.slice(3,5)),n(h.slice(5,7))];const b=w==='w'?[255,255,255]:[0,0,0];return'#'+a.map((v,i)=>Math.round(v+(b[i]-v)*t).toString(16).padStart(2,'0')).join('');}
-function themeColor(){return S.data.settings.color||prof().g.color||'#17324D';}
+function themeColor(){return S.data.settings.color||prof().g.color||'#B39DDB';}
+function hueShift(h,deg){let r=parseInt(h.slice(1,3),16)/255,g=parseInt(h.slice(3,5),16)/255,b=parseInt(h.slice(5,7),16)/255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;let H=0,S2=0;if(mx!==mn){const d=mx-mn;S2=l>.5?d/(2-mx-mn):d/(mx+mn);H=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;H*=60;}
+  H=(H+deg+360)%360;const k=n=>(n+H/30)%12,a=S2*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));return'#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');}
 function lum(h){const f=x=>{x=parseInt(x,16)/255;return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};return .2126*f(h.slice(1,3))+.7152*f(h.slice(3,5))+.0722*f(h.slice(5,7));}
-function applyTheme(){const c=themeColor(),R=document.documentElement.style;R.setProperty('--brand',c);const light=lum(c)>.36;R.setProperty('--on-brand',light?'#15202E':'#fff');R.setProperty('--brand-txt',light?hexMix(c,'k',.45):c);R.setProperty('--brand-d',hexMix(c,'k',.25));R.setProperty('--brand-soft',hexMix(c,'w',.88));R.setProperty('--brand-soft2',hexMix(c,'w',.94));
+function applyTheme(){const c=themeColor(),R=document.documentElement.style;R.setProperty('--brand',c);const light=lum(c)>.36;R.setProperty('--on-brand',light?'#15202E':'#fff');R.setProperty('--brand-txt',light?hexMix(c,'k',.45):c);const dark=matchMedia('(prefers-color-scheme: dark)').matches;const hs=hueShift;R.setProperty('--wc1',c);R.setProperty('--wc2',hs(c,40));R.setProperty('--wc3',hs(c,-50));R.setProperty('--wc-op',String((S.data.settings.wcOp!=null?S.data.settings.wcOp:60)/100));R.setProperty('--cream',dark?'':hexMix(c,'w',.95));R.setProperty('--line',dark?'':hexMix(c,'w',.78));R.setProperty('--line2',dark?'':hexMix(c,'w',.86));R.setProperty('--brand-d',hexMix(c,'k',.25));R.setProperty('--brand-soft',hexMix(c,'w',.88));R.setProperty('--brand-soft2',hexMix(c,'w',.94));
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=c;}
 
 /* ---------- λογότυπο ---------- */
@@ -81,7 +83,7 @@ function shellHTML(sec){
   const title={today:'Σήμερα',agenda:'Ημερολόγιο',people:LX('whoPl'),map:'Χάρτης',settings:'Ρυθμίσεις'}[sec]||'Ημερολόγιο';
   const a=([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}">${ic(i,19)}<span>${esc(l)}</span></a>`;
   const fab=['today','agenda','people'].includes(sec);
-  document.body.innerHTML=`<div class="app"><aside class="side noprint"><a class="brand" href="#/today">${LOGO}<div><b>Ημερολόγιο</b><span>${esc(S.meta.org||prof().p.n)}</span></div></a><nav class="nav">${nav.map(a).join('')}</nav><div class="side-ver tiny muted">Έκδοση ${APP_VERSION}</div></aside>
+  document.body.innerHTML=`<div class="wcbg" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="app"><aside class="side noprint"><a class="brand" href="#/today">${LOGO}<div><b>Ημερολόγιο</b><span>${esc(S.meta.org||prof().p.n)}</span></div></a><nav class="nav">${nav.map(a).join('')}</nav><div class="side-ver tiny muted">Έκδοση ${APP_VERSION}</div></aside>
   <div class="shell"><header class="topbar noprint"><a class="tbrand" href="#/today">${LOGO}</a><b class="tbtitle">${esc(title)}</b><span class="tbprof">${esc(S.meta.org||prof().p.n)}</span></header>${S.data.settings.demo?`<div class="demostrip noprint"><span>🧪 <b>Δοκιμαστική λειτουργία</b> — τα ραντεβού και οι ${esc(LX('whoPlL'))} είναι παραδείγματα</span><button type="button" id="demoEnd">Τέλος δοκιμής</button></div>`:''}<main class="main" id="main"></main></div>
   <nav class="bottomnav noprint">${nav.map(([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}"><span class="bi">${ic(i,22)}</span><span>${esc(l)}</span></a>`).join('')}</nav>
   ${fab?`<button class="fab noprint" id="fab" aria-label="${sec==='people'?'Νέος':'Νέο ραντεβού'}">${ic('plus',26)}</button>`:''}</div>`;
@@ -135,6 +137,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
 function viewAgendaApp(r){viewAgenda(r);
+  if(innerWidth<=960){const nl=$('.tl-now'),sc=$('#tlScroll');if(sc&&!window.AGPOS){const tgt=nl||$('.tl-ev')||null;if(tgt)setTimeout(()=>{const y=tgt.getBoundingClientRect().top+scrollY-innerHeight*.35;scrollTo({top:Math.max(0,y)});},60);}}
   const h=$('.page-head .actions');if(!h)return;
   const more=document.createElement('button');more.className='iconbtn agmore';more.setAttribute('aria-label','Περισσότερα');more.innerHTML=ic('more',20);h.appendChild(more);
   const items=[['agBlk','l-flag','Δέσμευση (ώρες που δεν είσαι διαθέσιμος)'],['agRem','bell','Υπενθυμίσεις'],['agWait','users','Λίστα αναμονής'],['agCopyW','copy','Αντιγραφή εβδομάδας'],['agLock','clock','Ποιες ώρες φαίνονται'],['agCfg','settings','Ωράριο λειτουργίας'],['agPdf','printer','Εκτύπωση / PDF']].filter(([id])=>$('#'+id));
@@ -261,7 +264,7 @@ const SET_SECS=()=>[
   ['info','',isPrivate()?'👤':'🏢',isPrivate()?'Προσωπικά στοιχεία':'Στοιχεία επιχείρησης',isPrivate()?(S.data.settings.myName||'Όνομα, τηλέφωνο'):(biz().name||'Επωνυμία, τηλέφωνο, ΑΦΜ')],
   ['staff','',`👥`,'Προσωπικό',(providers().length===1?'1 άτομο κάνει ραντεβού':providers().length+' άτομα κάνουν ραντεβού')],
   ['hours','','🕘','Ωράριο και αργίες',agCfg().from+'–'+agCfg().to],
-  ['look','','🎨','Χρώμα και λέξεις','Το χρώμα της εφαρμογής, πώς λέγονται οι '+LX('whoPlL')],
+  ['look','','🎨','Χρώμα, φόντο και λέξεις','Το χρώμα, το υδατογράφημα, πώς λέγονται οι '+LX('whoPlL')],
   ['msgs','','💬','Μηνύματα στους πελάτες',S.data.settings.confOff?'Χωρίς αυτόματη επιβεβαίωση':'Επιβεβαίωση με SMS μόλις κλείνεις ραντεβού'],
   ['backup','','🛟','Αντίγραφα ασφαλείας',bkStatusShort()],
   ['about','','ℹ️','Εγκατάσταση και έκδοση','Έκδοση '+APP_VERSION]];
@@ -294,9 +297,10 @@ const SETP={
  look(el){const base=profLex(),L=S.data.settings.lex||{},cur=themeColor();
   const lx=(k,l)=>`<div class="field"><label class="f" for="lx-${k}">${l}</label><input class="in" id="lx-${k}" data-lx="${k}" value="${esc(L[k]||'')}" placeholder="${esc(base[k]||'')}"></div>`;
   el.innerHTML=`<div class="card section"><h3>Χρώμα εφαρμογής</h3>${THEME_COLORS.map(([n,cs])=>`<div class="small muted" style="margin:10px 0 6px">${n}</div><div class="thgrid">${cs.map(c=>`<button type="button" data-th="${c}" style="background:${c}" class="${cur===c?'on':''}" aria-label="Χρώμα ${c}">${cur===c?ic('check',18):''}</button>`).join('')}</div>`).join('')}
+   <div class="field" style="margin-top:16px"><label class="f" for="wc-op">Υδατογράφημα στο φόντο <span class="tiny muted" id="wc-v">${S.data.settings.wcOp!=null?S.data.settings.wcOp:60}%</span></label><input type="range" id="wc-op" min="0" max="100" step="5" value="${S.data.settings.wcOp!=null?S.data.settings.wcOp:60}" style="width:100%"><div class="tiny muted">0 = καθαρό φόντο. Τα χρώματα ακολουθούν το χρώμα της εφαρμογής.</div></div>
    <div class="row" style="margin-top:12px;align-items:center"><label class="small" for="th-own">Δικό μου χρώμα</label><input type="color" id="th-own" value="${cur}"><button class="btn sm ghost" id="th-def">Το χρώμα του επαγγέλματος</button></div></div>
   <div class="card"><h3>Οι λέξεις της εφαρμογής</h3><p class="small muted" style="margin-top:0">Άλλαξέ τες αν θέλεις κάτι πιο δικό σου. Κενό = η λέξη του επαγγέλματος.</p><div class="grid g2" style="gap:8px">${lx('who','Το πρόσωπο')}${lx('whoAcc','«Διάλεξε …»')}${lx('whoGen','«Καρτέλα …»')}${lx('whoPl','Πληθυντικός')}${lx('whoPlL','Πληθυντικός με μικρά')}${lx('one','Τίτλος στο κινητό')}</div><button class="btn pri" id="st-lx">${ic('check',15)} Αποθήκευση λέξεων</button></div>`;
-  $$('[data-th]',el).forEach(b=>b.onclick=()=>{S.data.settings.color=b.dataset.th;save();render();});$('#th-own',el).onchange=e=>{S.data.settings.color=e.target.value;save();render();};$('#th-def',el).onclick=()=>{delete S.data.settings.color;save();render();};
+  $$('[data-th]',el).forEach(b=>b.onclick=()=>{S.data.settings.color=b.dataset.th;save();render();});const wo=$('#wc-op',el);wo.oninput=()=>{S.data.settings.wcOp=+wo.value;$('#wc-v',el).textContent=wo.value+'%';applyTheme();};wo.onchange=()=>save();$('#th-own',el).onchange=e=>{S.data.settings.color=e.target.value;save();render();};$('#th-def',el).onclick=()=>{delete S.data.settings.color;save();render();};
   $('#st-lx',el).onclick=()=>{const o={};$$('[data-lx]',el).forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};},
  msgs(el){el.innerHTML=`<div class="card section"><label class="switch"><span><b>Επιβεβαίωση με μήνυμα μόλις κλείνεις ραντεβού</b><small>Με την «Αποθήκευση» ανοίγει έτοιμο μήνυμα προς τον πελάτη (αν έχει τηλέφωνο). Εσύ πατάς μόνο «Αποστολή».</small></span><input type="checkbox" id="cf-on" ${S.data.settings.confOff?'':'checked'}></label>
    <div class="field" style="margin-top:12px"><label class="f" for="cf-t">Κείμενο επιβεβαίωσης</label><textarea class="in" id="cf-t" style="min-height:80px">${esc(S.data.settings.confTpl||CONF_TPL_DEF)}</textarea><div class="tiny muted" style="margin-top:4px">Λέξεις που αλλάζουν μόνες τους: {όνομα} {ημέρα} {ώρα} {επιχείρηση}</div></div>

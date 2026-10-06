@@ -200,7 +200,7 @@ const isLive=o=>o.date===todayISO()&&!o.st&&tmin(o.s)<=nowMin()&&nowMin()<tmin(o
 const isActive=o=>!o.st&&(o.date>todayISO()||(o.date===todayISO()&&tmin(o.e)>nowMin()));
 function apStateCls(o){return o.st==='cancel'?'cancel':o.st==='done'?'done':o.st==='absent'?'absent':isLive(o)?'live':isActive(o)?'active':'past';}
 let PPM=(()=>{try{const v=+localStorage.getItem('imer-agzoom');return v>=.5&&v<=3?v:1.15;}catch(e){return 1.15;}})();
-function agLock(){try{const o=JSON.parse(localStorage.getItem('imer-aglock')||'null');if(o&&o.from&&o.to)return o;}catch(e){}const c=agCfg();return{on:false,from:c.from,to:c.to};}
+function agLock(){try{const o=JSON.parse(localStorage.getItem('imer-aglock')||'null');if(o&&o.from&&o.to)return o;}catch(e){}const c=agCfg();return{on:true,auto:true,from:tstr(Math.max(0,tmin(c.from)-60)),to:tstr(Math.min(1439,tmin(c.to)+60))};}
 function agRange(){const L=agLock();if(L.on){const f=tmin(L.from),t=Math.max(tmin(L.to),f+60);return[f,t];}return[0,1440];}
 function timelineHTML(days,L){const c=agCfg();const[f,t]=agRange();const wf=tmin(c.from),wt=tmin(c.to);const H=Math.round((t-f)*PPM);const today=todayISO();const nm=nowMin();
   const hours=[];for(let m=Math.ceil(f/60)*60;m<=t;m+=60)hours.push(m);
