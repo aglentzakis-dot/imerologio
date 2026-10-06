@@ -161,8 +161,16 @@ function viewAgendaApp(r){viewAgenda(r);
     md.el.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(!b)return;md.close();setTimeout(()=>{const x=$('#'+b.dataset.go);if(x)x.click();},150);});};}
 
 /* ---------- παραδείγματα για να φανεί αμέσως πώς δουλεύει ---------- */
-const DEMO_NAMES=['Ελένη Παπαδάκη','Γιώργος Νικολάου','Κατερίνα Βλάχου','Νίκος Αντωνίου','Σοφία Μιχαηλίδη','Δημήτρης Καραλής','Μαρία Ζαφειρίου'];
-function demoFill(){const t=todayISO(),c=agCfg(),du=profDur(),notes=profNotes();const ids=DEMO_NAMES.map((n,i)=>{const p={id:uid(),name:n,avatar:initial(n),phone:'69'+String(40000000+i*1234567).slice(0,8),color:PERS_COLORS[i%PERS_COLORS.length],contacts:[],demo:true,created:new Date().toISOString()};p.contacts=[{name:n,phone:p.phone}];S.data.students.push(p);return p.id;});
+const DEMO_PEOPLE=[
+  ['Ελένη Παπαδάκη','Αλεξάνδρας 120, Αμπελόκηποι','Αμπελόκηποι',37.9905,23.7605,'Προτιμά πρωινά ραντεβού.'],
+  ['Γιώργος Νικολάου','Πανόρμου 45, Αμπελόκηποι','Πανόρμου',37.9935,23.7650,'Έρχεται με το παιδί του.'],
+  ['Κατερίνα Βλάχου','Λεωφόρος Κηφισίας 10, Αμπελόκηποι','Αμπελόκηποι',37.9890,23.7640,'Θέλει υπενθύμιση την προηγούμενη μέρα.'],
+  ['Νίκος Αντωνίου','Κουντουριώτου 30, Γκύζη','Γκύζη',37.9985,23.7520,''],
+  ['Σοφία Μιχαηλίδη','Μεσογείων 25, Ερυθρός Σταυρός','Ερυθρός Σταυρός',37.9870,23.7700,'Πληρώνει με κάρτα.'],
+  ['Δημήτρης Καραλής','Παπάγου 60, Ζωγράφου','Ζωγράφου',37.9790,23.7690,''],
+  ['Μαρία Ζαφειρίου','Ζαΐμη 12, Πολύγωνο','Πολύγωνο',38.0005,23.7590,'Νέα πελάτισσα — ήρθε από σύσταση.']];
+const DEMO_NAMES=DEMO_PEOPLE.map(x=>x[0]);
+function demoFill(){const t=todayISO(),c=agCfg(),du=profDur(),notes=profNotes();const LAT=['eleni','giorgos','katerina','nikos','sofia','dimitris','maria'];const ids=DEMO_PEOPLE.map(([n,addr,area,lat,lng,note],i)=>{const p={id:uid(),name:n,avatar:initial(n),phone:'69000000'+String(10+i),email:LAT[i]+'@example.com',notes:note,loc:{addr,area,lat,lng,home:true},color:PERS_COLORS[i%PERS_COLORS.length],contacts:[],demo:true,created:new Date().toISOString()};p.contacts=[{name:n,phone:p.phone,email:p.email}];S.data.students.push(p);return p.id;});
   const st=Math.max(tmin(c.from),9*60);const add=(d,m,k,sid,i)=>appts().push({id:uid(),sid,kind:k,date:d,d:wdOf(d),s:tstr(m),e:tstr(m+du),note:notes[i%notes.length]||'',ex:{},demo:true,created:new Date().toISOString()});
   [0,1,2,3,4,5].forEach(off=>{const d=addDays(t,off);if(!c.days.includes(wdOf(d))||isClosed(d))return;const n=off===0?4:2+off%3;for(let i=0;i<n;i++){const m=st+i*Math.max(du,60)+(off%2)*30;if(m+du<=tmin(c.to))add(d,m,'once',ids[(off*2+i)%ids.length],i+off);}});
   add(t,st+5*60,IM_DEF.kind()==='weekly'?'weekly':'once',ids[6],2);
@@ -279,7 +287,8 @@ const SET_SECS=()=>[
   ['info','',isPrivate()?'👤':'🏢',isPrivate()?'Προσωπικά στοιχεία':'Στοιχεία επιχείρησης',isPrivate()?(S.data.settings.myName||'Όνομα, τηλέφωνο'):(biz().name||'Επωνυμία, τηλέφωνο, ΑΦΜ')],
   ['staff','',`👥`,'Προσωπικό',(providers().length===1?'1 άτομο κάνει ραντεβού':providers().length+' άτομα κάνουν ραντεβού')],
   ['hours','','🕘','Ωράριο και αργίες',agCfg().from+'–'+agCfg().to],
-  ['look','','🎨','Χρώμα, φόντο και λέξεις','Το χρώμα, το υδατογράφημα, πώς λέγονται οι '+LX('whoPlL')],
+  ['look','','🎨','Χρώμα και φόντο','Το χρώμα της εφαρμογής και το υδατογράφημα'],
+  ['words','','🏷️','Πελάτες ή ασθενείς ή μαθητές;','Τώρα λέγονται «'+LX('whoPl')+'» και κλείνεις «'+LX('one')+'»'],
   ['msgs','','💬','Μηνύματα στους πελάτες',S.data.settings.confOff?'Χωρίς αυτόματη επιβεβαίωση':'Επιβεβαίωση με SMS μόλις κλείνεις ραντεβού'],
   ['backup','','🛟','Αντίγραφα ασφαλείας',bkStatusShort()],
   ['demo','','🧪','Δοκιμαστική λειτουργία',S.data.settings.demo?'Ενεργή — βλέπεις παραδείγματα':'Δες την εφαρμογή με παραδείγματα'],
@@ -314,18 +323,9 @@ const SETP={
   const lx=(k,l)=>`<div class="field"><label class="f" for="lx-${k}">${l}</label><input class="in" id="lx-${k}" data-lx="${k}" value="${esc(L[k]||'')}" placeholder="${esc(base[k]||'')}"></div>`;
   el.innerHTML=`<div class="card section"><h3>Χρώμα εφαρμογής</h3>${THEME_COLORS.map(([n,cs])=>`<div class="small muted" style="margin:10px 0 6px">${n}</div><div class="thgrid">${cs.map(c=>`<button type="button" data-th="${c}" style="background:${c}" class="${cur===c?'on':''}" aria-label="Χρώμα ${c}">${cur===c?ic('check',18):''}</button>`).join('')}</div>`).join('')}
    <div class="field" style="margin-top:16px"><label class="f" for="wc-op">Υδατογράφημα στο φόντο <span class="tiny muted" id="wc-v">${S.data.settings.wcOp!=null?S.data.settings.wcOp:60}%</span></label><input type="range" id="wc-op" min="0" max="100" step="5" value="${S.data.settings.wcOp!=null?S.data.settings.wcOp:60}" style="width:100%"><div class="tiny muted">0 = καθαρό φόντο. Τα χρώματα ακολουθούν το χρώμα της εφαρμογής.</div></div>
-   <div class="row" style="margin-top:12px;align-items:center"><label class="small" for="th-own">Δικό μου χρώμα</label><input type="color" id="th-own" value="${cur}"><button class="btn sm ghost" id="th-def">Το χρώμα του επαγγέλματος</button></div></div>
-  <div class="card"><h3>Πώς λες τους ανθρώπους σου;</h3><p class="small muted" style="margin-top:0">Η λέξη που βλέπεις παντού: στο μενού («${esc(LX('whoPl'))}»), στο νέο ραντεβού («Διάλεξε ${esc(LX('whoAcc'))}»), στην καρτέλα.</p>
-   <div class="chips">${Object.entries(IM_WHO).map(([k,w])=>`<button type="button" class="chipt ${LX('who')===w.who?'on':''}" data-who="${k}">${esc(w.who)}</button>`).join('')}</div>
-   <h3 style="margin-top:18px">Τι κλείνεις;</h3><p class="small muted" style="margin-top:0">Το όνομα κάθε εγγραφής, π.χ. στο ημερολόγιο του κινητού.</p>
-   <div class="chips">${['Ραντεβού','Μάθημα','Συνεδρία','Προπόνηση','Δουλειά','Κράτηση','Επίσκεψη'].map(o=>`<button type="button" class="chipt ${LX('one')===o?'on':''}" data-one="${o}">${o}</button>`).join('')}</div>
-   ${Object.keys(S.data.settings.lex||{}).length?`<button class="btn sm ghost" id="lx-def" style="margin-top:14px">Όπως ήταν στο επάγγελμα</button>`:''}
-   <details style="margin-top:14px"><summary class="small muted">Για προχωρημένους: κάθε μορφή της λέξης χωριστά</summary><div class="grid g2" style="gap:8px;margin-top:8px">${lx('who','Ένας (π.χ. Πελάτης)')}${lx('whoAcc','Διάλεξε … (π.χ. πελάτη)')}${lx('whoGen','Καρτέλα … (π.χ. πελάτη)')}${lx('whoPl','Πολλοί (π.χ. Πελάτες)')}${lx('whoPlL','Πολλοί, με μικρά (π.χ. πελάτες)')}${lx('one','Τι κλείνεις (π.χ. Ραντεβού)')}</div><button class="btn pri" id="st-lx">${ic('check',15)} Αποθήκευση</button></details></div>`;
+   <div class="row" style="margin-top:12px;align-items:center"><label class="small" for="th-own">Δικό μου χρώμα</label><input type="color" id="th-own" value="${cur}"><button class="btn sm ghost" id="th-def">Το χρώμα του επαγγέλματος</button></div></div>`;
   $$('[data-th]',el).forEach(b=>b.onclick=()=>{S.data.settings.color=b.dataset.th;save();render();});const wo=$('#wc-op',el);wo.oninput=()=>{S.data.settings.wcOp=+wo.value;$('#wc-v',el).textContent=wo.value+'%';applyTheme();};wo.onchange=()=>save();$('#th-own',el).onchange=e=>{S.data.settings.color=e.target.value;save();render();};$('#th-def',el).onclick=()=>{delete S.data.settings.color;save();render();};
-  $$('[data-who]',el).forEach(b=>b.onclick=()=>{const w=IM_WHO[b.dataset.who];const L=Object.assign({},S.data.settings.lex||{});['who','whoAcc','whoGen','whoPl','whoPlL'].forEach(k=>{if(w[k]===base[k])delete L[k];else L[k]=w[k];});S.data.settings.lex=L;save();toast('Τώρα λέγονται «'+w.whoPl+'».','ok');render();});
-  $$('[data-one]',el).forEach(b=>b.onclick=()=>{const L=Object.assign({},S.data.settings.lex||{});if(b.dataset.one===base.one)delete L.one;else L.one=b.dataset.one;S.data.settings.lex=L;save();render();});
-  const ld=$('#lx-def',el);if(ld)ld.onclick=()=>{S.data.settings.lex={};save();render();};
-  $('#st-lx',el).onclick=()=>{const o={};$$('[data-lx]',el).forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};},
+  },
  msgs(el){el.innerHTML=`<div class="card section"><label class="switch"><span><b>Επιβεβαίωση με μήνυμα μόλις κλείνεις ραντεβού</b><small>Με την «Αποθήκευση» ανοίγει έτοιμο μήνυμα προς τον πελάτη (αν έχει τηλέφωνο). Εσύ πατάς μόνο «Αποστολή».</small></span><input type="checkbox" id="cf-on" ${S.data.settings.confOff?'':'checked'}></label>
    <div class="field" style="margin-top:12px"><label class="f" for="cf-t">Κείμενο επιβεβαίωσης</label><textarea class="in" id="cf-t" style="min-height:80px">${esc(S.data.settings.confTpl||CONF_TPL_DEF)}</textarea><div class="tiny muted" style="margin-top:4px">Λέξεις που αλλάζουν μόνες τους: {όνομα} {ημέρα} {ώρα} {επιχείρηση}</div></div>
    <div class="row"><button class="btn pri" id="cf-s">${ic('check',16)} Αποθήκευση</button><button class="btn ghost" id="cf-d">Αρχικό κείμενο</button></div></div>
@@ -336,6 +336,21 @@ const SETP={
    <p class="small muted">Τα δικά σου ραντεβού και ${esc(LX('whoPlL'))} δεν πειράζονται. Με το «Τέλος δοκιμής» σβήνονται μόνο τα παραδείγματα.</p>
    ${on?`<button class="btn danger wide" id="dm-off">Τέλος δοκιμής — σβήσε τα παραδείγματα</button>`:`<button class="btn pri wide" id="dm-on">🧪 Ξεκίνα δοκιμαστική λειτουργία</button>`}</div>`;
   const a=$('#dm-on',el);if(a)a.onclick=()=>{demoFill();save();toast('Μπήκαν τα παραδείγματα.','ok');go('today');};const b=$('#dm-off',el);if(b)b.onclick=demoClear;},
+ words(el){const base=profLex(),L=S.data.settings.lex||{};
+  el.innerHTML=`<div class="card"><h3>Πώς λες τους ανθρώπους που έρχονται;</h3><p class="small muted" style="margin-top:0">Η λέξη που βλέπεις παντού: στο μενού («${esc(LX('whoPl'))}»), στο νέο ραντεβού («Διάλεξε ${esc(LX('whoAcc'))}»), στην καρτέλα.</p>
+   <div class="chips">${Object.entries(IM_WHO).map(([k,w])=>`<button type="button" class="chipt ${LX('who')===w.who?'on':''}" data-who="${k}">${esc(w.who)}</button>`).join('')}</div>
+   <h3 style="margin-top:18px">Τι κλείνεις;</h3><p class="small muted" style="margin-top:0">Το όνομα κάθε εγγραφής, π.χ. στο ημερολόγιο του κινητού.</p>
+   <div class="chips">${['Ραντεβού','Μάθημα','Συνεδρία','Προπόνηση','Δουλειά','Κράτηση','Επίσκεψη'].map(o=>`<button type="button" class="chipt ${LX('one')===o?'on':''}" data-one="${o}">${o}</button>`).join('')}</div>
+   ${Object.keys(S.data.settings.lex||{}).length?`<button class="btn sm ghost" id="lx-def" style="margin-top:14px">Όπως ήταν στο επάγγελμα</button>`:''}
+   <details style="margin-top:14px"><summary class="small muted">Για προχωρημένους: γράψε μόνος σου κάθε λέξη</summary>
+   <p class="small muted" style="margin:8px 0 10px">Η ίδια λέξη αλλάζει κατάληξη ανάλογα με τη φράση. Γράψε στο κουτάκι τη λέξη όπως ταιριάζει στη φράση από πάνω του. Από κάτω βλέπεις πώς θα φαίνεται.</p>
+   ${[['who','Τίτλος στην καρτέλα: «Νέος ___»','Νέος {}'],['whoAcc','Στο νέο ραντεβού: «Διάλεξε ___»','Διάλεξε {}…'],['whoGen','Κουμπί: «Καρτέλα ___»','Καρτέλα {}'],['whoPl','Στο κάτω μενού: «___»','{}'],['whoPlL','Στη φράση: «Πάγιοι ___»','Πάγιοι {}'],['one','Στο ημερολόγιο του κινητού: «___: Μαρία»','{}: Μαρία']].map(([k,l,ex])=>`<div class="lxrow"><label class="f" for="lx-${k}">${l}</label><input class="in" id="lx-${k}" data-lx="${k}" data-ex="${esc(ex)}" value="${esc(L[k]||'')}" placeholder="${esc(base[k]||'')}"><div class="lxprev" id="lxp-${k}">${esc(ex.replace('{}',L[k]||LX(k)))}</div></div>`).join('')}
+   <button class="btn pri" id="st-lx">${ic('check',15)} Αποθήκευση</button></details></div>`;
+  $$('[data-who]',el).forEach(b=>b.onclick=()=>{const w=IM_WHO[b.dataset.who];const L=Object.assign({},S.data.settings.lex||{});['who','whoAcc','whoGen','whoPl','whoPlL'].forEach(k=>{if(w[k]===base[k])delete L[k];else L[k]=w[k];});S.data.settings.lex=L;save();toast('Τώρα λέγονται «'+w.whoPl+'».','ok');render();});
+  $$('[data-one]',el).forEach(b=>b.onclick=()=>{const L=Object.assign({},S.data.settings.lex||{});if(b.dataset.one===base.one)delete L.one;else L.one=b.dataset.one;S.data.settings.lex=L;save();render();});
+  $$('[data-lx]',el).forEach(x=>x.oninput=()=>{const p=$('#lxp-'+x.dataset.lx,el);if(p)p.textContent=x.dataset.ex.replace('{}',x.value.trim()||x.placeholder);});
+  const ld=$('#lx-def',el);if(ld)ld.onclick=()=>{S.data.settings.lex={};save();render();};
+  $('#st-lx',el).onclick=()=>{const o={};$$('[data-lx]',el).forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};},
  backup(el){backupPage(el);},
  about(el){el.innerHTML=`<div class="card section"><h3>Εγκατάσταση</h3>${isStandalone()?'<p class="small muted" style="margin:0">Η εφαρμογή είναι εγκατεστημένη σε αυτή τη συσκευή.</p>':INST?`<p class="small muted" style="margin-top:0">Βάλ' την στην αρχική οθόνη για να ανοίγει σαν κανονική εφαρμογή.</p><button class="btn pri" id="ab-in">${ic('download',16)} Εγκατάσταση</button>`:`<p class="small muted" style="margin:0">Από τις τρεις τελείες του Chrome: «Προσθήκη στην αρχική οθόνη» → «Εγκατάσταση». Αν γράφει «έχει ήδη εγκατασταθεί», ψάξε «Ημερολόγιο» στη λίστα εφαρμογών του κινητού.</p>`}</div>
   <div class="card"><h3>Έκδοση ${esc(APP_VERSION)}</h3><button class="btn" id="up-chk">${ic('refresh',16)} Έλεγχος αναβάθμισης</button><p class="tiny muted" style="margin:12px 0 0">© 2026 Ανδρέας Μ. Γλεντζάκης. Με την επιφύλαξη παντός δικαιώματος.</p></div>`;
