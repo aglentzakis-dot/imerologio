@@ -32,7 +32,22 @@ async function IM_PICKCONTACTS(multi){try{const L=await navigator.contacts.selec
   catch(e){if(e&&e.name!=='AbortError')toast('Δεν ήταν δυνατή η πρόσβαση στις επαφές.','bad');return[];}}
 
 /* ---------- επάγγελμα και λέξεις ---------- */
-function findProf(id){for(const g of IM_GROUPS)for(const p of g.list)if(p.id===id)return{g,p};return null;}
+const customProfs=()=>(S.data&&S.data.settings.customProfs)||[];
+const groupList=g=>g.list.concat(customProfs().filter(c=>c.group===g.g));
+function findProf(id){for(const g of IM_GROUPS)for(const p of groupList(g))if(p.id===id)return{g,p};return null;}
+const PROF_ICONS=['✨','💼','🧰','🔧','🔨','🪚','🎨','🖌️','✂️','💇','💅','🧖','💆','🩺','🦷','🧠','🐾','🐶','📚','🎓','🎹','🎸','🏋️','🧘','⚽','🚗','🚚','🚕','🏠','🔑','⚖️','🧮','📐','💡','🌿','🌸','🧽','🍽️','☕','🍰','📷','🎬','💻','📱','🧵','👗','👶','👵','🙏','🛠️'];
+function profAddDialog(groupName,old){return new Promise(res=>{const g=IM_GROUPS.find(x=>x.g===groupName)||IM_GROUPS[IM_GROUPS.length-1];let icon=old?old.i:'✨';let done=false;
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${old?'Αλλαγή επαγγέλματος':'Νέο επάγγελμα'}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <p class="small muted" style="margin-top:0">Στην κατηγορία <b>${esc(g.g)}</b>: παίρνει τις λέξεις, τη διάρκεια και το χρώμα της κατηγορίας.</p>
+   <form id="pa"><div class="field"><label class="f" for="pa-n">Όνομα επαγγέλματος</label><input class="in" id="pa-n" name="n" required value="${esc(old?old.n:'')}" placeholder="π.χ. Μασέρ, Tattoo artist, Λογοθεραπευτής"></div>
+   <label class="f">Εικονίδιο</label><div class="pico">${PROF_ICONS.map(x=>`<button type="button" data-pi="${x}" class="${x===icon?'on':''}">${x}</button>`).join('')}</div>
+   <div class="field" style="margin-top:12px"><label class="f" for="pa-t">Συνηθισμένες εργασίες <span class="tiny muted">· προαιρετικό, μία ανά γραμμή</span></label><textarea class="in" id="pa-t" name="t" style="min-height:80px" placeholder="π.χ.&#10;Μασάζ πλάτης&#10;Αθλητικό μασάζ">${esc(old?(old.t||'').split('|').join('\n'):'')}</textarea></div>
+   <div class="row" style="justify-content:space-between">${old?`<button type="button" class="btn danger" id="pa-del">${ic('trash',16)}</button>`:'<span></span>'}<span class="row"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">${ic('check',16)} ${old?'Αποθήκευση':'Προσθήκη'}</button></span></div></form>`,{onClose:()=>{if(!done)res(null);}});
+  md.el.addEventListener('click',e=>{const b=e.target.closest('[data-pi]');if(b){icon=b.dataset.pi;$$('[data-pi]',md.el).forEach(x=>x.classList.toggle('on',x===b));}});
+  $('#pa',md.el).onsubmit=e=>{e.preventDefault();const o=fd(e.target);const n=o.n.trim();if(!n)return;const t=o.t.split('\n').map(x=>x.trim()).filter(Boolean).join('|');
+    const L=customProfs().slice();if(old){Object.assign(L.find(x=>x.id===old.id),{n,i:icon,t});}else L.push({id:'cp_'+uid().slice(0,8),n,i:icon,t,group:g.g,custom:true});
+    S.data.settings.customProfs=L;save();done=true;md.close();res(old?old.id:L[L.length-1].id);};
+  const dl=$('#pa-del',md.el);if(dl)dl.onclick=async()=>{if(!await confirmDlg(`Διαγραφή του επαγγέλματος «${esc(old.n)}»;`,{ok:'Διαγραφή',danger:true}))return;S.data.settings.customProfs=customProfs().filter(x=>x.id!==old.id);if(S.data.settings.prof===old.id)S.data.settings.prof='allo';save();done=true;md.close();res('deleted');};});}
 function prof(){return findProf(S.data.settings.prof)||findProf('allo');}
 function profLex(){const{g,p}=prof();return Object.assign({},g.lex,p.lex||{});}
 function LX(k){const L=Object.assign(profLex(),S.data.settings.lex||{});return L[k]||'';}
@@ -93,7 +108,7 @@ function shellHTML(sec){
 addEventListener('hashchange',render);
 
 /* ---------- πρώτη χρήση: επάγγελμα και όνομα ---------- */
-function profPickerHTML(cur){return IM_GROUPS.map(g=>`<div class="pgrp"><i style="background:${g.color}"></i>${esc(g.g)}</div><div class="ptiles">${g.list.map(p=>`<button type="button" data-pf="${p.id}" class="ptile ${p.id===cur?'on':''}" style="--gc:${g.color}"><span class="pti">${p.i||'✨'}</span><span class="ptn">${esc(p.n)}</span></button>`).join('')}</div>`).join('');}
+function profPickerHTML(cur,edit){return IM_GROUPS.map(g=>`<div class="pgrp"><i style="background:${g.color}"></i>${esc(g.g)}</div><div class="ptiles">${groupList(g).map(p=>`<button type="button" data-pf="${p.id}" class="ptile ${p.id===cur?'on':''} ${p.custom?'mine':''}" style="--gc:${g.color}"><span class="pti">${p.i||'✨'}</span><span class="ptn">${esc(p.n)}</span>${p.custom&&edit?`<span class="pted" data-pedit="${p.id}" role="button" aria-label="Αλλαγή">${ic('edit',13)}</span>`:''}</button>`).join('')}<button type="button" data-padd="${esc(g.g)}" class="ptile padd" style="--gc:${g.color}"><span class="pti">${ic('plus',22)}</span><span class="ptn">Δικό μου επάγγελμα</span></button></div>`).join('');}
 function firstRun(){
   const md=modal(`<div class="fr-head">${LOGO}<div><h2 style="margin:0">Καλώς ήρθες!</h2><div class="small muted">Ημερολόγιο ραντεβού για κάθε επάγγελμα</div></div></div>
    <div class="field"><label class="f" for="fr-n">Το όνομά σου</label><input class="in" id="fr-n" autocomplete="name" placeholder="π.χ. Μαρία Παπαδοπούλου"></div>
@@ -102,7 +117,7 @@ function firstRun(){
    <label class="check frdemo"><input type="checkbox" id="fr-d" checked><span>Βάλε μερικά παραδείγματα για να δω πώς δουλεύει<br><small class="tiny muted">Σβήνονται με ένα κουμπί.</small></span></label>
    <div id="fr-p">${profPickerHTML(null)}</div>`,{noHist:true,guard:false});
   md.el.parentElement.onclick=null;
-  md.el.addEventListener('click',e=>{const b=e.target.closest('[data-pf]');if(!b)return;
+  md.el.addEventListener('click',async e=>{const ad=e.target.closest('[data-padd]');if(ad){const id=await profAddDialog(ad.dataset.padd);if(id){$('#fr-p',md.el).innerHTML=profPickerHTML(id);const t=$(`[data-pf="${id}"]`,md.el);if(t)t.click();}return;}const b=e.target.closest('[data-pf]');if(!b)return;
     S.data.settings.prof=b.dataset.pf;S.data.settings.myName=$('#fr-n',md.el).value.trim();biz().name=$('#fr-b',md.el).value.trim();
     const c=agCfg();c.step=Math.min(60,profDur()>=60?60:profDur()>=30?30:15);applyIdentity();
     if($('#fr-d',md.el).checked)demoFill();
@@ -272,8 +287,8 @@ function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_
   if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}<div class="setlist">${L.map(([k,,i,t,d])=>`<a class="setrow" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div><p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
   M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
 const SETP={
- prof(el){el.innerHTML=`<p class="small muted" style="margin-top:0">Αλλάζουν οι λέξεις, οι ειδικότητες του προσωπικού, η διάρκεια ραντεβού και το χρώμα. Τα ραντεβού και τα πρόσωπα μένουν όπως είναι.</p>${profPickerHTML(S.data.settings.prof)}`;
-  el.onclick=e=>{const b=e.target.closest('[data-pf]');if(!b)return;S.data.settings.prof=b.dataset.pf;S.data.settings.lex={};save();toast('Επάγγελμα: '+prof().p.n,'ok');render();};},
+ prof(el){el.innerHTML=`<p class="small muted" style="margin-top:0">Αλλάζουν οι λέξεις, οι ειδικότητες του προσωπικού, η διάρκεια ραντεβού και το χρώμα. Τα ραντεβού και τα πρόσωπα μένουν όπως είναι.</p>${profPickerHTML(S.data.settings.prof,true)}`;
+  el.onclick=async e=>{const pe=e.target.closest('[data-pedit]');if(pe){e.stopPropagation();const r=await profAddDialog((findProf(pe.dataset.pedit)||{g:{}}).g.g,customProfs().find(x=>x.id===pe.dataset.pedit));if(r)render();return;}const ad=e.target.closest('[data-padd]');if(ad){const id=await profAddDialog(ad.dataset.padd);if(id){S.data.settings.prof=id;S.data.settings.lex={};save();toast('Επάγγελμα: '+prof().p.n,'ok');render();}return;}const b=e.target.closest('[data-pf]');if(!b)return;S.data.settings.prof=b.dataset.pf;S.data.settings.lex={};save();toast('Επάγγελμα: '+prof().p.n,'ok');render();};},
  info(el){const B=biz();const pv=isPrivate();
   el.innerHTML=`<div class="seg kindseg field"><button type="button" data-kind="biz" class="${pv?'':'on'}">🏢 Επιχείρηση</button><button type="button" data-kind="private" class="${pv?'on':''}">👤 Ιδιώτης</button></div>
   <p class="small muted" style="margin-top:0">${pv?'Για προσωπική χρήση: μόνο τα δικά σου στοιχεία.':'Μπαίνουν στις υπενθυμίσεις προς τους πελάτες και στα PDF.'}</p>
