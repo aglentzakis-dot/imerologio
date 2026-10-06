@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.12">
+<meta name="app-version" content="1.13">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -338,6 +338,35 @@ body{background:var(--cream)}
 @media (min-width:961px){.updbar{left:auto;right:28px;bottom:28px;width:360px}}
 .lxrow{padding:10px 0;border-top:1px solid var(--line2)}.lxrow .f{margin-top:0}
 .lxprev{margin-top:6px;font-size:.88rem;color:var(--ink2)}.lxprev::before{content:"Θα φαίνεται: ";color:var(--ink3)}
+/* ===== κουμπιά με όγκο (3Δ) και χρώμα ===== */
+.btn,.chipt,.avf,.avd,.dayarr,.ptile,.setrow,.kindseg button,.seg button,.seg a{
+  background-image:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0) 55%);
+  box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 -2px 0 rgba(21,32,46,.06) inset,0 3px 0 color-mix(in srgb,var(--brand) 22%,var(--line)),0 6px 14px -6px rgba(21,32,46,.25);
+  transition:transform .08s ease,box-shadow .08s ease}
+.btn:active,.chipt:active,.avf:active,.avd:active,.dayarr:active,.ptile:active,.setrow:active,.kindseg button:active,.seg button:active,.seg a:active{
+  transform:translateY(3px);box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 0 0 color-mix(in srgb,var(--brand) 22%,var(--line)),0 2px 6px -4px rgba(21,32,46,.3)}
+.btn{border:1px solid color-mix(in srgb,var(--brand) 25%,var(--line));background-color:color-mix(in srgb,var(--brand) 7%,var(--paper))}
+.btn.pri{background-color:var(--brand);border-color:color-mix(in srgb,var(--brand) 80%,#000);box-shadow:0 1px 0 rgba(255,255,255,.45) inset,0 3px 0 color-mix(in srgb,var(--brand) 65%,#000),0 8px 16px -6px color-mix(in srgb,var(--brand) 70%,transparent)}
+.btn.danger{background-color:color-mix(in srgb,var(--bad) 10%,var(--paper));border-color:color-mix(in srgb,var(--bad) 40%,var(--line));color:var(--bad);box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 3px 0 color-mix(in srgb,var(--bad) 35%,var(--line)),0 6px 14px -6px rgba(21,32,46,.25)}
+.btn.ghost{background-color:transparent;box-shadow:none;background-image:none}
+.iconbtn{box-shadow:none}
+/* κουμπιά ενεργειών στο ραντεβού: το καθένα με δικό του χρώμα */
+.actgrid .btn{min-height:58px;font-weight:600;border-width:1.5px}
+.actgrid .btn .ic{width:22px;height:22px;padding:5px;box-sizing:content-box;border-radius:10px;background:var(--ac);color:#fff;box-shadow:0 2px 0 color-mix(in srgb,var(--ac) 60%,#000)}
+.actgrid .btn{--ac:var(--brand);background-color:color-mix(in srgb,var(--ac) 9%,var(--paper));border-color:color-mix(in srgb,var(--ac) 35%,var(--line));box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 3px 0 color-mix(in srgb,var(--ac) 35%,var(--line)),0 6px 14px -6px rgba(21,32,46,.25)}
+.actgrid .btn[data-a="came"]{--ac:#2E9D63;border-style:solid;color:#1F7A4A}
+.actgrid .btn[data-a="absent"],.actgrid .btn[data-a="cancel"]{--ac:#E07A3F}
+.actgrid .btn[data-a="move"]{--ac:#4C7FD9}
+.actgrid .btn[data-a="remind"]{--ac:#C9A400}
+.actgrid .btn[data-a="ics"]{--ac:#8A5BD6}
+.actgrid .btn[data-a="edit"]{--ac:#2F9AA8}
+.actgrid .btn[data-a="stop"]{--ac:#9C6B3C}
+.actgrid .btn[data-a="del"]{--ac:#D2453B;color:#B23A31}
+.actgrid .btn[data-a="unabsent"],.actgrid .btn[data-a="uncancel"],.actgrid .btn[data-a="undone"]{--ac:#7A8794}
+/* κάρτα ραντεβού και διεύθυνση */
+.qsum.qedit{background:linear-gradient(135deg,color-mix(in srgb,var(--brand) 22%,var(--paper)),color-mix(in srgb,var(--brand) 8%,var(--paper)));box-shadow:0 1px 0 rgba(255,255,255,.8) inset,0 8px 20px -10px color-mix(in srgb,var(--brand) 70%,transparent);border:1px solid color-mix(in srgb,var(--brand) 30%,var(--line))}
+.qsum .av.lg{background:var(--brand);color:var(--on-brand);box-shadow:0 3px 0 color-mix(in srgb,var(--brand) 60%,#000)}
+.scols button{box-shadow:0 2px 0 rgba(0,0,0,.18),0 0 0 2px #fff inset}
 @media (prefers-reduced-motion:reduce){.wcbg i{animation:none!important}}
 .app{position:relative;z-index:1}
 body{background:var(--cream)}
