@@ -376,27 +376,32 @@ function apptSheet(key){const[id,date]=key.split('|');const a=appts().find(x=>x.
 function apptQuick(a,date,o){const rec=a.kind!=='once';const ex=(a.ex=a.ex||{});const st=stOf(a.sid)||{};const PV=providers();let pv=(o&&o.by)||provOf(a);const pv0=pv;
   const md=modal(`<div class="spread" style="margin-bottom:8px"><h3 style="margin:0">Αλλαγή ραντεβού</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <div class="qsum"><span class="av lg">${st.avatar||'🙂'}</span><div><b>${esc(stuName(st))}</b><div class="small">${WDAYS[wdOf(date)]} ${fmtDate(date)} · ${kindTxt(a.kind)}</div></div></div>
-   <form id="qf"><label class="f">Ποιος το αναλαμβάνει</label><button type="button" class="pickbtn field" id="q-pv"></button>
+   <form id="qf"><div class="field"><label class="f" for="q-d">Ημέρα</label><input class="in" type="date" id="q-d" name="nd" value="${date}" required>
+    <div class="row qdays" style="gap:6px;margin-top:6px"><button type="button" class="chip" data-qd="-1">− 1 μέρα</button><button type="button" class="chip" data-qd="1">+ 1 μέρα</button><button type="button" class="chip" data-qd="7">+ 1 εβδομάδα</button><span class="small grow" id="q-dl" style="text-align:right"></span></div></div>
+    <label class="f">Ποιος το αναλαμβάνει</label><button type="button" class="pickbtn field" id="q-pv"></button>
     <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="q-s">Έναρξη</label><input class="in" type="time" id="q-s" name="s" value="${a.s}" required></div><div class="field"><label class="f" for="q-e">Λήξη</label><input class="in" type="time" id="q-e" name="e" value="${a.e}" required></div></div>
     <div class="field"><label class="f" for="q-n">Σημείωση</label><input class="in" id="q-n" name="note" value="${esc(a.note||'')}"></div>
     ${rec?`<label class="f">Ισχύει για</label><div class="seg field" id="q-sc"><button type="button" data-sc="once" class="on">Μόνο ${fmtShort(date)}</button><button type="button" data-sc="all">Όλες τις φορές (πάγιο)</button></div>`:''}
     <div id="q-cf"></div>
     <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><span class="row" style="gap:6px"><button type="button" class="btn sm ghost" id="q-full">${ic('edit',15)} Όλα τα στοιχεία</button><a class="btn sm ghost" href="#/person/${a.sid}" data-close>${ic('user',15)} Καρτέλα</a></span><span class="row"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">${ic('check',16)} Αποθήκευση</button></span></div></form>`);
   const f=$('#qf',md.el);let sc='once';
-  const draw=()=>{const p=provById(pv);const X=occ(date,date,{by:pv}).filter(x=>x.a.id!==a.id&&tmin(x.s)<tmin(f.e.value)&&tmin(f.s.value)<tmin(x.e));
+  const draw=()=>{const p=provById(pv);const nd=f.nd.value||date;$('#q-dl',md.el).innerHTML=`<b>${WDAYS[wdOf(nd)]} ${fmtShort(nd)}</b>${nd!==date?' · <span style="color:var(--ok)">αλλαγή</span>':''}`;const X=occ(nd,nd,{by:pv}).filter(x=>x.a.id!==a.id&&tmin(x.s)<tmin(f.e.value)&&tmin(f.s.value)<tmin(x.e));
     $('#q-pv',md.el).innerHTML=`<i class="pvb" style="background:${p.color}">${provIni(p)}</i><span class="grow"><b>${esc(p.id==='me'?(S.user.name||'Εγώ')+' (εγώ)':p.name)}</b><small>${esc(roleName(p.role,p.custom))}${pv!==pv0?' · <span style="color:var(--ok)">αλλαγή</span>':''}</small></span>${ic('down',18)}`;
     $('#q-cf',md.el).innerHTML=X.length?`<div class="note small field" style="background:var(--pink)">${ic('alert',14)} ${esc(p.id==='me'?'Εσύ έχεις':p.short+' έχει')} ήδη ραντεβού: ${X.map(x=>esc(stuName(stOf(x.a.sid)))+' '+x.s+'–'+x.e).join(', ')}.</div>`:'';};draw();
   f.addEventListener('input',draw);f.addEventListener('change',draw);
-  md.el.addEventListener('click',e=>{const b=e.target.closest('[data-sc]');if(b){sc=b.dataset.sc;$$('[data-sc]',md.el).forEach(x=>x.classList.toggle('on',x===b));}});
+  md.el.addEventListener('click',e=>{const q=e.target.closest('[data-qd]');if(q){f.nd.value=addDays(f.nd.value||date,+q.dataset.qd);md.dirty();draw();return;}const b=e.target.closest('[data-sc]');if(b){sc=b.dataset.sc;$$('[data-sc]',md.el).forEach(x=>x.classList.toggle('on',x===b));}});
   $('#q-pv',md.el).onclick=async()=>{const L=PV.some(p=>p.id===pv)?PV:PV.concat(provById(pv));const r=await richPick({title:'Ποιος το αναλαμβάνει',sel:[pv],hint:`${WDAYS[wdOf(date)]} ${fmtShort(date)} · ${f.s.value}–${f.e.value}`,
     items:L.map(p=>{const X=occ(date,date,{by:p.id}).filter(x=>x.a.id!==a.id&&tmin(x.s)<tmin(f.e.value)&&tmin(f.s.value)<tmin(x.e));return{id:p.id,label:p.id==='me'?(S.user.name||'Εγώ')+' (εγώ)':p.name,color:p.color,ini:provIni(p),sub:esc(roleName(p.role,p.custom)),badge:X.length?`<span class="chip bad">έχει ραντεβού ${X.map(x=>x.s).join(', ')}</span>`:'<span class="chip ok">ελεύθερος</span>'};})});if(r){pv=r[0];md.dirty();draw();}};
   $('#q-full',md.el).onclick=()=>{md.close();apptDialog({a});};
-  f.onsubmit=e=>{e.preventDefault();const v=fd(f);if(tmin(v.e)<=tmin(v.s))return toast('Έλεγξε τις ώρες.','bad');const by=pv==='me'?undefined:pv;
-    if(rec&&sc==='once'){const timeCh=v.s!==a.s||v.e!==a.e||(v.note||'')!==(a.note||'');
-      if(timeCh){ex[date]={st:'moved'};appts().push({id:uid(),sid:a.sid,kind:'once',date,d:wdOf(date),s:v.s,e:v.e,note:v.note||'',ex:{},ref:a.id,by,created:new Date().toISOString()});}
+  f.onsubmit=e=>{e.preventDefault();const v=fd(f);if(tmin(v.e)<=tmin(v.s))return toast('Έλεγξε τις ώρες.','bad');const by=pv==='me'?undefined:pv;const nd=v.nd||date;const dCh=nd!==date;
+    if(isClosed(nd)&&!confirm('Η '+fmtShort(nd)+' είναι κλειστή μέρα (αργία ή ρεπό). Να μπει παρ\' όλα αυτά;'))return;
+    if(rec&&sc==='all'&&dCh){const snap0=a.date;if(a.date>=date){Object.assign(a,{date:nd,d:wdOf(nd),s:v.s,e:v.e,note:v.note||'',by});}else{const until0=a.until;a.until=addDays(date,-1);appts().push(Object.assign(JSON.parse(JSON.stringify(a)),{id:uid(),date:nd,d:wdOf(nd),s:v.s,e:v.e,note:v.note||'',by,ex:{},until:until0,created:new Date().toISOString()}));if(!until0)delete appts()[appts().length-1].until;}
+      save();md.close();toast(`Το πάγιο πάει πλέον ${WDAYS[wdOf(nd)]} από ${fmtShort(nd)}.`,'ok');render();return;}
+    if(rec&&sc==='once'){const timeCh=dCh||v.s!==a.s||v.e!==a.e||(v.note||'')!==(a.note||'');
+      if(timeCh){ex[date]={st:'moved'};appts().push({id:uid(),sid:a.sid,kind:'once',date:nd,d:wdOf(nd),s:v.s,e:v.e,note:v.note||'',ex:{},ref:a.id,by,created:new Date().toISOString()});}
       else{const cur={...(ex[date]||{})};if(pv===provOf(a))delete cur.by;else cur.by=pv;if(Object.keys(cur).length)ex[date]=cur;else delete ex[date];}}
-    else{Object.assign(a,{s:v.s,e:v.e,note:v.note||'',by});if(ex[date]&&ex[date].by){delete ex[date].by;if(!Object.keys(ex[date]).length)delete ex[date];}}
-    save();md.close();toast(rec&&sc==='once'?`Άλλαξε μόνο για ${fmtShort(date)}.`:'Το ραντεβού άλλαξε.','ok');render();};}
+    else{Object.assign(a,{s:v.s,e:v.e,note:v.note||'',by});if(dCh&&!rec)Object.assign(a,{date:nd,d:wdOf(nd)});if(ex[date]&&ex[date].by){delete ex[date].by;if(!Object.keys(ex[date]).length)delete ex[date];}}
+    save();md.close();toast(dCh?`Το ραντεβού πήγε ${WDAYS[wdOf(nd)]} ${fmtShort(nd)} ${v.s}.`:rec&&sc==='once'?`Άλλαξε μόνο για ${fmtShort(date)}.`:'Το ραντεβού άλλαξε.','ok');render();};}
 function agendaCfgDialog(){const c=agCfg();let R=workRanges().map(([a,b])=>[tstr(a),tstr(b)]);const dur=+(S.data.settings.dur||IM_DEF.dur());
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Ωράριο λειτουργίας</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
   <form id="cf"><label class="f">Μέρες που δουλεύεις</label><div class="chips" style="margin-bottom:6px">${DAY_ORDER.map(d=>`<label class="chipt ${c.days.includes(d)?'on':''}"><input type="checkbox" name="d${d}" ${c.days.includes(d)?'checked':''} style="display:none">${WDAYS_S[d]}</label>`).join('')}</div>
