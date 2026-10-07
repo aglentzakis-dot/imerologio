@@ -70,7 +70,7 @@ function applyTheme(){const c=softColor(themeColor()),R=document.documentElement
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=c;}
 
 /* ---------- λογότυπο ---------- */
-const LOGO=`<svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="26" fill="#17324D"/><rect x="20" y="27" width="60" height="55" rx="9" fill="#fff"/><path d="M20 36a9 9 0 0 1 9-9h42a9 9 0 0 1 9 9v6H20z" fill="#F2B632"/><rect x="33" y="18" width="6" height="16" rx="3" fill="#fff" stroke="#17324D" stroke-width="2"/><rect x="61" y="18" width="6" height="16" rx="3" fill="#fff" stroke="#17324D" stroke-width="2"/><g fill="#D6DEE3"><rect x="28" y="50" width="10" height="8" rx="2"/><rect x="45" y="50" width="10" height="8" rx="2"/><rect x="28" y="64" width="10" height="8" rx="2"/><rect x="45" y="64" width="10" height="8" rx="2"/><rect x="62" y="64" width="10" height="8" rx="2"/></g><rect x="62" y="50" width="10" height="8" rx="2" fill="#2E7D5B"/></svg>`;
+const LOGO=`<svg viewBox="0 0 100 100" aria-hidden="true"><image href="icon-192.png" width="100" height="100"/></svg>`;
 async function markPNG(){return null;}
 
 /* ---------- ιστορικό: το «πίσω» κλείνει πρώτα το ανοιχτό παράθυρο ---------- */
