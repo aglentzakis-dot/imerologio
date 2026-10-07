@@ -141,7 +141,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
    <div class="hero-date">${WDAYS[wdOf(t)]} ${+t.slice(8)} ${MONTHS_G[+t.slice(5,7)-1]}</div>
    <div class="hero-sum">${closed?esc(closed):act.length?`<b>${act.length}</b> ${act.length===1?'ραντεβού':'ραντεβού'} σήμερα${left?` · <b>${left}</b> ακόμα`:''}`:'Κανένα ραντεβού σήμερα'}</div></div></section>
   ${next?`<button class="nextcard ${live?'live':''}" data-ap="${next.key}"><span class="nc-time"><b>${next.s}</b><small>${next.e}</small></span><span class="nc-main"><small>${live?'Τώρα':'Επόμενο'}</small><b>${esc(stuName(nst))}</b>${next.a.note?`<span>${esc(next.a.note)}</span>`:''}${pvBadge(next,1)}</span>${ic('right',20)}</button>
-    ${ph?`<div class="ncact"><a class="btn" href="tel:${telLink(ph)}">${ic('l-message-square',16)} Κλήση</a><a class="btn" href="${smsHref(ph,remText(next))}">${ic('send',16)} Υπενθύμιση</a></div>`:''}`:''}
+    ${ph?`<div class="ncact"><a class="btn" data-cg="${nst.id}" href="tel:${telLink(ph)}">${ic('l-phone',16)} Κλήση</a><a class="btn" data-cg="${nst.id}" href="${smsHref(ph,remText(next))}">${ic('send',16)} Υπενθύμιση</a></div>`:''}`:''}
   <section class="tsec"><div class="tsec-h"><h2>Το πρόγραμμα της ημέρας</h2><span class="row" style="gap:8px;align-items:center"><button class="eyebtn ${S.data.settings.hideNames?'off':''}" id="tEye" aria-label="${S.data.settings.hideNames?'Εμφάνιση ονομάτων':'Απόκρυψη ονομάτων'}">${ic('eye',18)}</button><a href="#/agenda?view=day&d=${t}">Ημέρα ${ic('right',14)}</a></span></div>
    ${act.length||L.length?`<div class="tlist">${L.map(o=>`<div class="trow ${o.st==='done'?'done':''} ${tmin(o.e)<=now&&o.st===''?'past':''}"><span class="tr-t">${o.s}</span>${apptCard(o,{compact:true})}</div>`).join('')}</div>`
     :`<div class="tempty">${ic('l-calendar-clock',34)}<b>Η μέρα είναι ελεύθερη</b><span>Κλείσε ραντεβού με το κουμπί + ή διάλεξε μια ελεύθερη ώρα.</span><button class="btn pri" id="tNew">${ic('plus',16)} Νέο ραντεβού</button></div>`}</section>
@@ -347,7 +347,7 @@ function msgHistory(p){const L=(p.msgs||[]).map(m=>({at:m.at,what:m.what,via:m.v
   Object.entries(R).forEach(([k,at])=>{const a=appts().find(x=>x.id===k.split('|')[0]);if(a&&a.sid===p.id&&typeof at==='string')L.push({at,what:'Υπενθύμιση για το ραντεβού '+fmtShort(k.split('|')[1]),via:'μήνυμα'});});
   return L.sort((a,b)=>b.at.localeCompare(a.at));}
 const atTxt=iso=>{const d=new Date(iso);return fmtShort(isoDate(d))+'/'+String(d.getFullYear()).slice(2)+' '+pad(d.getHours())+':'+pad(d.getMinutes());};
-function consCard(p){const el=$('#p-cons');if(!el)return;const ph=p.phone||((p.contacts||[])[0]||{}).phone,em=p.email;const H=msgHistory(p);const t=consText();
+function consCard(p){const sb=$('#p-stopb');if(sb)sb.innerHTML=consOf(p,'appt')===false?(c=>`<div class="stopall">⛔ <b>Δεν θέλει κανένα μήνυμα</b>${c.at?' · '+esc(c.how||'')+' στις '+atTxt(c.at).split(' ')[0]:''}</div>`)((p.cons||{}).appt||{}):'';const el=$('#p-cons');if(!el)return;const ph=p.phone||((p.contacts||[])[0]||{}).phone,em=p.email;const H=msgHistory(p);const t=consText();
   el.innerHTML=`<h3>🛡️ Συγκαταθέσεις για μηνύματα</h3>
    <label class="switch"><span><b>Μηνύματα για τα ραντεβού</b><small>Επιβεβαιώσεις, υπενθυμίσεις, αλλαγές · ${consLbl(p,'appt')}</small></span><input type="checkbox" data-cons="appt" ${consOf(p,'appt')!==false?'checked':''}></label>
    <label class="switch"><span><b>Προσφορές και νέα</b><small>Μόνο αν το θέλει ρητά · ${consLbl(p,'promo')}</small></span><input type="checkbox" data-cons="promo" ${consOf(p,'promo')===true?'checked':''}></label>
@@ -367,6 +367,18 @@ function consCard(p){const el=$('#p-cons');if(!el)return;const ph=p.phone||((p.c
   $('#cs-edef',el).onclick=()=>{delete S.data.settings.consTpl;save();toast('Μπήκε το αρχικό κείμενο.','ok');consCard(p);$('.constxt',el).open=true;};
   const a=$('#cs-sms',el);if(a)a.addEventListener('click',()=>{logMsg(p,'Κείμενο ενημέρωσης / συγκατάθεσης','SMS');setTimeout(()=>consCard(p),300);});
   const b=$('#cs-mail',el);if(b)b.addEventListener('click',()=>{logMsg(p,'Κείμενο ενημέρωσης / συγκατάθεσης','email');setTimeout(()=>consCard(p),300);});}
+
+/* ---------- φύλακας: προειδοποίηση πριν από επικοινωνία με όποιον είπε «ΣΤΟΠ ΟΛΑ» ---------- */
+document.addEventListener('click',async e=>{const a=e.target.closest('a[data-cg]');if(!a)return;const p=getStudent(a.dataset.cg);if(!p||consOf(p,'appt')!==false)return;
+  e.preventDefault();e.stopImmediatePropagation();const h=a.getAttribute('href')||'';const tel=h.startsWith('tel:');
+  const via=tel?'κλήση':h.startsWith('sms:')?'SMS':h.includes('wa.me')||h.includes('whatsapp')?'WhatsApp':h.startsWith('viber:')?'Viber':h.startsWith('mailto:')?'email':'μήνυμα';
+  const c=(p.cons||{}).appt||{};const when=c.at?' στις '+atTxt(c.at).split(' ')[0]:'';
+  const txt=tel?`⛔ <b>${esc(stuName(p))}</b> είπε «ΣΤΟΠ ΟΛΑ»${when} — δεν θέλει μηνύματα.<br><br>Ένα τηλεφώνημα για κάτι που αφορά το ραντεβού του μπορεί να χρειαστεί, αλλά να είσαι σίγουρος ότι το θέλει. Να γίνει η κλήση;`
+   :`⛔ <b>${esc(stuName(p))}</b> είπε «ΣΤΟΠ ΟΛΑ»${when} — <b>δεν θέλει κανένα μήνυμα</b>, ούτε για τα ραντεβού.<br><br>Αν του στείλεις ${esc(via)}, το κάνεις με δική σου ευθύνη και θα γραφτεί στο ιστορικό του. Να ανοίξει παρ' όλα αυτά;`;
+  if(!await confirmDlg(txt,{ok:tel?'Ναι, κλήση':'Ναι, το ξέρω',cancel:'Όχι',danger:true}))return;
+  if(!tel)logMsg(p,'Μήνυμα παρά το «ΣΤΟΠ ΟΛΑ»',via);
+  if(a.target==='_blank')window.open(h,'_blank','noopener');else location.href=h;
+  if(!tel&&$('#p-cons'))setTimeout(()=>consCard(p),300);},true);
 
 /* ---------- συχνότητα επισκέψεων ---------- */
 function visitStats(p){const t=todayISO();const from=addDays(t,-730);
@@ -418,10 +430,10 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   const up=isNew?[]:occ(addDays(t,-60),addDays(t,180),{sid:p.id,withCancel:true,by:''});const fut=up.filter(o=>o.date>=t);const past=up.filter(o=>o.date<t).reverse().slice(0,10);
   const pr=PERS_COLORS;
   M().innerHTML=`${pageHead(isNew?'Νέος '+esc(LX('who')).toLowerCase():esc(stuName(p)),isNew?'':esc(LX('who')),`<a class="btn" href="#/people">Πίσω</a>`)}
-  <div class="grid g2" style="align-items:start"><form class="card" id="pf"><h3>Στοιχεία</h3>
+  <div id="p-stopb"></div><div class="grid g2" style="align-items:start"><form class="card" id="pf"><h3>Στοιχεία</h3>
    ${IM_CONTACTS_OK()?`<button type="button" class="btn conpick field" id="p-con">${ic('users',16)} Από τις επαφές του κινητού</button>`:''}
    <div class="field"><label class="f" for="p-n">Ονοματεπώνυμο</label><input class="in" id="p-n" name="name" required autocomplete="off" value="${esc(p.name||'')}"></div>
-   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="p-ph">Τηλέφωνο</label><div class="phrow"><input class="in" id="p-ph" name="phone" type="tel" inputmode="tel" value="${esc(p.phone||'')}">${p.phone?`<a class="callbtn" href="tel:${telLink(p.phone)}" aria-label="Κλήση">${ic('l-phone',20)}</a><a class="callbtn sms" href="sms:${telLink(p.phone)}" aria-label="Μήνυμα">${ic('l-message-square',20)}</a>`:''}</div></div>
+   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="p-ph">Τηλέφωνο</label><div class="phrow"><input class="in" id="p-ph" name="phone" type="tel" inputmode="tel" value="${esc(p.phone||'')}">${p.phone?`<a class="callbtn" data-cg="${p.id}" href="tel:${telLink(p.phone)}" aria-label="Κλήση">${ic('l-phone',20)}</a><a class="callbtn sms" data-cg="${p.id}" href="sms:${telLink(p.phone)}" aria-label="Μήνυμα">${ic('l-message-square',20)}</a>`:''}</div></div>
    <div class="field"><label class="f" for="p-em">Email</label><input class="in" id="p-em" name="email" type="email" inputmode="email" autocapitalize="none" value="${esc(p.email||'')}"></div></div>
    <div class="field"><label class="f" for="p-ad">Διεύθυνση <span class="tiny muted">· για τον χάρτη, προαιρετικό</span></label><input class="in" id="p-ad" name="addr" value="${esc(p.loc&&p.loc.addr||'')}"></div>
    <div class="field"><label class="f" for="p-no">Σημειώσεις</label><textarea class="in" id="p-no" name="notes" style="min-height:70px">${esc(p.notes||'')}</textarea></div>
@@ -429,7 +441,7 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
    <div class="field"><label class="f">Χρώμα στο ημερολόγιο</label><div class="scols">${pr.map(c=>`<button type="button" data-pc="${c}" style="background:${c}" class="${p.color===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}<button type="button" data-pc="" class="none ${p.color?'':'on'}" aria-label="Χωρίς χρώμα">${ic('x',12)}</button></div></div>
    <div class="savebar"><button class="btn pri">${ic('check',16)} Αποθήκευση</button>${isNew?'':`<button type="button" class="btn danger" id="p-del">${ic('trash',16)} Διαγραφή</button>`}</div></form>
   ${isNew?'':`<div class="card"><div class="card-h"><h3>Ραντεβού</h3><button class="btn sm pri" id="p-new">${ic('plus',15)} Νέο ραντεβού</button></div>
-   ${p.phone?`<div class="row" style="gap:6px;margin-bottom:12px"><a class="btn sm" href="tel:${telLink(p.phone)}">Κλήση</a>${chBtnsHTML({contacts:[{name:p.name,phone:p.phone,email:p.email}]},'Καλησπέρα!','Μήνυμα','')}</div>`:''}
+   ${p.phone?`<div class="row" style="gap:6px;margin-bottom:12px"><a class="btn sm" data-cg="${p.id}" href="tel:${telLink(p.phone)}">Κλήση</a>${chBtnsHTML({contacts:[{name:p.name,phone:p.phone,email:p.email}]},'Καλησπέρα!','Μήνυμα',`data-cg="${p.id}"`)}</div>`:''}
    ${fut.length?`<div class="aglist">${fut.slice(0,6).map(o=>`<div class="small muted" style="margin:8px 0 2px">${WDAYS[wdOf(o.date)]} ${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div>${fut.length>6?`<p class="small muted" style="margin:8px 0 0">και ${fut.length-6} ακόμα μέσα στους επόμενους 6 μήνες.</p>`:''}`:'<p class="small muted">Κανένα επόμενο ραντεβού.</p>'}
    ${past.length?`<details style="margin-top:12px"><summary class="small"><b>Προηγούμενα</b> (${past.length})</summary><div class="aglist" style="margin-top:6px">${past.map(o=>`<div class="small muted" style="margin:8px 0 2px">${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div></details>`:''}</div>`}</div>
   ${isNew?`<div class="card conscard"><h3>🛡️ Συγκαταθέσεις για μηνύματα</h3><p class="small muted" style="margin:0">Μπαίνουν μόλις αποθηκεύσεις ${esc(LX('whoAcc'))}.</p></div>`:`<div class="card conscard" id="p-cons"></div>`}`;
