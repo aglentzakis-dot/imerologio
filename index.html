@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.14">
+<meta name="app-version" content="1.15">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -369,6 +369,23 @@ body{background:var(--cream)}
 .scols button{box-shadow:0 2px 0 rgba(0,0,0,.18),0 0 0 2px #fff inset}
 .cirow{display:flex;align-items:center;gap:8px}.cirow input{flex:1}
 .cisample{display:flex;align-items:center;gap:10px;margin-top:6px}.cisample i{width:44px;height:24px;border-radius:8px;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+/* σταθερό κουμπί αποθήκευσης στο κάτω μέρος */
+.savebar{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:20;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin:14px -14px -14px;padding:12px 14px;background:color-mix(in srgb,var(--paper) 94%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid var(--line);border-radius:0 0 18px 18px}
+.savebar .btn.pri{flex:1;min-height:48px;font-size:1rem}
+@media (min-width:961px){.savebar{bottom:0}}
+.dlg .savebar{bottom:calc(-22px - env(safe-area-inset-bottom,0px));margin:14px -22px -22px;padding:12px 22px calc(12px + env(safe-area-inset-bottom,0px));border-radius:0}
+/* εισαγωγή */
+.implist{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto;padding:2px}
+.improw{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--paper);cursor:pointer}
+.improw input{width:20px;height:20px;flex:none}.improw small{display:block;color:var(--ink2)}.improw em{color:#B07E00;font-style:normal;font-weight:700}
+.improw.dup{opacity:.6}
+/* επιλογή μήνα */
+.dsm,.perhd .dayt b,.dayhd .dayt b{cursor:pointer}
+.dlg .perhd .dayt>b::after{display:none}
+.dsm::after,.perhd .dayt>b::after,.dayhd .dayt>b::after{content:"";display:inline-block;width:7px;height:7px;margin-left:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-3px) rotate(45deg);opacity:.6}
+.mpgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mpm{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 4px;border-radius:14px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font:inherit;cursor:pointer}
+.mpm small{color:var(--ink2);font-size:.75rem}.mpm.now{border-color:var(--brand)}.mpm.on{background:var(--brand);border-color:var(--brand)}.mpm.on b,.mpm.on small{color:var(--on-brand)}
 @media (prefers-reduced-motion:reduce){.wcbg i{animation:none!important}}
 .app{position:relative;z-index:1}
 body{background:var(--cream)}

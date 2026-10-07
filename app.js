@@ -235,11 +235,81 @@ async function viewMap(){const all=myStudents();const on=all.filter(p=>p.loc&&p.
   M().onclick=async e=>{const b=e.target.closest('[data-place]');if(b){PLACE=b.dataset.place;render();window.scrollTo(0,0);return;}if(e.target.closest('#plx')){PLACE=null;render();return;}
     if(e.target.closest('#geoAll')){const L=noPin.filter(p=>p.loc&&p.loc.addr);toast('Εντοπισμός '+L.length+' διευθύνσεων…');let n=0;for(const p of L)if(await geocodePerson(p,false))n++;toast(`Βρέθηκαν ${n} από ${L.length}.`,n?'ok':'bad');render();}};}
 
+/* ---------- εισαγωγή πολλών μαζί: επαφές κινητού, Excel/CSV, αρχείο επαφών (.vcf) ---------- */
+const normPh=p=>{let d=String(p||'').replace(/\D/g,'');if(d.startsWith('0030'))d=d.slice(4);else if(d.startsWith('30')&&d.length===12)d=d.slice(2);return d;};
+const normNm=n=>normT(n).replace(/\s+/g,' ').trim();
+function importMenu(){const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Εισαγωγή πολλών μαζί</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+  <p class="small muted" style="margin-top:0">Βολεύει όταν έρχεσαι από άλλη εφαρμογή ή έχεις ήδη λίστα με τους ${esc(LX('whoPlL'))} σου. Πριν μπουν, βλέπεις τη λίστα και ξετσεκάρεις όσους δεν θέλεις. Όσοι υπάρχουν ήδη παραλείπονται.</p>
+  <div class="list">
+   ${IM_CONTACTS_OK()?`<button class="rw" data-im="con"><span class="ricon">📇</span><span class="grow"><b>Από τις επαφές του κινητού</b><small>Διάλεξε όσους θέλεις, όλους μαζί</small></span>${ic('right',16)}</button>`:''}
+   <button class="rw" data-im="xls"><span class="ricon">📊</span><span class="grow"><b>Από αρχείο Excel ή CSV</b><small>Στήλες όπως Όνομα, Τηλέφωνο, Email, Διεύθυνση</small></span>${ic('right',16)}</button>
+   <button class="rw" data-im="vcf"><span class="ricon">👥</span><span class="grow"><b>Από αρχείο επαφών (.vcf)</b><small>Η «Εξαγωγή επαφών» του κινητού ή του Google</small></span>${ic('right',16)}</button>
+  </div>
+  <button class="btn sm ghost" id="im-tpl" style="margin-top:12px">${ic('file',15)} Κατέβασε έτοιμο πρότυπο Excel</button>
+  <input type="file" id="im-f" hidden>`,{guard:false});
+  const fi=$('#im-f',md.el);
+  md.el.addEventListener('click',async e=>{const b=e.target.closest('[data-im]');if(!b)return;const k=b.dataset.im;
+    if(k==='con'){try{localStorage.setItem('imer-conpick','bulk');}catch(x){}const L=await IM_PICKCONTACTS(true);try{localStorage.removeItem('imer-conpick');}catch(x){}if(!L.length)return;md.close();importPreview(L.map(c=>({name:c.name,phone:c.phone,email:c.email})),'τις επαφές');return;}
+    fi.accept=k==='vcf'?'.vcf,text/vcard,text/x-vcard':'.xlsx,.xls,.csv,.txt,.ods';fi.dataset.k=k;fi.click();});
+  fi.onchange=async()=>{const f=fi.files[0];fi.value='';if(!f)return;try{const rows=await readImportFile(f);if(!rows)return;md.close();
+    if(rows.kind==='people')importPreview(rows.list,f.name);else importMap(rows.table,f.name);}catch(err){toast('Δεν διαβάστηκε το αρχείο: '+(err.message||''),'bad');}};
+  $('#im-tpl',md.el).onclick=()=>{const csv='﻿Ονοματεπώνυμο;Τηλέφωνο;Email;Διεύθυνση;Σημειώσεις\r\nΜαρία Παπαδοπούλου;6900000001;maria@example.com;Αλεξάνδρας 10, Αθήνα;\r\n';downloadText('protypo-pelates.csv',csv,'text/csv');toast('Άνοιξέ το με Excel, γέμισέ το και φέρ\' το εδώ.','ok');};}
+async function readImportFile(f){const n=f.name.toLowerCase();
+  if(n.endsWith('.vcf')){return{kind:'people',list:parseVcf(await f.text())};}
+  if(n.endsWith('.csv')||n.endsWith('.txt')){return{kind:'table',table:parseCsv(await f.text())};}
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');const wb=window.XLSX.read(await f.arrayBuffer(),{type:'array'});const sh=wb.Sheets[wb.SheetNames[0]];
+  return{kind:'table',table:window.XLSX.utils.sheet_to_json(sh,{header:1,raw:false,defval:''})};}
+function parseCsv(t){t=t.replace(/^﻿/,'');const first=t.split(/\r?\n/)[0]||'';const sep=[';',',','\t'].map(c=>[c,first.split(c).length]).sort((a,b)=>b[1]-a[1])[0][0];
+  const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
+    else if(ch==='"')q=true;else if(ch===sep){row.push(cur);cur='';}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur='';}else cur+=ch;}
+  if(cur||row.length){row.push(cur);rows.push(row);}return rows.filter(r=>r.some(x=>String(x).trim()));}
+function parseVcf(t){const L=[];t.replace(/\r\n[ \t]/g,'').split(/BEGIN:VCARD/i).slice(1).forEach(b=>{const get=re=>{const m=b.match(re);return m?m[1].trim():'';};
+  const dec=v=>v.replace(/\\,/g,',').replace(/\;/g,';').replace(/\\n/gi,' ');let fn=dec(get(/\nFN[^:\n]*:(.*)/i));if(!fn){const nn=get(/\nN[^:\n]*:(.*)/i).split(';');fn=[nn[1],nn[0]].filter(Boolean).join(' ');}
+  const adr=get(/\nADR[^:\n]*:(.*)/i).split(';').map(dec).filter(x=>x.trim()).join(', ');
+  if(fn||get(/\nTEL[^:\n]*:(.*)/i))L.push({name:fn||get(/\nTEL[^:\n]*:(.*)/i),phone:get(/\nTEL[^:\n]*:(.*)/i),email:get(/\nEMAIL[^:\n]*:(.*)/i),addr:adr,notes:dec(get(/\nNOTE[^:\n]*:(.*)/i))});});return L;}
+const IMP_FIELDS=[['name','Ονοματεπώνυμο',/(ον[οό]μ|name|πελ[άα]τ|full)/],['last','Επώνυμο (αν είναι χωριστά)',/(επ[ωώ]ν|surname|last)/],['phone','Τηλέφωνο',/(τηλ|κιν|phone|mobile|tel|cell)/],['email','Email',/(mail|ηλεκτρ)/],['addr','Διεύθυνση',/(διευθ|address|οδ[οό]ς|addr)/],['notes','Σημειώσεις',/(σημει|σχ[οό]λ|note|παρατ)/]];
+function importMap(table,src){if(!table.length)return toast('Το αρχείο είναι άδειο.','bad');
+  const head=table[0].map(x=>normT(x));const hasHead=head.some(h=>IMP_FIELDS.some(f=>f[2].test(h)));const cols=table[0].map((x,i)=>hasHead?(String(x).trim()||'Στήλη '+(i+1)):'Στήλη '+(i+1)+' (π.χ. «'+String(x).slice(0,18)+'»)');
+  const map={};IMP_FIELDS.forEach(([k,,re])=>{const i=hasHead?head.findIndex(h=>re.test(h)&&!(k==='name'&&/(επ[ωώ]ν|surname|last)/.test(h))):-1;map[k]=i;});
+  if(map.name<0)map.name=0;if(map.phone<0&&!hasHead)map.phone=table[0].findIndex((x,i)=>i!==map.name&&/\d{6,}/.test(String(x).replace(/\D/g,'')));
+  const body=hasHead?table.slice(1):table;
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Ποια στήλη είναι τι;</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <p class="small muted" style="margin-top:0">Από «${esc(src)}»: ${body.length} γραμμές. Τα βρήκα μόνος μου — διόρθωσε αν κάτι δεν ταιριάζει.</p>
+   <div class="grid g2" style="gap:8px">${IMP_FIELDS.map(([k,l])=>`<div class="field"><label class="f">${l}</label><select class="in" data-mk="${k}"><option value="-1">— κανένα —</option>${cols.map((c,i)=>opt(i,c,map[k])).join('')}</select></div>`).join('')}</div>
+   <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri" id="mp-go">Συνέχεια ${ic('right',15)}</button></div>`,{guard:false});
+  $('#mp-go',md.el).onclick=()=>{$$('[data-mk]',md.el).forEach(x=>map[x.dataset.mk]=+x.value);const g=(r,k)=>map[k]>=0?String(r[map[k]]==null?'':r[map[k]]).trim():'';
+    const L=body.map(r=>({name:[g(r,'name'),g(r,'last')].filter(Boolean).join(' '),phone:g(r,'phone'),email:g(r,'email'),addr:g(r,'addr'),notes:g(r,'notes')})).filter(x=>x.name||x.phone);
+    if(!L.length)return toast('Δεν βρέθηκαν ονόματα με αυτές τις στήλες.','bad');md.close();importPreview(L,src);};}
+function importPreview(list,src){const exPh=new Set(S.data.students.map(p=>normPh(p.phone)).filter(x=>x.length>=6)),exNm=new Set(S.data.students.map(p=>normNm(p.name)));const seen=new Set();
+  const L=list.map(x=>{const k=normPh(x.phone)||normNm(x.name);const dup=(normPh(x.phone).length>=6&&exPh.has(normPh(x.phone)))||exNm.has(normNm(x.name));const twice=seen.has(k);seen.add(k);return Object.assign({},x,{name:(x.name||x.phone||'').trim(),dup:dup||twice,on:!(dup||twice)});});
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Έλεγχος πριν την εισαγωγή</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <p class="small muted" style="margin-top:0">Από ${esc(src)}: ${L.length} άτομα${L.some(x=>x.dup)?` · ${L.filter(x=>x.dup).length} υπάρχουν ήδη και δεν θα ξαναμπούν`:''}.</p>
+   <label class="check small" style="margin-bottom:8px"><input type="checkbox" id="ip-all" checked> Όλοι</label>
+   <div class="implist">${L.map((x,i)=>`<label class="improw ${x.dup?'dup':''}"><input type="checkbox" data-ii="${i}" ${x.on?'checked':''}><span class="grow"><b>${esc(x.name)}</b><small>${[x.phone,x.email,x.addr].filter(Boolean).map(esc).join(' · ')||'&nbsp;'}${x.dup?' <em>υπάρχει ήδη</em>':''}</small></span></label>`).join('')}</div>
+   <div class="savebar"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri" id="ip-go"></button></div>`,{guard:false});
+  const cnt=()=>{const n=L.filter(x=>x.on).length;$('#ip-go',md.el).innerHTML=`${ic('check',16)} Πρόσθεσε ${n}`;$('#ip-go',md.el).disabled=!n;};cnt();
+  md.el.addEventListener('change',e=>{const c=e.target.closest('[data-ii]');if(c){L[+c.dataset.ii].on=c.checked;cnt();}if(e.target.id==='ip-all'){L.forEach(x=>{if(!x.dup)x.on=e.target.checked;});$$('[data-ii]',md.el).forEach(c=>c.checked=L[+c.dataset.ii].on);cnt();}});
+  $('#ip-go',md.el).onclick=()=>{const add=L.filter(x=>x.on);add.forEach((x,i)=>{const p={id:uid(),name:x.name,avatar:initial(x.name),phone:x.phone||'',email:(x.email||'').toLowerCase(),notes:x.notes||'',color:PERS_COLORS[(S.data.students.length+i)%PERS_COLORS.length],contacts:(x.phone||x.email)?[{name:x.name,phone:x.phone||'',email:x.email||''}]:[],created:new Date().toISOString()};if(x.addr)p.loc={addr:x.addr,home:true};S.data.students.push(p);});
+    save();md.close();const na=add.filter(x=>x.addr).length;toast(`Μπήκαν ${add.length} ${LX('whoPlL')}.${na?` ${na} έχουν διεύθυνση — από τον Χάρτη πάτα «Εντοπισμός από τις διευθύνσεις».`:''}`,'ok');go('people');render();};}
+
+/* ---------- πάτημα στον μήνα/ημερομηνία του ημερολογίου: επιλογή μήνα ---------- */
+function monthPicker(){const r=parseRoute();let view=r.q.view;try{view=view||localStorage.getItem('imer-agview');}catch(e){}view=['month','week','day','list'].includes(view)?view:'day';
+  const cur=(r.q.d||r.q.w||(r.q.m?r.q.m+'-01':'')||todayISO()).slice(0,7);let y=+cur.slice(0,4);const t=todayISO();
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Πήγαινε σε μήνα</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div><div id="mp-b"></div>
+   <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-mgo="${t.slice(0,7)}">${ic('calendar',15)} Σήμερα</button></div>`,{guard:false});
+  const draw=()=>{const C={};appts();occ(y+'-01-01',y+'-12-31',{by:''}).forEach(o=>{const k=o.date.slice(0,7);C[k]=(C[k]||0)+1;});
+    $('#mp-b',md.el).innerHTML=`<div class="perhd" style="margin-bottom:10px"><button type="button" class="dayarr" data-yr="-1" aria-label="Προηγούμενη χρονιά">${ic('left',22)}</button><div class="dayt"><b style="font-size:1.3rem">${y}</b></div><button type="button" class="dayarr" data-yr="1" aria-label="Επόμενη χρονιά">${ic('right',22)}</button></div>
+     <div class="mpgrid">${MONTHS.map((m,i)=>{const k=y+'-'+pad(i+1);return`<button type="button" class="mpm ${k===cur?'on':''} ${k===t.slice(0,7)?'now':''}" data-mgo="${k}"><b>${m}</b><small>${C[k]?C[k]+' ραντεβού':'—'}</small></button>`;}).join('')}</div>`;};draw();
+  md.el.addEventListener('click',e=>{const yr=e.target.closest('[data-yr]');if(yr){y+=+yr.dataset.yr;draw();return;}const g=e.target.closest('[data-mgo]');if(!g)return;const k=g.dataset.mgo;const d=k===t.slice(0,7)?t:k+'-01';md.close();
+    setTimeout(()=>go(view==='month'?`agenda?view=month&m=${k}`:view==='week'?`agenda?view=week&w=${mondayOf(d)}`:view==='list'?`agenda?view=list&d=${d}`:`agenda?view=day&d=${d}`),130);});}
+document.addEventListener('click',e=>{const m=e.target.closest&&e.target.closest('#main .dsm, #main .perhd .dayt b, #main .dayhd .dayt b');if(!m)return;e.preventDefault();e.stopPropagation();monthPicker();},true);
+
 /* ---------- πρόσωπα: λίστα ---------- */
 function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
-  M().innerHTML=`${pageHead(esc(LX('whoPl')),`${all.length}`,`<a class="btn pri" href="#/person/new">${ic('plus',17)} Νέος</a>`)}
+  M().innerHTML=`${pageHead(esc(LX('whoPl')),`${all.length}`,`<button class="btn" id="p-imp">${ic('download',16)} Εισαγωγή</button><a class="btn pri" href="#/person/new">${ic('plus',17)} Νέος</a>`)}
   ${all.length?`<div class="search field">${ic('search',17)}<input class="in" id="pq" type="search" placeholder="Όνομα ή τηλέφωνο" value="${esc(q)}" aria-label="Αναζήτηση"></div><div class="list" id="pl"></div>`
-   :emptyHTML('users',`Δεν υπάρχουν ακόμη ${esc(LX('whoPlL'))}`,`Πρόσθεσε τον πρώτο — ή γράψε απευθείας το όνομα όταν κλείνεις ραντεβού.`,`<a class="btn pri" href="#/person/new">${ic('plus',16)} Νέος</a>`)}`;
+   :emptyHTML('users',`Δεν υπάρχουν ακόμη ${esc(LX('whoPlL'))}`,`Πρόσθεσε τον πρώτο — ή γράψε απευθείας το όνομα όταν κλείνεις ραντεβού.`,`<a class="btn pri" href="#/person/new">${ic('plus',16)} Νέος</a> <button class="btn" id="p-imp2">${ic('download',16)} Εισαγωγή πολλών μαζί</button>`)}`;
+  [$('#p-imp'),$('#p-imp2')].forEach(b=>{if(b)b.onclick=importMenu;});
   if(!all.length)return;
   const t=todayISO();
   const draw=()=>{const v=$('#pq').value.toLowerCase().trim();const L=all.filter(p=>!v||(p.name||'').toLowerCase().includes(v)||(p.phone||'').replace(/\s/g,'').includes(v.replace(/\s/g,'')));
@@ -248,7 +318,7 @@ function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
   draw();$('#pq').oninput=draw;}
 
 /* ---------- πρόσωπο: καρτέλα ---------- */
-function viewPerson(r){const isNew=r.id==='new';const p0=isNew?{id:uid(),created:new Date().toISOString(),contacts:[]}:getStudent(r.id);if(!p0)return go('people');
+function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='new';const p0=isNew?{id:uid(),created:new Date().toISOString(),contacts:[]}:getStudent(r.id);if(!p0)return go('people');
   const p=JSON.parse(JSON.stringify(p0));const t=todayISO();
   const up=isNew?[]:occ(addDays(t,-60),addDays(t,180),{sid:p.id,withCancel:true,by:''});const fut=up.filter(o=>o.date>=t);const past=up.filter(o=>o.date<t).reverse().slice(0,10);
   const pr=PERS_COLORS;
@@ -261,23 +331,29 @@ function viewPerson(r){const isNew=r.id==='new';const p0=isNew?{id:uid(),created
    <div class="field"><label class="f" for="p-ad">Διεύθυνση <span class="tiny muted">· για τον χάρτη, προαιρετικό</span></label><input class="in" id="p-ad" name="addr" value="${esc(p.loc&&p.loc.addr||'')}"></div>
    <div class="field"><label class="f" for="p-no">Σημειώσεις</label><textarea class="in" id="p-no" name="notes" style="min-height:70px">${esc(p.notes||'')}</textarea></div>
    <div class="field"><label class="f">Χρώμα στο ημερολόγιο</label><div class="scols">${pr.map(c=>`<button type="button" data-pc="${c}" style="background:${c}" class="${p.color===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}<button type="button" data-pc="" class="none ${p.color?'':'on'}" aria-label="Χωρίς χρώμα">${ic('x',12)}</button></div></div>
-   <div class="row"><button class="btn pri">${ic('check',16)} Αποθήκευση</button>${isNew?'':`<button type="button" class="btn danger" id="p-del">${ic('trash',16)} Διαγραφή</button>`}</div></form>
+   <div class="savebar"><button class="btn pri">${ic('check',16)} Αποθήκευση</button>${isNew?'':`<button type="button" class="btn danger" id="p-del">${ic('trash',16)} Διαγραφή</button>`}</div></form>
   ${isNew?'':`<div class="card"><div class="card-h"><h3>Ραντεβού</h3><button class="btn sm pri" id="p-new">${ic('plus',15)} Νέο ραντεβού</button></div>
    ${p.phone?`<div class="row" style="gap:6px;margin-bottom:12px"><a class="btn sm" href="tel:${telLink(p.phone)}">Κλήση</a>${chBtnsHTML({contacts:[{name:p.name,phone:p.phone,email:p.email}]},'Καλησπέρα!','Μήνυμα','')}</div>`:''}
    ${fut.length?`<div class="aglist">${fut.slice(0,6).map(o=>`<div class="small muted" style="margin:8px 0 2px">${WDAYS[wdOf(o.date)]} ${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div>${fut.length>6?`<p class="small muted" style="margin:8px 0 0">και ${fut.length-6} ακόμα μέσα στους επόμενους 6 μήνες.</p>`:''}`:'<p class="small muted">Κανένα επόμενο ραντεβού.</p>'}
    ${past.length?`<details style="margin-top:12px"><summary class="small"><b>Προηγούμενα</b> (${past.length})</summary><div class="aglist" style="margin-top:6px">${past.map(o=>`<div class="small muted" style="margin:8px 0 2px">${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div></details>`:''}</div>`}</div>`;
   const F=$('#pf');let col=p.color||'';
-  const pc=$('#p-con');if(pc)pc.onclick=async()=>{const L=await IM_PICKCONTACTS(false);const c=L[0];if(!c)return;F.name.value=c.name;if(c.phone)F.phone.value=c.phone;if(c.email)F.email.value=c.email;toast('Μπήκαν τα στοιχεία από τις επαφές.','ok');};
-  F.onclick=e=>{const b=e.target.closest('[data-pc]');if(!b)return;col=b.dataset.pc;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x===b));};
+  // πρόχειρο: ό,τι γράφεις κρατιέται, ακόμα κι αν το κινητό κλείσει την εφαρμογή στο παρασκήνιο
+  const DK='imer-pdraft';const saveDraft=()=>{try{const o=fd(F);localStorage.setItem(DK,JSON.stringify({rid:r.id,t:Date.now(),o,col}));}catch(e){}};
+  const clearDraft=()=>{try{localStorage.removeItem(DK);localStorage.removeItem('imer-conpick');}catch(e){}};
+  try{const d=JSON.parse(localStorage.getItem(DK)||'null');if(d&&d.rid===r.id&&Date.now()-d.t<6*36e5){['name','phone','email','addr','notes'].forEach(k=>{if(d.o[k]!=null&&F[k])F[k].value=d.o[k];});if(d.col!=null){col=d.col;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x.dataset.pc===col));}
+    const cp=localStorage.getItem('imer-conpick');if(cp){localStorage.removeItem('imer-conpick');toast('Το κινητό έκλεισε τη λίστα επαφών όσο ήσουν σε άλλη εφαρμογή. Ό,τι είχες γράψει κρατήθηκε — πάτα ξανά «Από τις επαφές».','bad');}else if(d.o.name||d.o.phone)toast('Συνεχίζεις από εκεί που είχες μείνει.','ok');}}catch(e){}
+  F.addEventListener('input',saveDraft);
+  const pc=$('#p-con');if(pc)pc.onclick=async()=>{saveDraft();try{localStorage.setItem('imer-conpick','1');}catch(e){}const L=await IM_PICKCONTACTS(false);try{localStorage.removeItem('imer-conpick');}catch(e){}const c=L[0];if(!c)return;F.name.value=c.name;if(c.phone)F.phone.value=c.phone;if(c.email)F.email.value=c.email;toast('Μπήκαν τα στοιχεία από τις επαφές.','ok');saveDraft();};
+  F.onclick=e=>{const b=e.target.closest('[data-pc]');if(!b)return;col=b.dataset.pc;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x===b));saveDraft();};
   F.onsubmit=e=>{e.preventDefault();const o=fd(F);if(!o.name.trim())return toast('Γράψε όνομα.','bad');
     Object.assign(p0,{name:o.name.trim(),avatar:initial(o.name),phone:o.phone.trim(),email:o.email.trim().toLowerCase(),notes:o.notes.trim(),color:col||undefined,updated:new Date().toISOString()});
     p0.contacts=(p0.phone||p0.email)?[{name:p0.name,role:'',phone:p0.phone,email:p0.email}]:[];
     const newAddr=o.addr.trim()&&!(p0.loc&&p0.loc.addr===o.addr.trim()&&p0.loc.lat!=null);if(o.addr.trim())p0.loc=Object.assign({},p0.loc&&p0.loc.addr===o.addr.trim()?p0.loc:{},{addr:o.addr.trim(),home:true});else delete p0.loc;
-    if(isNew)S.data.students.push(p0);save();toast('Αποθηκεύτηκε.','ok');if(newAddr)geocodePerson(p0,true);
+    if(isNew)S.data.students.push(p0);save();clearDraft();toast('Αποθηκεύτηκε.','ok');if(newAddr)geocodePerson(p0,true);
     if(isNew&&sessionStorage.getItem('im-after-person')){sessionStorage.removeItem('im-after-person');go('today');setTimeout(()=>apptDialog({date:todayISO(),sids:[p0.id]}),200);return;}
     go('person/'+p0.id);};
   const dl=$('#p-del');if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.sid===p0.id).length;if(!await confirmDlg(`Διαγραφή «${esc(stuName(p0))}»${n?` και ${n===1?'του ραντεβού του':'των '+n+' ραντεβού του'}`:''}; Δεν αναιρείται.`,{ok:'Διαγραφή',danger:true}))return;
-    S.data.students=S.data.students.filter(x=>x.id!==p0.id);S.data.appts=appts().filter(a=>a.sid!==p0.id);S.data.waitlist=(S.data.waitlist||[]).filter(w=>w.sid!==p0.id);save();toast('Διαγράφηκε.');go('people');};
+    clearDraft();S.data.students=S.data.students.filter(x=>x.id!==p0.id);S.data.appts=appts().filter(a=>a.sid!==p0.id);S.data.waitlist=(S.data.waitlist||[]).filter(w=>w.sid!==p0.id);save();toast('Διαγράφηκε.');go('people');};
   const nb=$('#p-new');if(nb)nb.onclick=()=>apptDialog({date:todayISO(),sids:[p0.id]});}
 const PERS_COLORS=['#7462B4','#3A8A61','#2F7FA8','#C77A3A','#B4527A','#8A7A2E','#C46A7A','#5A6ACF','#2E8C8C','#9C5BB5'];
 
