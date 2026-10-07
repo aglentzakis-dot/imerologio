@@ -440,11 +440,16 @@ function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
   tabs();draw();$('#pq').oninput=draw;}
 
 /* ---------- πρόσωπο: καρτέλα ---------- */
+/* επιστροφή στις υπενθυμίσεις όταν η καρτέλα άνοιξε από εκεί */
+function remBackInfo(){try{return JSON.parse(sessionStorage.getItem('im-rem-back')||'null');}catch(_){return null;}}
+function remBackGo(){const b=remBackInfo();try{sessionStorage.removeItem('im-rem-back');}catch(_){}if(!b)return false;location.hash=b.h||'#/today';setTimeout(()=>remindDialog(b.d),250);return true;}
+addEventListener('hashchange',()=>{if(!location.hash.startsWith('#/person/'))try{sessionStorage.removeItem('im-rem-back');}catch(_){}});
 function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='new';const p0=isNew?{id:uid(),created:new Date().toISOString(),contacts:[]}:getStudent(r.id);if(!p0)return go('people');
   const p=JSON.parse(JSON.stringify(p0));const t=todayISO();
   const up=isNew?[]:occ(addDays(t,-60),addDays(t,180),{sid:p.id,withCancel:true,by:''});const fut=up.filter(o=>o.date>=t);const past=up.filter(o=>o.date<t).reverse().slice(0,10);
   const pr=PERS_COLORS;
-  M().innerHTML=`${pageHead(isNew?'Νέος '+esc(LX('who')).toLowerCase():esc(stuName(p)),isNew?'':esc(LX('who')),`<a class="btn" href="#/people">Πίσω</a>`)}
+  const rb=!isNew&&remBackInfo();
+  M().innerHTML=`${pageHead(isNew?'Νέος '+esc(LX('who')).toLowerCase():esc(stuName(p)),isNew?'':esc(LX('who')),rb?`<button class="btn" id="p-remback">${ic('bell',15)} Πίσω στις υπενθυμίσεις</button>`:`<a class="btn" href="#/people">Πίσω</a>`)}
   <div id="p-stopb"></div><div class="grid g2" style="align-items:start"><form class="card" id="pf"><h3>Στοιχεία</h3>
    ${IM_CONTACTS_OK()?`<button type="button" class="btn conpick field" id="p-con">${ic('users',16)} Από τις επαφές του κινητού</button>`:''}
    <div class="field"><label class="f" for="p-n">Ονοματεπώνυμο</label><input class="in" id="p-n" name="name" required autocomplete="off" value="${esc(p.name||'')}"></div>
@@ -475,11 +480,11 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
     const newAddr=o.addr.trim()&&!(p0.loc&&p0.loc.addr===o.addr.trim()&&p0.loc.lat!=null);if(o.addr.trim())p0.loc=Object.assign({},p0.loc&&p0.loc.addr===o.addr.trim()?p0.loc:{},{addr:o.addr.trim(),home:true});else delete p0.loc;
     if(isNew)S.data.students.push(p0);save();clearDraft();toast('Αποθηκεύτηκε.','ok');if(newAddr)geocodePerson(p0,true);
     if(isNew&&sessionStorage.getItem('im-after-person')){sessionStorage.removeItem('im-after-person');go('today');setTimeout(()=>apptDialog({date:todayISO(),sids:[p0.id]}),200);return;}
-    go('person/'+p0.id);};
+    if(remBackGo())return;go('person/'+p0.id);};
   const dl=$('#p-del');if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.sid===p0.id).length;if(!await confirmDlg(`Διαγραφή «${esc(stuName(p0))}»${n?` και ${n===1?'του ραντεβού του':'των '+n+' ραντεβού του'}`:''}; Δεν αναιρείται.`,{ok:'Διαγραφή',danger:true}))return;
     clearDraft();S.data.students=S.data.students.filter(x=>x.id!==p0.id);S.data.appts=appts().filter(a=>a.sid!==p0.id);S.data.waitlist=(S.data.waitlist||[]).filter(w=>w.sid!==p0.id);save();toast('Διαγράφηκε.');go('people');};
   const nb=$('#p-new');if(nb)nb.onclick=()=>apptDialog({date:todayISO(),sids:[p0.id]});
-  if(!isNew)consCard(p0);}
+  if(rb){scrollTo(0,0);setTimeout(()=>scrollTo(0,0),120);setTimeout(()=>scrollTo(0,0),400);}if(!isNew)consCard(p0);const rbb=$("#p-remback");if(rbb)rbb.onclick=()=>remBackGo();}
 const PERS_COLORS=['#7462B4','#3A8A61','#2F7FA8','#C77A3A','#B4527A','#8A7A2E','#C46A7A','#5A6ACF','#2E8C8C','#9C5BB5'];
 
 /* ---------- ρυθμίσεις: λίστα κατηγοριών, κάθε κατηγορία σε δική της σελίδα ---------- */

@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.24">
+<meta name="app-version" content="1.25">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -1595,6 +1595,10 @@ input[type=color]{width:44px;height:36px;border:1px solid var(--line);border-rad
 .actgrid .btn .ic{flex:none}
 .actgrid .btn:last-child:nth-child(odd){grid-column:1/-1;justify-content:center}
 .actgrid .btn:last-child:nth-child(odd)>span{flex:0 1 auto}
+.remrow .remwho{display:flex;align-items:center;gap:12px;flex:1 1 220px;min-width:0;color:inherit;text-decoration:none;border-radius:12px;padding:4px;margin:-4px}
+.remrow .remwho:active{background:var(--brand-soft)}
+.remrow .remwho small{display:block}
+.remcard{display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-size:.78rem;font-weight:600;color:var(--brand-txt);background:var(--brand-soft);padding:2px 9px;border-radius:999px}
 @media (prefers-reduced-motion:reduce){.fab:active{transform:none}}
 </style>
 </head>
