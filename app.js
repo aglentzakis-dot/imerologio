@@ -84,7 +84,7 @@ addEventListener('keydown',e=>{if(e.key!=='Escape')return;const t=topModal();if(
 
 /* ---------- πλοήγηση ---------- */
 function parseRoute(){const h=location.hash.replace(/^#\/?/,'');const[p,q]=h.split('?');const parts=p.split('/').filter(Boolean);return{name:parts[0]||'today',id:parts[1]||null,q:Object.fromEntries(new URLSearchParams(q||''))};}
-function render(){
+function render(){document.body&&document.body.classList.toggle('hidenames',!!(S.data&&S.data.settings.hideNames));
   applyTheme();if(!S.data.settings.prof){shellHTML('today');M().innerHTML='';return firstRun();}
   window.AGPOS=null;if(/^#\/agenda/.test(S.curHash||'')&&/^#\/agenda/.test(location.hash)&&typeof agPosSave==='function')agPosSave();
   S.curHash=location.hash;
@@ -103,6 +103,7 @@ function shellHTML(sec){
   <div class="shell"><header class="topbar noprint"><a class="tbrand" href="#/today">${LOGO}</a><b class="tbtitle">${esc(title)}</b><span class="tbprof">${esc(S.meta.org||prof().p.n)}</span></header>${S.data.settings.demo?`<div class="demostrip noprint"><span>🧪 <b>Δοκιμαστική λειτουργία</b> — τα ραντεβού και οι ${esc(LX('whoPlL'))} είναι παραδείγματα</span><button type="button" id="demoEnd">Τέλος δοκιμής</button></div>`:''}<main class="main" id="main"></main></div>
   <nav class="bottomnav noprint">${nav.map(([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}"><span class="bi">${ic(i,22)}</span><span>${esc(l)}</span></a>`).join('')}</nav>
   ${fab?`<button class="fab noprint" id="fab" aria-label="${sec==='people'?'Νέος':'Νέο ραντεβού'}">${ic('plus',26)}</button>`:''}</div>`;
+  document.body.classList.toggle('hidenames',!!S.data.settings.hideNames);
   const de=$('#demoEnd');if(de)de.onclick=demoClear;
   const f=$('#fab');if(f)f.onclick=()=>sec==='people'?go('person/new'):apptDialog({date:(parseRoute().q.d)||todayISO()});
 }
@@ -141,18 +142,22 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
    <div class="hero-sum">${closed?esc(closed):act.length?`<b>${act.length}</b> ${act.length===1?'ραντεβού':'ραντεβού'} σήμερα${left?` · <b>${left}</b> ακόμα`:''}`:'Κανένα ραντεβού σήμερα'}</div></div></section>
   ${next?`<button class="nextcard ${live?'live':''}" data-ap="${next.key}"><span class="nc-time"><b>${next.s}</b><small>${next.e}</small></span><span class="nc-main"><small>${live?'Τώρα':'Επόμενο'}</small><b>${esc(stuName(nst))}</b>${next.a.note?`<span>${esc(next.a.note)}</span>`:''}${pvBadge(next,1)}</span>${ic('right',20)}</button>
     ${ph?`<div class="ncact"><a class="btn" href="tel:${telLink(ph)}">${ic('l-message-square',16)} Κλήση</a><a class="btn" href="${smsHref(ph,remText(next))}">${ic('send',16)} Υπενθύμιση</a></div>`:''}`:''}
-  <section class="tsec"><div class="tsec-h"><h2>Το πρόγραμμα της ημέρας</h2><a href="#/agenda?view=day&d=${t}">Ημέρα ${ic('right',14)}</a></div>
+  <section class="tsec"><div class="tsec-h"><h2>Το πρόγραμμα της ημέρας</h2><span class="row" style="gap:8px;align-items:center"><button class="eyebtn ${S.data.settings.hideNames?'off':''}" id="tEye" aria-label="${S.data.settings.hideNames?'Εμφάνιση ονομάτων':'Απόκρυψη ονομάτων'}">${ic('eye',18)}</button><a href="#/agenda?view=day&d=${t}">Ημέρα ${ic('right',14)}</a></span></div>
    ${act.length||L.length?`<div class="tlist">${L.map(o=>`<div class="trow ${o.st==='done'?'done':''} ${tmin(o.e)<=now&&o.st===''?'past':''}"><span class="tr-t">${o.s}</span>${apptCard(o,{compact:true})}</div>`).join('')}</div>`
     :`<div class="tempty">${ic('l-calendar-clock',34)}<b>Η μέρα είναι ελεύθερη</b><span>Κλείσε ραντεβού με το κουμπί + ή διάλεξε μια ελεύθερη ώρα.</span><button class="btn pri" id="tNew">${ic('plus',16)} Νέο ραντεβού</button></div>`}</section>
   ${F.length?`<section class="tsec"><div class="tsec-h"><h2>Ελεύθερες ώρες σήμερα</h2></div><div class="chips">${F.map(x=>`<button class="chipt free" data-new="${t}|${x}">${x}</button>`).join('')}</div></section>`:''}
   <section class="tsec"><div class="tsec-h"><h2>Αύριο</h2><a href="#/agenda?view=day&d=${tm}">Άνοιγμα ${ic('right',14)}</a></div>
    <div class="tmrw"><span><b>${T.length}</b> ${T.length===1?'ραντεβού':'ραντεβού'}${T.length?' — πρώτο στις '+T[0].s:''}</span>${T.length?`<button class="btn sm" id="tRem">${ic('bell',15)} Στείλε υπενθυμίσεις</button>`:''}</div></section>
   ${installCardHTML()}`;
-  const n=$('#tNew');if(n)n.onclick=()=>apptDialog({date:t});const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);
+  const n=$('#tNew');if(n)n.onclick=()=>apptDialog({date:t});
+  $('#tEye').onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();render();};const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);
   bindInstall();}
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
 function viewAgendaApp(r){viewAgenda(r);
+  $$('#main .tl-ev:not(.tl-blk) b').forEach(b=>{if(!b.querySelector('.nm')){const t=b.textContent.trim();const sp=t.indexOf(' ');b.innerHTML=(sp>0&&sp<3?esc(t.slice(0,sp))+' ':'')+'<span class="nm">'+esc(sp>0&&sp<3?t.slice(sp+1):t)+'</span>';}});
+  {const h=$('.page-head .actions');if(h){const e=document.createElement('button');e.className='eyebtn '+(S.data.settings.hideNames?'off':'');e.setAttribute('aria-label',S.data.settings.hideNames?'Εμφάνιση ονομάτων':'Απόκρυψη ονομάτων');e.title=e.getAttribute('aria-label');e.innerHTML=ic('eye',20);
+    e.onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();document.body.classList.toggle('hidenames',!!S.data.settings.hideNames);e.classList.toggle('off',!!S.data.settings.hideNames);toast(S.data.settings.hideNames?'Τα ονόματα κρύφτηκαν. Πάτα ξανά το μάτι για να φανούν.':'Τα ονόματα φαίνονται.');};h.insertBefore(e,h.firstChild);}}
   if(innerWidth<=960){const nl=$('.tl-now'),sc=$('#tlScroll');if(sc&&!window.AGPOS){const tgt=nl||$('.tl-ev')||null;if(tgt)setTimeout(()=>{const y=tgt.getBoundingClientRect().top+scrollY-innerHeight*.35;scrollTo({top:Math.max(0,y)});},60);}}
   const h=$('.page-head .actions');if(!h)return;
   const more=document.createElement('button');more.className='iconbtn agmore';more.setAttribute('aria-label','Περισσότερα');more.innerHTML=ic('more',20);h.appendChild(more);
