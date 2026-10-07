@@ -70,7 +70,7 @@ function applyTheme(){const c=softColor(themeColor()),R=document.documentElement
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=c;}
 
 /* ---------- λογότυπο ---------- */
-const LOGO=`<svg viewBox="0 0 100 100" aria-hidden="true"><image href="icon-192.png" width="100" height="100"/></svg>`;
+const LOGO=`<img src="icon-192.png" alt="" class="logo-img" width="100" height="100" decoding="async">`;
 async function markPNG(){return null;}
 
 /* ---------- ιστορικό: το «πίσω» κλείνει πρώτα το ανοιχτό παράθυρο ---------- */
@@ -302,7 +302,28 @@ function monthPicker(){const r=parseRoute();let view=r.q.view;try{view=view||loc
      <div class="mpgrid">${MONTHS.map((m,i)=>{const k=y+'-'+pad(i+1);return`<button type="button" class="mpm ${k===cur?'on':''} ${k===t.slice(0,7)?'now':''}" data-mgo="${k}"><b>${m}</b><small>${C[k]?C[k]+' ραντεβού':'—'}</small></button>`;}).join('')}</div>`;};draw();
   md.el.addEventListener('click',e=>{const yr=e.target.closest('[data-yr]');if(yr){y+=+yr.dataset.yr;draw();return;}const g=e.target.closest('[data-mgo]');if(!g)return;const k=g.dataset.mgo;const d=k===t.slice(0,7)?t:k+'-01';md.close();
     setTimeout(()=>go(view==='month'?`agenda?view=month&m=${k}`:view==='week'?`agenda?view=week&w=${mondayOf(d)}`:view==='list'?`agenda?view=list&d=${d}`:`agenda?view=day&d=${d}`),130);});}
-document.addEventListener('click',e=>{const m=e.target.closest&&e.target.closest('#main .dsm, #main .perhd .dayt b, #main .dayhd .dayt b');if(!m)return;e.preventDefault();e.stopPropagation();monthPicker();},true);
+/* εβδομάδα: λίστα εβδομάδων του μήνα · ημέρα: μικρό ημερολόγιο μήνα για να διαλέξεις μέρα */
+function curView(){const r=parseRoute();let v=r.q.view;try{v=v||localStorage.getItem('imer-agview');}catch(e){}return['month','week','day','list'].includes(v)?v:'day';}
+function weekPicker(){const r=parseRoute();const t=todayISO();const selW=mondayOf(r.q.w||r.q.d||t);let ym=selW.slice(0,7);
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Διάλεξε εβδομάδα</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div><div id="wp-b"></div>
+   <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-wgo="${mondayOf(t)}">${ic('calendar',15)} Αυτή η εβδομάδα</button></div>`,{guard:false});
+  const draw=()=>{const[Y,Mo]=ym.split('-').map(Number);const first=ym+'-01',last=isoDate(new Date(Y,Mo,0));const W=[];for(let w=mondayOf(first);w<=last;w=addDays(w,7))W.push(w);
+    $('#wp-b',md.el).innerHTML=`<div class="perhd" style="margin-bottom:10px"><button type="button" class="dayarr" data-wm="-1" aria-label="Προηγούμενος μήνας">${ic('left',22)}</button><div class="dayt"><b style="font-size:1.15rem">${MONTHS[Mo-1]} ${Y}</b></div><button type="button" class="dayarr" data-wm="1" aria-label="Επόμενος μήνας">${ic('right',22)}</button></div>
+     <div class="wplist">${W.map(w=>{const e=addDays(w,6);const n=occ(w,e,{by:''}).length;const fr=[...Array(7)].map((_,i)=>addDays(w,i)).filter(d=>d>=t&&workDay(d)&&!isClosed(d)).reduce((a,d)=>a+freeSlots(d).length,0);
+       return`<button type="button" class="wpw ${w===selW?'on':''} ${w===mondayOf(t)?'now':''}" data-wgo="${w}"><span class="grow"><b>${fmtShort(w)} – ${fmtShort(e)}</b><small>${w===mondayOf(t)?'Αυτή η εβδομάδα · ':''}${n} ραντεβού${e>=t?` · ${fr} ελεύθερα κενά`:''}</small></span>${ic('right',16)}</button>`;}).join('')}</div>`;};draw();
+  md.el.addEventListener('click',e=>{const m=e.target.closest('[data-wm]');if(m){const[Y,Mo]=ym.split('-').map(Number);ym=isoDate(new Date(Y,Mo-1+ +m.dataset.wm,1)).slice(0,7);draw();return;}
+    const g=e.target.closest('[data-wgo]');if(!g)return;md.close();setTimeout(()=>go(`agenda?view=week&w=${g.dataset.wgo}`),130);});}
+function dayPicker(){const r=parseRoute();const t=todayISO();const sel=r.q.d||t;let ym=sel.slice(0,7);
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Διάλεξε μέρα</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div><div id="dp-b"></div>
+   <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" data-dgo="${t}">${ic('calendar',15)} Σήμερα</button></div>`,{guard:false});
+  const draw=()=>{const[Y,Mo]=ym.split('-').map(Number);const first=ym+'-01',last=isoDate(new Date(Y,Mo,0));const C={};occ(first,last,{by:''}).forEach(o=>C[o.date]=(C[o.date]||0)+1);
+    let cells='';for(let i=0;i<(new Date(Y,Mo-1,1).getDay()+6)%7;i++)cells+='<span></span>';for(let d=first;d<=last;d=addDays(d,1)){const off=!workDay(d)||isClosed(d);cells+=`<button type="button" class="dpd ${d===sel?'on':''} ${d===t?'now':''} ${off?'off':''}" data-dgo="${d}"><b>${+d.slice(8)}</b>${C[d]?`<i>${C[d]}</i>`:''}</button>`;}
+    $('#dp-b',md.el).innerHTML=`<div class="perhd" style="margin-bottom:10px"><button type="button" class="dayarr" data-dm="-1" aria-label="Προηγούμενος μήνας">${ic('left',22)}</button><div class="dayt"><b style="font-size:1.15rem">${MONTHS[Mo-1]} ${Y}</b></div><button type="button" class="dayarr" data-dm="1" aria-label="Επόμενος μήνας">${ic('right',22)}</button></div>
+     <div class="dpgrid">${['Δ','Τ','Τ','Π','Π','Σ','Κ'].map(x=>`<span class="dpw">${x}</span>`).join('')}${cells}</div><p class="tiny muted" style="margin:8px 0 0;text-align:center">Το νούμερο πάνω δεξιά = πόσα ραντεβού έχει η μέρα.</p>`;};draw();
+  md.el.addEventListener('click',e=>{const m=e.target.closest('[data-dm]');if(m){const[Y,Mo]=ym.split('-').map(Number);ym=isoDate(new Date(Y,Mo-1+ +m.dataset.dm,1)).slice(0,7);draw();return;}
+    const g=e.target.closest('[data-dgo]');if(!g)return;md.close();setTimeout(()=>go(`agenda?view=day&d=${g.dataset.dgo}`),130);});}
+document.addEventListener('click',e=>{const m=e.target.closest&&e.target.closest('#main .dsm, #main .perhd .dayt b, #main .dayhd .dayt b');if(!m)return;e.preventDefault();e.stopPropagation();
+  const v=curView();if(m.classList.contains('dsm'))return dayPicker();if(v==='week')return weekPicker();if(v==='day')return dayPicker();monthPicker();},true);
 
 /* ---------- πρόσωπα: λίστα ---------- */
 function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
