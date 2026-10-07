@@ -347,7 +347,7 @@ function apptSheet(key){const[id,date]=key.split('|');const a=appts().find(x=>x.
     ${o.st==='cancel'?`<button class="btn" data-a="uncancel">${ic('undo',16)}<span>Επαναφορά ραντεβού</span></button>`:''}
     ${o.st===''||o.st==='cancel'?`<button class="btn" data-a="move">${ic('clock',16)}<span>${rec?'Μετακίνηση (μόνο αυτή τη φορά)':'Μετακίνηση'}</span></button>`:''}
     ${rec&&o.st===''?`<button class="btn" data-a="cancel">${ic('x',16)}<span>Ακύρωση (μόνο αυτή τη φορά)</span></button>`:''}
-    ${o.st===''&&date>=todayISO()?`<button class="btn" data-a="remind">${ic('bell',16)}<span>Υπενθύμιση με μήνυμα</span></button>`:''}<button class="btn" data-a="ics">${ic('calendar',16)}<span>Στο ημερολόγιο κινητού</span></button>
+    ${o.st===''&&date>=todayISO()?`<button class="btn" data-a="remind">${ic('bell',16)}<span>Υπενθύμιση με μήνυμα</span></button>`:''}<button class="btn" data-a="ics">${ic('calendar',16)}<span>Ημερολόγιο κινητού</span></button>
     <button class="btn" data-a="edit">${ic('edit',16)}<span>${rec?'Αλλαγή πάγιου':'Αλλαγή'}</span></button>
     ${rec?`<button class="btn" data-a="stop">${ic('l-flag',16)}<span>Τέλος πάγιου από εδώ</span></button>`:`<button class="btn danger" data-a="del">${ic('trash',16)}<span>Διαγραφή</span></button>`}
    </div>

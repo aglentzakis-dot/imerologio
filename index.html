@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.23">
+<meta name="app-version" content="1.24">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -1589,6 +1589,12 @@ input[type=color]{width:44px;height:36px;border:1px solid var(--line);border-rad
 .btn.wide{width:100%;justify-content:center}
 .howto{padding-left:20px;margin:8px 0}.howto li{margin-bottom:6px}
 .instpop{text-align:center;padding:6px 4px}.instpop svg{width:64px;height:64px;border-radius:18px;margin:4px auto 10px;display:block}
+.actgrid{gap:10px}
+.actgrid .btn{justify-content:flex-start;text-align:left;gap:12px;min-height:62px;padding:8px 14px 8px 10px;font-size:.95rem;line-height:1.18}
+.actgrid .btn>span{flex:1;min-width:0}
+.actgrid .btn .ic{flex:none}
+.actgrid .btn:last-child:nth-child(odd){grid-column:1/-1;justify-content:center}
+.actgrid .btn:last-child:nth-child(odd)>span{flex:0 1 auto}
 @media (prefers-reduced-motion:reduce){.fab:active{transform:none}}
 </style>
 </head>
