@@ -197,7 +197,7 @@ const CONF_TPL_DEF='Καλησπέρα{όνομα}! Κλείσαμε ραντε�
 function confText(a){const p=stOf(a.sid)||{},B=biz();const first=(p.name||'').split(' ')[0];
   return(S.data.settings.confTpl||CONF_TPL_DEF).replace(/\{όνομα\}/g,first?' '+first:'').replace(/\{ημέρα\}/g,WDAYS[wdOf(a.date)]+' '+fmtShort(a.date)).replace(/\{ώρα\}/g,a.s).replace(/\{επιχείρηση\}/g,(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'').trim();}
 function IM_AFTER_SAVE(list,{edit}){if(edit||S.data.settings.confOff||!list||list.length!==1)return;const a=list[0];const p=stOf(a.sid);const ph=p&&(p.phone||((p.contacts||[])[0]||{}).phone);if(!ph||p.demo)return;if(consOf(p,'appt')===false){toast('Δεν στάλθηκε επιβεβαίωση: ο πελάτης δεν θέλει μηνύματα για ραντεβού.');return;}
-  location.href=smsHref(ph,confText(a));}
+  logMsg(p,'Επιβεβαίωση ραντεβού '+fmtShort(a.date)+' '+a.s,'SMS');location.href=smsHref(ph,confText(a));}
 
 /* ---------- πιστοποιητικά προσωπικού που λήγουν ---------- */
 const CERT_SUGG={'Ομορφιά & περιποίηση':['Πιστοποιητικό υγείας','Βεβαίωση άσκησης επαγγέλματος','Δίπλωμα / πτυχίο ειδικότητας'],
@@ -340,6 +340,26 @@ function setCons(p,k,on,how){p.cons=p.cons||{};p.cons[k]={on:!!on,at:new Date().
   if(k==='appt'){if(on)delete p.consent;else p.consent={ch:{sms:false,wa:false,viber:false,email:false}};}}
 const consLbl=(p,k)=>{const c=p.cons&&p.cons[k];return c?`${c.on?'Ναι':'Όχι'} · ${fmtShort(c.at.slice(0,10))}/${c.at.slice(2,4)}`:'Δεν έχει ρωτηθεί';};
 
+/* ---------- ιστορικό μηνυμάτων ανά πελάτη (καταγράφεται όταν πατάς «αποστολή») ---------- */
+function logMsg(p,what,via){if(!p)return;p.msgs=(p.msgs||[]).concat([{at:new Date().toISOString(),what,via}]).slice(-60);save();}
+function msgHistory(p){const L=(p.msgs||[]).map(m=>({at:m.at,what:m.what,via:m.via}));const R=S.data.remSent||{};
+  Object.entries(R).forEach(([k,at])=>{const a=appts().find(x=>x.id===k.split('|')[0]);if(a&&a.sid===p.id&&typeof at==='string')L.push({at,what:'Υπενθύμιση για το ραντεβού '+fmtShort(k.split('|')[1]),via:'μήνυμα'});});
+  return L.sort((a,b)=>b.at.localeCompare(a.at));}
+const atTxt=iso=>{const d=new Date(iso);return fmtShort(isoDate(d))+'/'+String(d.getFullYear()).slice(2)+' '+pad(d.getHours())+':'+pad(d.getMinutes());};
+function consCard(p){const el=$('#p-cons');if(!el)return;const ph=p.phone||((p.contacts||[])[0]||{}).phone,em=p.email;const H=msgHistory(p);const t=consText();
+  el.innerHTML=`<h3>🛡️ Συγκαταθέσεις για μηνύματα</h3>
+   <label class="switch"><span><b>Μηνύματα για τα ραντεβού</b><small>Επιβεβαιώσεις, υπενθυμίσεις, αλλαγές · ${consLbl(p,'appt')}</small></span><input type="checkbox" data-cons="appt" ${consOf(p,'appt')!==false?'checked':''}></label>
+   <label class="switch"><span><b>Προσφορές και νέα</b><small>Μόνο αν το θέλει ρητά · ${consLbl(p,'promo')}</small></span><input type="checkbox" data-cons="promo" ${consOf(p,'promo')===true?'checked':''}></label>
+   ${consOf(p,'promo')===true?`<button type="button" class="btn sm danger" id="cs-stop" style="margin-top:8px">✋ Είπε ΣΤΟΠ — όχι άλλες προσφορές</button>`:''}
+   <details class="constxt"><summary class="small"><b>Το κείμενο που του λες ή του στέλνεις</b></summary><div class="note small" style="white-space:pre-wrap;margin-top:8px">${esc(t)}</div>
+    <div class="row" style="margin-top:8px">${ph?`<a class="btn sm" id="cs-sms" href="${smsHref(ph,t)}">${ic('l-message-square',15)} Στείλ' το με SMS</a>`:''}${em?`<a class="btn sm" id="cs-mail" href="mailto:${esc(em)}?subject=${encodeURIComponent('Ενημέρωση για τα μηνύματα')}&body=${encodeURIComponent(t)}">${ic('send',15)} Με email</a>`:''}</div></details>
+   <h4 class="hist-h">Ιστορικό μηνυμάτων</h4>${H.length?`<div class="histlist">${H.slice(0,20).map(h=>`<div class="msgrow"><span class="hd">${atTxt(h.at)}</span><span class="grow">${esc(h.what)}</span><span class="chip sm">${esc(h.via)}</span></div>`).join('')}</div>`:'<p class="small muted" style="margin:0">Δεν έχει σταλεί ακόμα κανένα μήνυμα από την εφαρμογή.</p>'}
+   <p class="tiny muted" style="margin:8px 0 0">Καταγράφεται τη στιγμή που πατάς «Στείλε». Αν δεν πάτησες τελικά «Αποστολή» στο κινητό, η καταγραφή μένει.</p>`;
+  $$('[data-cons]',el).forEach(c=>c.onchange=()=>{setCons(p,c.dataset.cons,c.checked);save();toast(c.dataset.cons==='promo'?(c.checked?'Δέχεται προσφορές.':'Όχι προσφορές.'):(c.checked?'Δέχεται μηνύματα για τα ραντεβού.':'Όχι μηνύματα για τα ραντεβού.'),'ok');consCard(p);});
+  const st=$('#cs-stop',el);if(st)st.onclick=()=>{setCons(p,'promo',false,'απάντησε ΣΤΟΠ');logMsg(p,'Απάντησε ΣΤΟΠ στις προσφορές','σημείωση');toast('Καταγράφηκε: όχι άλλες προσφορές.','ok');consCard(p);};
+  const a=$('#cs-sms',el);if(a)a.addEventListener('click',()=>{logMsg(p,'Κείμενο ενημέρωσης / συγκατάθεσης','SMS');setTimeout(()=>consCard(p),300);});
+  const b=$('#cs-mail',el);if(b)b.addEventListener('click',()=>{logMsg(p,'Κείμενο ενημέρωσης / συγκατάθεσης','email');setTimeout(()=>consCard(p),300);});}
+
 /* ---------- συχνότητα επισκέψεων ---------- */
 function visitStats(p){const t=todayISO();const from=addDays(t,-730);
   const V=[...new Set(occ(from,addDays(t,-1),{sid:p.id,withCancel:true,by:''}).filter(o=>o.st!=='cancel'&&o.st!=='absent').map(o=>o.date))].sort();
@@ -363,8 +383,8 @@ function offerDialog(preIds){const all=myStudents().filter(p=>!p.demo||S.data.se
   const txt=p=>{const first=(p.name||'').split(' ')[0];return($('#of-t',md.el).value||'').replace(/\{όνομα\}/g,first?' '+first:'').trim()+'\n'+(isPrivate()?S.data.settings.myName||'':biz().name||S.data.settings.myName||'')+'\nΓια να μη λαμβάνετε προσφορές απαντήστε ΣΤΟΠ.';};
   $('#of-t',md.el).onchange=e=>{S.data.settings.offerTpl=e.target.value;save();};
   md.el.addEventListener('change',e=>{const c=e.target.closest('[data-of]');if(c){c.checked?sel.add(c.dataset.of):sel.delete(c.dataset.of);}});
-  md.el.addEventListener('click',e=>{const b=e.target.closest('[data-ofsms]');if(b){const p=getStudent(b.dataset.ofsms);location.href=smsHref(p.phone,txt(p));b.textContent='✓ SMS';return;}
-    if(e.target.closest('#of-mail')){const L=yes.filter(p=>sel.has(p.id)&&p.email);if(!L.length)return toast('Κανένας επιλεγμένος δεν έχει email.','bad');const t=txt({name:''});location.href=`mailto:?bcc=${L.map(p=>encodeURIComponent(p.email)).join(',')}&subject=${encodeURIComponent('Προσφορά — '+(biz().name||''))}&body=${encodeURIComponent(t)}`;}});}
+  md.el.addEventListener('click',e=>{const b=e.target.closest('[data-ofsms]');if(b){const p=getStudent(b.dataset.ofsms);logMsg(p,'Προσφορά','SMS');location.href=smsHref(p.phone,txt(p));b.textContent='✓ SMS';return;}
+    if(e.target.closest('#of-mail')){const L=yes.filter(p=>sel.has(p.id)&&p.email);if(!L.length)return toast('Κανένας επιλεγμένος δεν έχει email.','bad');const t=txt({name:''});L.forEach(p=>logMsg(p,'Προσφορά','email'));location.href=`mailto:?bcc=${L.map(p=>encodeURIComponent(p.email)).join(',')}&subject=${encodeURIComponent('Προσφορά — '+(biz().name||''))}&body=${encodeURIComponent(t)}`;}});}
 
 /* ---------- πρόσωπα: λίστα ---------- */
 function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
@@ -398,15 +418,13 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
    <div class="field"><label class="f" for="p-ad">Διεύθυνση <span class="tiny muted">· για τον χάρτη, προαιρετικό</span></label><input class="in" id="p-ad" name="addr" value="${esc(p.loc&&p.loc.addr||'')}"></div>
    <div class="field"><label class="f" for="p-no">Σημειώσεις</label><textarea class="in" id="p-no" name="notes" style="min-height:70px">${esc(p.notes||'')}</textarea></div>
    ${isNew?'':(()=>{const v=visitStats(p);return`<div class="freqbox ${v.late?'late':''}"><div><b>${v.count?'Τελευταία φορά: '+fmtShort(v.last)+' (πριν '+daysTxt(v.since)+')':'Δεν έχει έρθει ακόμα'}</b><small>${freqTxt(v)}${v.next?' · επόμενο '+fmtShort(v.next):''}</small></div>${v.late?'<span class="chip y">έχει καιρό να έρθει</span>':''}</div>`;})()}
-   <div class="consbox"><div class="spread"><b>Συγκαταθέσεις για μηνύματα</b><button type="button" class="btn sm ghost" id="p-ctxt">${ic('info',14)} Τι του λέω;</button></div>
-    <label class="switch"><span><b>Μηνύματα για τα ραντεβού</b><small>Επιβεβαιώσεις, υπενθυμίσεις, αλλαγές (SMS / email) · ${consLbl(p,'appt')}</small></span><input type="checkbox" data-cons="appt" ${consOf(p,'appt')!==false?'checked':''}></label>
-    <label class="switch"><span><b>Προσφορές και νέα</b><small>Μόνο αν το θέλει ρητά · ${consLbl(p,'promo')}</small></span><input type="checkbox" data-cons="promo" ${consOf(p,'promo')===true?'checked':''}></label></div>
    <div class="field"><label class="f">Χρώμα στο ημερολόγιο</label><div class="scols">${pr.map(c=>`<button type="button" data-pc="${c}" style="background:${c}" class="${p.color===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}<button type="button" data-pc="" class="none ${p.color?'':'on'}" aria-label="Χωρίς χρώμα">${ic('x',12)}</button></div></div>
    <div class="savebar"><button class="btn pri">${ic('check',16)} Αποθήκευση</button>${isNew?'':`<button type="button" class="btn danger" id="p-del">${ic('trash',16)} Διαγραφή</button>`}</div></form>
   ${isNew?'':`<div class="card"><div class="card-h"><h3>Ραντεβού</h3><button class="btn sm pri" id="p-new">${ic('plus',15)} Νέο ραντεβού</button></div>
    ${p.phone?`<div class="row" style="gap:6px;margin-bottom:12px"><a class="btn sm" href="tel:${telLink(p.phone)}">Κλήση</a>${chBtnsHTML({contacts:[{name:p.name,phone:p.phone,email:p.email}]},'Καλησπέρα!','Μήνυμα','')}</div>`:''}
    ${fut.length?`<div class="aglist">${fut.slice(0,6).map(o=>`<div class="small muted" style="margin:8px 0 2px">${WDAYS[wdOf(o.date)]} ${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div>${fut.length>6?`<p class="small muted" style="margin:8px 0 0">και ${fut.length-6} ακόμα μέσα στους επόμενους 6 μήνες.</p>`:''}`:'<p class="small muted">Κανένα επόμενο ραντεβού.</p>'}
-   ${past.length?`<details style="margin-top:12px"><summary class="small"><b>Προηγούμενα</b> (${past.length})</summary><div class="aglist" style="margin-top:6px">${past.map(o=>`<div class="small muted" style="margin:8px 0 2px">${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div></details>`:''}</div>`}</div>`;
+   ${past.length?`<details style="margin-top:12px"><summary class="small"><b>Προηγούμενα</b> (${past.length})</summary><div class="aglist" style="margin-top:6px">${past.map(o=>`<div class="small muted" style="margin:8px 0 2px">${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div></details>`:''}</div>`}</div>
+  ${isNew?`<div class="card conscard"><h3>🛡️ Συγκαταθέσεις για μηνύματα</h3><p class="small muted" style="margin:0">Μπαίνουν μόλις αποθηκεύσεις ${esc(LX('whoAcc'))}.</p></div>`:`<div class="card conscard" id="p-cons"></div>`}`;
   const F=$('#pf');let col=p.color||'';
   // πρόχειρο: ό,τι γράφεις κρατιέται, ακόμα κι αν το κινητό κλείσει την εφαρμογή στο παρασκήνιο
   const DK='imer-pdraft';const saveDraft=()=>{try{const o=fd(F);localStorage.setItem(DK,JSON.stringify({rid:r.id,t:Date.now(),o,col}));}catch(e){}};
@@ -414,22 +432,19 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   try{const d=JSON.parse(localStorage.getItem(DK)||'null');if(d&&d.rid===r.id&&Date.now()-d.t<6*36e5){['name','phone','email','addr','notes'].forEach(k=>{if(d.o[k]!=null&&F[k])F[k].value=d.o[k];});if(d.col!=null){col=d.col;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x.dataset.pc===col));}
     const cp=localStorage.getItem('imer-conpick');if(cp){localStorage.removeItem('imer-conpick');toast('Το κινητό έκλεισε τη λίστα επαφών όσο ήσουν σε άλλη εφαρμογή. Ό,τι είχες γράψει κρατήθηκε — πάτα ξανά «Από τις επαφές».','bad');}else if(d.o.name||d.o.phone)toast('Συνεχίζεις από εκεί που είχες μείνει.','ok');}}catch(e){}
   F.addEventListener('input',saveDraft);
-  $('#p-ctxt').onclick=()=>{const ph=F.phone.value.trim(),em=F.email.value.trim();const t=consText();const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Τι λες στον πελάτη</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
-    <div class="note small" style="white-space:pre-wrap">${esc(t)}</div><p class="tiny muted">Διάβασέ του το ή στείλ' το. Μετά τσέκαρε τι δέχτηκε — μένει καταγεγραμμένη η ημερομηνία. Το κείμενο αλλάζει από Ρυθμίσεις → Μηνύματα στους πελάτες.</p>
-    <div class="row">${ph?`<a class="btn" href="${smsHref(ph,t)}">${ic('l-message-square',15)} Στείλ' το με SMS</a>`:''}${em?`<a class="btn" href="mailto:${esc(em)}?subject=${encodeURIComponent('Ενημέρωση για τα μηνύματα')}&body=${encodeURIComponent(t)}">${ic('send',15)} Με email</a>`:''}</div>`,{guard:false});};
   const pc=$('#p-con');if(pc)pc.onclick=async()=>{saveDraft();try{localStorage.setItem('imer-conpick','1');}catch(e){}const L=await IM_PICKCONTACTS(false);try{localStorage.removeItem('imer-conpick');}catch(e){}const c=L[0];if(!c)return;F.name.value=c.name;if(c.phone)F.phone.value=c.phone;if(c.email)F.email.value=c.email;toast('Μπήκαν τα στοιχεία από τις επαφές.','ok');saveDraft();};
   F.onclick=e=>{const b=e.target.closest('[data-pc]');if(!b)return;col=b.dataset.pc;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x===b));saveDraft();};
   F.onsubmit=e=>{e.preventDefault();const o=fd(F);if(!o.name.trim())return toast('Γράψε όνομα.','bad');
     Object.assign(p0,{name:o.name.trim(),avatar:initial(o.name),phone:o.phone.trim(),email:o.email.trim().toLowerCase(),notes:o.notes.trim(),color:col||undefined,updated:new Date().toISOString()});
     p0.contacts=(p0.phone||p0.email)?[{name:p0.name,role:'',phone:p0.phone,email:p0.email}]:[];
     const newAddr=o.addr.trim()&&!(p0.loc&&p0.loc.addr===o.addr.trim()&&p0.loc.lat!=null);if(o.addr.trim())p0.loc=Object.assign({},p0.loc&&p0.loc.addr===o.addr.trim()?p0.loc:{},{addr:o.addr.trim(),home:true});else delete p0.loc;
-    $$('[data-cons]',F).forEach(c=>{const k=c.dataset.cons;const prev=consOf(p0,k);const now=c.checked;if(k==='appt'?(prev===undefined?!now:prev!==now):(prev===undefined?now:prev!==now))setCons(p0,k,now);});
     if(isNew)S.data.students.push(p0);save();clearDraft();toast('Αποθηκεύτηκε.','ok');if(newAddr)geocodePerson(p0,true);
     if(isNew&&sessionStorage.getItem('im-after-person')){sessionStorage.removeItem('im-after-person');go('today');setTimeout(()=>apptDialog({date:todayISO(),sids:[p0.id]}),200);return;}
     go('person/'+p0.id);};
   const dl=$('#p-del');if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.sid===p0.id).length;if(!await confirmDlg(`Διαγραφή «${esc(stuName(p0))}»${n?` και ${n===1?'του ραντεβού του':'των '+n+' ραντεβού του'}`:''}; Δεν αναιρείται.`,{ok:'Διαγραφή',danger:true}))return;
     clearDraft();S.data.students=S.data.students.filter(x=>x.id!==p0.id);S.data.appts=appts().filter(a=>a.sid!==p0.id);S.data.waitlist=(S.data.waitlist||[]).filter(w=>w.sid!==p0.id);save();toast('Διαγράφηκε.');go('people');};
-  const nb=$('#p-new');if(nb)nb.onclick=()=>apptDialog({date:todayISO(),sids:[p0.id]});}
+  const nb=$('#p-new');if(nb)nb.onclick=()=>apptDialog({date:todayISO(),sids:[p0.id]});
+  if(!isNew)consCard(p0);}
 const PERS_COLORS=['#7462B4','#3A8A61','#2F7FA8','#C77A3A','#B4527A','#8A7A2E','#C46A7A','#5A6ACF','#2E8C8C','#9C5BB5'];
 
 /* ---------- ρυθμίσεις: λίστα κατηγοριών, κάθε κατηγορία σε δική της σελίδα ---------- */
