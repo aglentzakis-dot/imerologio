@@ -337,13 +337,27 @@ const CONS_RESP='Το κείμενο το αλλάζεις με δική σου 
 function consText(){const B=biz();return(S.data.settings.consTpl||CONS_TXT_DEF).replace(/\{επιχείρηση\}/g,(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'Το γραφείο μας');}
 // undefined = δεν έχει ρωτηθεί ακόμα · true / false = ρητή απάντηση
 function consOf(p,k){const c=p&&p.cons&&p.cons[k];return c?c.on:undefined;}
-function setCons(p,k,on,how){p.cons=p.cons||{};p.cons[k]={on:!!on,at:new Date().toISOString(),how:how||'στην καρτέλα'};
+function setCons(p,k,on,how,at,mid){p.cons=p.cons||{};p.cons[k]={on:!!on,at:at||new Date().toISOString(),how:how||'στην καρτέλα'};if(mid)p.cons[k].mid=mid;
   if(k==='appt'){if(on)delete p.consent;else p.consent={ch:{sms:false,wa:false,viber:false,email:false}};}}
 const consLbl=(p,k)=>{const c=p.cons&&p.cons[k];return c?`${c.on?'Ναι':'Όχι'} · ${fmtShort(c.at.slice(0,10))}/${c.at.slice(2,4)}`:'Δεν έχει ρωτηθεί';};
 
 /* ---------- ιστορικό μηνυμάτων ανά πελάτη (καταγράφεται όταν πατάς «αποστολή») ---------- */
-function logMsg(p,what,via){if(!p)return;p.msgs=(p.msgs||[]).concat([{at:new Date().toISOString(),what,via}]).slice(-60);save();}
-function msgHistory(p){const L=(p.msgs||[]).map(m=>({at:m.at,what:m.what,via:m.via}));const R=S.data.remSent||{};
+function logMsg(p,what,via,x){if(!p)return;const m=Object.assign({at:new Date().toISOString(),what,via},x||{});p.msgs=(p.msgs||[]).concat([m]).slice(-60);save();return m;}
+/* ημερομηνία που το είπε ο πελάτης (μπορεί να είναι παλιότερη από σήμερα) */
+const VIA_ANS=['SMS','Τηλέφωνο','Από κοντά','Viber / WhatsApp','Email'];
+function dayISO(d){return d===todayISO()?new Date().toISOString():new Date(d+'T12:00').toISOString();}
+function answerDlg(title,{date,via}={}){return new Promise(res=>{let v=via||'SMS';
+  const md=modal(`<h3 style="margin-top:0">${title}</h3>
+   <div class="field"><label class="f" for="ad-d">Πότε το είπε</label><input class="in" type="date" id="ad-d" value="${date||todayISO()}" max="${todayISO()}"><div class="tiny muted" style="margin-top:4px">Αν σου το είπε άλλη μέρα και το περνάς τώρα, βάλε την ημερομηνία που το είπε.</div></div>
+   <div class="field"><label class="f">Πώς το είπε</label><div class="row" style="gap:6px">${VIA_ANS.map(x=>`<button type="button" class="chip${x===v?' on':''}" data-av="${esc(x)}">${esc(x)}</button>`).join('')}</div></div>
+   <div class="row" style="justify-content:flex-end"><button class="btn" data-x="0">Άκυρο</button><button class="btn pri" data-x="1">${ic('check',15)} Καταγραφή</button></div>`,{onClose:()=>res(null),noHist:true,guard:false});
+  md.el.addEventListener('click',e=>{const c=e.target.closest('[data-av]');if(c){v=c.dataset.av;$$('[data-av]',md.el).forEach(b=>b.classList.toggle('on',b===c));return;}
+   const b=e.target.closest('[data-x]');if(!b)return;if(b.dataset.x==='1'){const d=$('#ad-d',md.el).value||todayISO();if(d>todayISO())return toast('Η ημερομηνία δεν μπορεί να είναι μελλοντική.','bad');res({date:d,via:v});}else res(null);md.close();});});}
+async function recAnswer(p,{title,what,set,toastTxt}){const A=await answerDlg(title);if(!A)return;const at=dayISO(A.date);
+  const m=logMsg(p,what,A.via,{day:A.date!==todayISO(),rec:new Date().toISOString(),id:uid()});set.forEach(([k,on,how])=>setCons(p,k,on,how,at,m.id));m.at=at;save();toast(toastTxt,'ok');consCard(p);}
+async function editAnswer(p,id){const m=(p.msgs||[]).find(x=>x.id===id);if(!m)return;const A=await answerDlg('Διόρθωση: '+esc(m.what),{date:isoDate(new Date(m.at)),via:m.via});if(!A)return;
+  m.at=dayISO(A.date);m.via=A.via;m.day=A.date!==todayISO();Object.values(p.cons||{}).forEach(c=>{if(c&&c.mid===id)c.at=m.at;});save();toast('Διορθώθηκε.','ok');consCard(p);}
+function msgHistory(p){const L=(p.msgs||[]).map(m=>({at:m.at,what:m.what,via:m.via,day:m.day,rec:m.rec,id:m.id}));const R=S.data.remSent||{};
   Object.entries(R).forEach(([k,at])=>{const a=appts().find(x=>x.id===k.split('|')[0]);if(a&&a.sid===p.id&&typeof at==='string')L.push({at,what:'Υπενθύμιση για το ραντεβού '+fmtShort(k.split('|')[1]),via:'μήνυμα'});});
   return L.sort((a,b)=>b.at.localeCompare(a.at));}
 const atTxt=iso=>{const d=new Date(iso);return fmtShort(isoDate(d))+'/'+String(d.getFullYear()).slice(2)+' '+pad(d.getHours())+':'+pad(d.getMinutes());};
@@ -355,12 +369,13 @@ function consCard(p){const sb=$('#p-stopb');if(sb)sb.innerHTML=consOf(p,'appt')=
    <details class="constxt"><summary class="small"><b>Το κείμενο που του λες ή του στέλνεις</b></summary><div id="cs-view"><div class="note small" style="white-space:pre-wrap;margin-top:8px">${esc(t)}</div><button type="button" class="btn sm ghost" id="cs-edit" style="margin-top:6px">✏️ Αλλαγή κειμένου</button></div>
     <div id="cs-ed" hidden><textarea class="in" id="cs-et" style="min-height:150px;margin-top:8px">${esc(S.data.settings.consTpl||CONS_TXT_DEF)}</textarea><div class="tiny muted" style="margin:4px 0">{επιχείρηση} = η επωνυμία σου · ισχύει για όλους τους ${esc(LX('whoPlL'))}</div><div class="note small warnnote">⚠️ ${CONS_RESP}</div><div class="row" style="margin-top:6px"><button type="button" class="btn sm pri" id="cs-esave">${ic('check',15)} Αποθήκευση</button><button type="button" class="btn sm ghost" id="cs-edef">Αρχικό κείμενο</button><button type="button" class="btn sm ghost" id="cs-ecan">Άκυρο</button></div></div>
     <div class="row" style="margin-top:8px">${ph?`<a class="btn sm" id="cs-sms" href="${smsHref(ph,t)}">${ic('l-message-square',15)} Στείλ' το με SMS</a>`:''}${em?`<a class="btn sm" id="cs-mail" href="mailto:${esc(em)}?subject=${encodeURIComponent('Ενημέρωση για τα μηνύματα')}&body=${encodeURIComponent(t)}">${ic('send',15)} Με email</a>`:''}</div></details>
-   <h4 class="hist-h">Ιστορικό μηνυμάτων</h4>${H.length?`<div class="histlist">${H.slice(0,20).map(h=>`<div class="msgrow"><span class="hd">${atTxt(h.at)}</span><span class="grow">${esc(h.what)}</span><span class="chip sm">${esc(h.via)}</span></div>`).join('')}</div>`:'<p class="small muted" style="margin:0">Δεν έχει σταλεί ακόμα κανένα μήνυμα από την εφαρμογή.</p>'}
+   <h4 class="hist-h">Ιστορικό μηνυμάτων</h4>${H.length?`<div class="histlist">${H.slice(0,20).map(h=>`<div class="msgrow"><span class="hd">${h.day?atTxt(h.at).split(' ')[0]:atTxt(h.at)}</span><span class="grow">${esc(h.what)}${h.day&&h.rec?`<small class="tiny muted" style="display:block">περάστηκε ${atTxt(h.rec)}</small>`:''}</span><span class="chip sm">${esc(h.via)}</span>${h.id?`<button type="button" class="iconbtn sm" data-hed="${h.id}" aria-label="Διόρθωση ημερομηνίας">✏️</button>`:''}</div>`).join('')}</div>`:'<p class="small muted" style="margin:0">Δεν υπάρχει ακόμα καμία καταγραφή.</p>'}
    <p class="tiny muted" style="margin:8px 0 0">Καταγράφεται τη στιγμή που πατάς «Στείλε». Αν δεν πάτησες τελικά «Αποστολή» στο κινητό, η καταγραφή μένει.</p>`;
   $$('[data-cons]',el).forEach(c=>c.onchange=()=>{setCons(p,c.dataset.cons,c.checked);save();toast(c.dataset.cons==='promo'?(c.checked?'Δέχεται προσφορές.':'Όχι προσφορές.'):(c.checked?'Δέχεται μηνύματα για τα ραντεβού.':'Όχι μηνύματα για τα ραντεβού.'),'ok');consCard(p);});
-  const st=$('#cs-stop',el);if(st)st.onclick=()=>{setCons(p,'promo',false,'απάντησε ΣΤΟΠ');save();logMsg(p,'Απάντησε ΣΤΟΠ στις προσφορές','σημείωση');toast('Καταγράφηκε: όχι άλλες προσφορές.','ok');consCard(p);};
-  const sa=$('#cs-stopall',el);if(sa)sa.onclick=()=>{setCons(p,'promo',false,'απάντησε ΣΤΟΠ ΟΛΑ');setCons(p,'appt',false,'απάντησε ΣΤΟΠ ΟΛΑ');save();logMsg(p,'Απάντησε ΣΤΟΠ ΟΛΑ — κανένα μήνυμα','σημείωση');toast('Καταγράφηκε: κανένα μήνυμα.','ok');consCard(p);};
-  const ys=$('#cs-yes',el);if(ys)ys.onclick=()=>{setCons(p,'promo',true,'απάντησε ΝΑΙ');save();logMsg(p,'Απάντησε ΝΑΙ στις προσφορές','σημείωση');toast('Καταγράφηκε: δέχεται προσφορές.','ok');consCard(p);};
+  const st=$('#cs-stop',el);if(st)st.onclick=()=>recAnswer(p,{title:'✋ Είπε ΣΤΟΠ — όχι προσφορές',what:'Απάντησε ΣΤΟΠ στις προσφορές',set:[['promo',false,'απάντησε ΣΤΟΠ']],toastTxt:'Καταγράφηκε: όχι άλλες προσφορές.'});
+  const sa=$('#cs-stopall',el);if(sa)sa.onclick=()=>recAnswer(p,{title:'⛔ Είπε ΣΤΟΠ ΟΛΑ — κανένα μήνυμα',what:'Απάντησε ΣΤΟΠ ΟΛΑ — κανένα μήνυμα',set:[['promo',false,'απάντησε ΣΤΟΠ ΟΛΑ'],['appt',false,'απάντησε ΣΤΟΠ ΟΛΑ']],toastTxt:'Καταγράφηκε: κανένα μήνυμα.'});
+  const ys=$('#cs-yes',el);if(ys)ys.onclick=()=>recAnswer(p,{title:'👍 Είπε ΝΑΙ στις προσφορές',what:'Απάντησε ΝΑΙ στις προσφορές',set:[['promo',true,'απάντησε ΝΑΙ']],toastTxt:'Καταγράφηκε: δέχεται προσφορές.'});
+  $$('[data-hed]',el).forEach(b=>b.onclick=()=>editAnswer(p,b.dataset.hed));
   $('#cs-edit',el).onclick=()=>{$('#cs-view',el).hidden=true;$('#cs-ed',el).hidden=false;$('#cs-et',el).focus();};
   $('#cs-ecan',el).onclick=()=>consCard(p);
   $('#cs-esave',el).onclick=()=>{S.data.settings.consTpl=$('#cs-et',el).value.trim()||CONS_TXT_DEF;save();toast('Αποθηκεύτηκε το νέο κείμενο.','ok');consCard(p);$('.constxt',el).open=true;};
