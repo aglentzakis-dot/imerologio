@@ -53,6 +53,8 @@ function profLex(){const{g,p}=prof();return Object.assign({},g.lex,p.lex||{});}
 function LX(k){const L=Object.assign(profLex(),S.data.settings.lex||{});return L[k]||'';}
 function profRoles(){const{g,p}=prof();const L=(p.roles||g.roles||[]).map(x=>x.slice());(S.data.settings.customRoles||[]).forEach(r=>{if(!L.some(x=>x[0]===r[0]))L.splice(Math.max(0,L.length-1),0,r.slice());});return L;}
 function profDur(){const{g,p}=prof();return +S.data.settings.dur||p.dur||g.dur||60;}
+if(window.LANG==='en'){WDAYS.splice(0,7,'Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday');WDAYS_S.splice(0,7,'Sun','Mon','Tue','Wed','Thu','Fri','Sat');
+  MONTHS.splice(0,12,'January','February','March','April','May','June','July','August','September','October','November','December');MONTHS_G.splice(0,12,...MONTHS);}
 const IM_DEF={kind:()=>{const{g,p}=prof();return p.kind||g.kind||'once';},dur:()=>profDur(),
   start:date=>{const c=agCfg();const t=todayISO();if((date||t)===t){const m=Math.ceil((nowMin()+15)/30)*30;if(m>=tmin(c.from)&&m<tmin(c.to))return tstr(m);}return c.from;}};
 function profNotes(){return(prof().p.t||'').split('|').filter(Boolean);}
@@ -100,11 +102,11 @@ function shellHTML(sec){
   const a=([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}">${ic(i,19)}<span>${esc(l)}</span></a>`;
   const fab=['today','agenda','people'].includes(sec);
   document.body.innerHTML=`<div class="wcbg" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="app"><aside class="side noprint"><a class="brand" href="#/today">${LOGO}<div><b>Ημερολόγιο</b><span>${esc(S.meta.org||prof().p.n)}</span></div></a><nav class="nav">${nav.map(a).join('')}</nav><div class="side-ver tiny muted">Έκδοση ${APP_VERSION}</div></aside>
-  <div class="shell"><header class="topbar noprint"><a class="tbrand" href="#/today">${LOGO}</a><b class="tbtitle">${esc(title)}</b><span class="tbprof">${esc(S.meta.org||prof().p.n)}</span></header>${S.data.settings.demo?`<div class="demostrip noprint"><span>🧪 <b>Δοκιμαστική λειτουργία</b> — τα ραντεβού και οι ${esc(LX('whoPlL'))} είναι παραδείγματα</span><button type="button" id="demoEnd">Τέλος δοκιμής</button></div>`:''}<main class="main" id="main"></main></div>
+  <div class="shell"><header class="topbar noprint"><a class="tbrand" href="#/today">${LOGO}</a><b class="tbtitle">${esc(title)}</b><span class="tbprof">${esc(S.meta.org||prof().p.n)}</span><button type="button" class="tblang" id="tbLang" aria-label="Γλώσσα · Language">${langFlag()}</button></header>${S.data.settings.demo?`<div class="demostrip noprint"><span>🧪 <b>Δοκιμαστική λειτουργία</b> — τα ραντεβού και οι ${esc(LX('whoPlL'))} είναι παραδείγματα</span><button type="button" id="demoEnd">Τέλος δοκιμής</button></div>`:''}<main class="main" id="main"></main></div>
   <nav class="bottomnav noprint">${nav.map(([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}"><span class="bi">${ic(i,22)}</span><span>${esc(l)}</span></a>`).join('')}</nav>
   ${fab?`<button class="fab noprint" id="fab" aria-label="${sec==='people'?'Νέος':'Νέο ραντεβού'}">${ic('plus',26)}</button>`:''}</div>`;
   document.body.classList.toggle('hidenames',!!S.data.settings.hideNames);
-  const de=$('#demoEnd');if(de)de.onclick=demoClear;
+  const de=$('#demoEnd');if(de)de.onclick=demoClear;const tl=$('#tbLang');if(tl)tl.onclick=langDialog;
   const f=$('#fab');if(f)f.onclick=()=>sec==='people'?go('person/new'):apptDialog({date:(parseRoute().q.d)||todayISO()});
 }
 addEventListener('hashchange',render);
@@ -196,7 +198,7 @@ function bindInstall(){const g=$('#instGo');if(g)g.onclick=async()=>{INST.prompt
 /* ---------- επιβεβαίωση με μήνυμα μόλις κλειστεί ραντεβού ---------- */
 const CONF_TPL_DEF='Καλησπέρα{όνομα}! Κλείσαμε ραντεβού {ημέρα} στις {ώρα}. Για αλλαγή στείλτε μου μήνυμα. {επιχείρηση}';
 function confText(a){const p=stOf(a.sid)||{},B=biz();const first=(p.name||'').split(' ')[0];
-  return(S.data.settings.confTpl||CONF_TPL_DEF).replace(/\{όνομα\}/g,first?' '+first:'').replace(/\{ημέρα\}/g,WDAYS[wdOf(a.date)]+' '+fmtShort(a.date)).replace(/\{ώρα\}/g,a.s).replace(/\{επιχείρηση\}/g,(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'').trim();}
+  return(S.data.settings.confTpl||tr(CONF_TPL_DEF)).replace(/\{όνομα\}/g,first?' '+first:'').replace(/\{ημέρα\}/g,WDAYS[wdOf(a.date)]+' '+fmtShort(a.date)).replace(/\{ώρα\}/g,a.s).replace(/\{επιχείρηση\}/g,(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'').trim();}
 function IM_AFTER_SAVE(list,{edit}){if(edit||S.data.settings.confOff||!list||list.length!==1)return;const a=list[0];const p=stOf(a.sid);const ph=p&&(p.phone||((p.contacts||[])[0]||{}).phone);if(!ph||p.demo)return;if(consOf(p,'appt')===false){toast('Δεν στάλθηκε επιβεβαίωση: ο πελάτης δεν θέλει μηνύματα για ραντεβού.');return;}
   logMsg(p,'Επιβεβαίωση ραντεβού '+fmtShort(a.date)+' '+a.s,'SMS');location.href=smsHref(ph,confText(a));}
 
@@ -326,7 +328,7 @@ function dayPicker(){const r=parseRoute();const t=todayISO();const sel=r.q.d||t;
   const draw=()=>{const[Y,Mo]=ym.split('-').map(Number);const first=ym+'-01',last=isoDate(new Date(Y,Mo,0));const C={};occ(first,last,{by:''}).forEach(o=>C[o.date]=(C[o.date]||0)+1);
     let cells='';for(let i=0;i<(new Date(Y,Mo-1,1).getDay()+6)%7;i++)cells+='<span></span>';for(let d=first;d<=last;d=addDays(d,1)){const off=!workDay(d)||isClosed(d);cells+=`<button type="button" class="dpd ${d===sel?'on':''} ${d===t?'now':''} ${off?'off':''}" data-dgo="${d}"><b>${+d.slice(8)}</b>${C[d]?`<i>${C[d]}</i>`:''}</button>`;}
     $('#dp-b',md.el).innerHTML=`<div class="perhd" style="margin-bottom:10px"><button type="button" class="dayarr" data-dm="-1" aria-label="Προηγούμενος μήνας">${ic('left',22)}</button><div class="dayt"><b style="font-size:1.15rem">${MONTHS[Mo-1]} ${Y}</b></div><button type="button" class="dayarr" data-dm="1" aria-label="Επόμενος μήνας">${ic('right',22)}</button></div>
-     <div class="dpgrid">${['Δ','Τ','Τ','Π','Π','Σ','Κ'].map(x=>`<span class="dpw">${x}</span>`).join('')}${cells}</div><p class="tiny muted" style="margin:8px 0 0;text-align:center">Το νούμερο πάνω δεξιά = πόσα ραντεβού έχει η μέρα.</p>`;};draw();
+     <div class="dpgrid">${(window.LANG==='en'?['M','T','W','T','F','S','S']:['Δ','Τ','Τ','Π','Π','Σ','Κ']).map(x=>`<span class="dpw">${x}</span>`).join('')}${cells}</div><p class="tiny muted" style="margin:8px 0 0;text-align:center">Το νούμερο πάνω δεξιά = πόσα ραντεβού έχει η μέρα.</p>`;};draw();
   md.el.addEventListener('click',e=>{const m=e.target.closest('[data-dm]');if(m){const[Y,Mo]=ym.split('-').map(Number);ym=isoDate(new Date(Y,Mo-1+ +m.dataset.dm,1)).slice(0,7);draw();return;}
     const g=e.target.closest('[data-dgo]');if(!g)return;md.close();setTimeout(()=>go(`agenda?view=day&d=${g.dataset.dgo}`),130);});}
 document.addEventListener('click',e=>{const m=e.target.closest&&e.target.closest('#main .dsm, #main .perhd .dayt b, #main .dayhd .dayt b');if(!m)return;e.preventDefault();e.stopPropagation();
@@ -335,7 +337,7 @@ document.addEventListener('click',e=>{const m=e.target.closest&&e.target.closest
 /* ---------- συγκαταθέσεις: μηνύματα για ραντεβού και, χωριστά, για προσφορές ---------- */
 const CONS_TXT_DEF='{επιχείρηση}: Κρατάμε το όνομα, το τηλέφωνο και το email σας μόνο σε αυτή τη συσκευή, για δύο ξεχωριστά πράγματα:\n1) Μηνύματα για τα ραντεβού σας (επιβεβαίωση, υπενθύμιση, αλλαγή).\n2) Προσφορές και νέα — μόνο αν μας απαντήσετε ΝΑΙ.\nΓια να σταματήσουν μόνο οι προσφορές, απαντήστε ΣΤΟΠ. Για να σταματήσουν και τα μηνύματα για τα ραντεβού, απαντήστε ΣΤΟΠ ΟΛΑ. Μπορείτε και να μας το πείτε όποτε θέλετε.';
 const CONS_RESP='Το κείμενο το αλλάζεις με δική σου ευθύνη. Καλό είναι να λέει καθαρά τι κρατάς, για ποιο λόγο στέλνεις μηνύματα, και πώς σταματούν χωριστά οι προσφορές και τα μηνύματα για τα ραντεβού.';
-function consText(){const B=biz();return(S.data.settings.consTpl||CONS_TXT_DEF).replace(/\{επιχείρηση\}/g,(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'Το γραφείο μας');}
+function consText(){const B=biz();return(S.data.settings.consTpl||tr(CONS_TXT_DEF)).replace(/\{επιχείρηση\}/g,(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'Το γραφείο μας');}
 // undefined = δεν έχει ρωτηθεί ακόμα · true / false = ρητή απάντηση
 function consOf(p,k){const c=p&&p.cons&&p.cons[k];return c?c.on:undefined;}
 function setCons(p,k,on,how,at,mid){p.cons=p.cons||{};p.cons[k]={on:!!on,at:at||new Date().toISOString(),how:how||'στην καρτέλα'};if(mid)p.cons[k].mid=mid;
@@ -368,7 +370,7 @@ function consCard(p){const sb=$('#p-stopb');if(sb)sb.innerHTML=consOf(p,'appt')=
    <label class="switch"><span><b>Προσφορές και νέα</b><small>Μόνο αν το θέλει ρητά · ${consLbl(p,'promo')}</small></span><input type="checkbox" data-cons="promo" ${consOf(p,'promo')===true?'checked':''}></label>
    <div class="row" style="margin-top:8px">${consOf(p,'promo')===true?`<button type="button" class="btn sm danger" id="cs-stop">✋ Είπε ΣΤΟΠ — όχι προσφορές</button>`:''}${consOf(p,'appt')!==false||consOf(p,'promo')===true?`<button type="button" class="btn sm danger" id="cs-stopall">⛔ Είπε ΣΤΟΠ ΟΛΑ — κανένα μήνυμα</button>`:''}${consOf(p,'promo')!==true&&consOf(p,'appt')!==false?`<button type="button" class="btn sm" id="cs-yes">👍 Είπε ΝΑΙ στις προσφορές</button>`:''}</div>
    <details class="constxt"><summary class="small"><b>Το κείμενο που του λες ή του στέλνεις</b></summary><div id="cs-view"><div class="note small" style="white-space:pre-wrap;margin-top:8px">${esc(t)}</div><button type="button" class="btn sm ghost" id="cs-edit" style="margin-top:6px">✏️ Αλλαγή κειμένου</button></div>
-    <div id="cs-ed" hidden><textarea class="in" id="cs-et" style="min-height:150px;margin-top:8px">${esc(S.data.settings.consTpl||CONS_TXT_DEF)}</textarea><div class="tiny muted" style="margin:4px 0">{επιχείρηση} = η επωνυμία σου · ισχύει για όλους τους ${esc(LX('whoPlL'))}</div><div class="note small warnnote">⚠️ ${CONS_RESP}</div><div class="row" style="margin-top:6px"><button type="button" class="btn sm pri" id="cs-esave">${ic('check',15)} Αποθήκευση</button><button type="button" class="btn sm ghost" id="cs-edef">Αρχικό κείμενο</button><button type="button" class="btn sm ghost" id="cs-ecan">Άκυρο</button></div></div>
+    <div id="cs-ed" hidden><textarea class="in" id="cs-et" style="min-height:150px;margin-top:8px">${esc(S.data.settings.consTpl||tr(CONS_TXT_DEF))}</textarea><div class="tiny muted" style="margin:4px 0">{επιχείρηση} = η επωνυμία σου · ισχύει για όλους τους ${esc(LX('whoPlL'))}</div><div class="note small warnnote">⚠️ ${CONS_RESP}</div><div class="row" style="margin-top:6px"><button type="button" class="btn sm pri" id="cs-esave">${ic('check',15)} Αποθήκευση</button><button type="button" class="btn sm ghost" id="cs-edef">Αρχικό κείμενο</button><button type="button" class="btn sm ghost" id="cs-ecan">Άκυρο</button></div></div>
     <div class="row" style="margin-top:8px">${ph?`<a class="btn sm" id="cs-sms" href="${smsHref(ph,t)}">${ic('l-message-square',15)} Στείλ' το με SMS</a>`:''}${em?`<a class="btn sm" id="cs-mail" href="mailto:${esc(em)}?subject=${encodeURIComponent('Ενημέρωση για τα μηνύματα')}&body=${encodeURIComponent(t)}">${ic('send',15)} Με email</a>`:''}</div></details>
    <h4 class="hist-h">Ιστορικό μηνυμάτων</h4>${H.length?`<div class="histlist">${H.slice(0,20).map(h=>`<div class="msgrow"><span class="hd">${h.day?atTxt(h.at).split(' ')[0]:atTxt(h.at)}</span><span class="grow">${esc(h.what)}${h.day&&h.rec?`<small class="tiny muted" style="display:block">περάστηκε ${atTxt(h.rec)}</small>`:''}</span><span class="chip sm">${esc(h.via)}</span>${h.id?`<button type="button" class="iconbtn sm" data-hed="${h.id}" aria-label="Διόρθωση ημερομηνίας">✏️</button>`:''}</div>`).join('')}</div>`:'<p class="small muted" style="margin:0">Δεν υπάρχει ακόμα καμία καταγραφή.</p>'}
    <p class="tiny muted" style="margin:8px 0 0">Καταγράφεται τη στιγμή που πατάς «Στείλε». Αν δεν πάτησες τελικά «Αποστολή» στο κινητό, η καταγραφή μένει.</p>`;
@@ -379,7 +381,7 @@ function consCard(p){const sb=$('#p-stopb');if(sb)sb.innerHTML=consOf(p,'appt')=
   $$('[data-hed]',el).forEach(b=>b.onclick=()=>editAnswer(p,b.dataset.hed));
   $('#cs-edit',el).onclick=()=>{$('#cs-view',el).hidden=true;$('#cs-ed',el).hidden=false;$('#cs-et',el).focus();};
   $('#cs-ecan',el).onclick=()=>consCard(p);
-  $('#cs-esave',el).onclick=()=>{S.data.settings.consTpl=$('#cs-et',el).value.trim()||CONS_TXT_DEF;save();toast('Αποθηκεύτηκε το νέο κείμενο.','ok');consCard(p);$('.constxt',el).open=true;};
+  $('#cs-esave',el).onclick=()=>{S.data.settings.consTpl=$('#cs-et',el).value.trim()||tr(CONS_TXT_DEF);save();toast('Αποθηκεύτηκε το νέο κείμενο.','ok');consCard(p);$('.constxt',el).open=true;};
   $('#cs-edef',el).onclick=()=>{delete S.data.settings.consTpl;save();toast('Μπήκε το αρχικό κείμενο.','ok');consCard(p);$('.constxt',el).open=true;};
   const a=$('#cs-sms',el);if(a)a.addEventListener('click',()=>{logMsg(p,'Κείμενο ενημέρωσης / συγκατάθεσης','SMS');setTimeout(()=>consCard(p),300);});
   const b=$('#cs-mail',el);if(b)b.addEventListener('click',()=>{logMsg(p,'Κείμενο ενημέρωσης / συγκατάθεσης','email');setTimeout(()=>consCard(p),300);});}
@@ -410,13 +412,13 @@ function freqTxt(v){if(!v.count)return'Δεν έχει έρθει ακόμα';re
 
 /* ---------- μήνυμα προσφοράς μόνο σε όσους έχουν πει «ναι» ---------- */
 function offerDialog(preIds){const all=myStudents().filter(p=>!p.demo||S.data.settings.demo);const yes=all.filter(p=>consOf(p,'promo')===true);const sel=new Set((preIds||yes.map(p=>p.id)).filter(id=>yes.some(p=>p.id===id)));
-  const tpl=S.data.settings.offerTpl||'Καλησπέρα{όνομα}! ';
+  const tpl=S.data.settings.offerTpl||tr('Καλησπέρα{όνομα}! ');
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Μήνυμα προσφοράς</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <p class="small muted" style="margin-top:0">Στέλνεται <b>μόνο</b> σε όσους έχουν πει «ναι» στις προσφορές (${yes.length} από ${all.length}). Στο τέλος μπαίνει μόνο του το «Για να μη λαμβάνετε προσφορές απαντήστε ΣΤΟΠ».</p>
    <div class="field"><label class="f" for="of-t">Το μήνυμα</label><textarea class="in" id="of-t" style="min-height:90px" placeholder="π.χ. Αυτόν τον μήνα -20% στη βαφή!">${esc(tpl)}</textarea><div class="tiny muted">{όνομα} = το μικρό όνομα του πελάτη</div></div>
    ${yes.length?`<div class="implist" style="max-height:34vh">${yes.map(p=>`<div class="improw"><input type="checkbox" data-of="${p.id}" ${sel.has(p.id)?'checked':''} aria-label="Επιλογή"><span class="grow"><b>${esc(stuName(p))}</b><small>${esc(p.phone||'')}${p.email?' · '+esc(p.email):''}</small></span>${p.phone?`<a class="btn sm" data-ofsms="${p.id}">SMS</a>`:''}</div>`).join('')}</div>
    <div class="savebar"><button type="button" class="btn" id="of-mail">${ic('send',15)} Email σε όλους τους επιλεγμένους</button></div>`:`<div class="note small">Κανείς δεν έχει δώσει ακόμα συγκατάθεση για προσφορές. Σημείωσέ τη στην καρτέλα κάθε ${esc(LX('whoGen'))}.</div>`}`,{guard:false});
-  const txt=p=>{const first=(p.name||'').split(' ')[0];return($('#of-t',md.el).value||'').replace(/\{όνομα\}/g,first?' '+first:'').trim()+'\n'+(isPrivate()?S.data.settings.myName||'':biz().name||S.data.settings.myName||'')+'\nΓια να μη λαμβάνετε προσφορές απαντήστε ΣΤΟΠ.';};
+  const txt=p=>{const first=(p.name||'').split(' ')[0];return($('#of-t',md.el).value||'').replace(/\{όνομα\}/g,first?' '+first:'').trim()+'\n'+(isPrivate()?S.data.settings.myName||'':biz().name||S.data.settings.myName||'')+'\n'+tr('Για να μη λαμβάνετε προσφορές απαντήστε ΣΤΟΠ.');};
   $('#of-t',md.el).onchange=e=>{S.data.settings.offerTpl=e.target.value;save();};
   md.el.addEventListener('change',e=>{const c=e.target.closest('[data-of]');if(c){c.checked?sel.add(c.dataset.of):sel.delete(c.dataset.of);}});
   md.el.addEventListener('click',e=>{const b=e.target.closest('[data-ofsms]');if(b){const p=getStudent(b.dataset.ofsms);logMsg(p,'Προσφορά','SMS');location.href=smsHref(p.phone,txt(p));b.textContent='✓ SMS';return;}
@@ -492,6 +494,7 @@ const PERS_COLORS=['#7462B4','#3A8A61','#2F7FA8','#C77A3A','#B4527A','#8A7A2E','
 function isPrivate(){return biz().kind==='private';}
 const SET_SECS=()=>[
   ['prof','',prof().p.i||'✨','Επάγγελμα',prof().p.n],
+  ['lang','','🌐','Γλώσσα · Language',LANGS.map(l=>l.f+' '+l.n).join(' · ')],
   ['info','',isPrivate()?'👤':'🏢',isPrivate()?'Προσωπικά στοιχεία':'Στοιχεία επιχείρησης',isPrivate()?(S.data.settings.myName||'Όνομα, τηλέφωνο'):(biz().name||'Επωνυμία, τηλέφωνο, ΑΦΜ')],
   ['staff','',`👥`,'Προσωπικό',(providers().length===1?'1 άτομο κάνει ραντεβού':providers().length+' άτομα κάνουν ραντεβού')],
   ['hours','','🕘','Ωράριο και αργίες',agCfg().from+'–'+agCfg().to],
@@ -504,7 +507,11 @@ const SET_SECS=()=>[
 function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_SECS();const sec=L.find(x=>x[0]===id);
   if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}<div class="setlist">${L.map(([k,,i,t,d])=>`<a class="setrow" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div><p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
   M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
+function langDialog(){const md=modal(`<div class="spread" style="margin-bottom:10px"><h3 style="margin:0">🌐 Γλώσσα · Language</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>${langPickHTML()}`,{guard:false});langPickBind(md.el);}
+function langPickHTML(){return`<div class="langpick">${LANGS.map(l=>`<button type="button" class="langbtn ${l.k===LANG?'on':''}" data-lang="${l.k}" data-notr><span class="lflag">${l.f}</span><b>${l.n}</b>${l.k===LANG?'<small>✓</small>':''}</button>`).join('')}</div>`;}
+function langPickBind(el){$$('[data-lang]',el).forEach(b=>b.onclick=()=>{if(b.dataset.lang!==LANG)setLang(b.dataset.lang);});}
 const SETP={
+ lang(el){el.innerHTML=`<div class="card">${langPickHTML()}<p class="small muted" style="margin:12px 0 0">Ισχύει για όλες τις εφαρμογές GlenApps σε αυτό το κινητό. Τα μηνύματα προς τους πελάτες βγαίνουν στη γλώσσα που διαλέγεις· όσα κείμενα έχεις αλλάξει εσύ μένουν όπως τα έγραψες.</p></div>`;langPickBind(el);},
  prof(el){el.innerHTML=`<p class="small muted" style="margin-top:0">Αλλάζουν οι λέξεις, οι ειδικότητες του προσωπικού, η διάρκεια ραντεβού και το χρώμα. Τα ραντεβού και τα πρόσωπα μένουν όπως είναι.</p>${profPickerHTML(S.data.settings.prof,true)}`;
   el.onclick=async e=>{const pe=e.target.closest('[data-pedit]');if(pe){e.stopPropagation();const r=await profAddDialog((findProf(pe.dataset.pedit)||{g:{}}).g.g,customProfs().find(x=>x.id===pe.dataset.pedit));if(r)render();return;}const ad=e.target.closest('[data-padd]');if(ad){const id=await profAddDialog(ad.dataset.padd);if(id){S.data.settings.prof=id;S.data.settings.lex={};save();toast('Επάγγελμα: '+prof().p.n,'ok');render();}return;}const b=e.target.closest('[data-pf]');if(!b)return;S.data.settings.prof=b.dataset.pf;S.data.settings.lex={};save();toast('Επάγγελμα: '+prof().p.n,'ok');render();};},
  info(el){const B=biz();const pv=isPrivate();
@@ -536,15 +543,15 @@ const SETP={
   $$('[data-th]',el).forEach(b=>b.onclick=()=>{S.data.settings.color=b.dataset.th;save();render();});const ci=$('#ci-op',el);ci.oninput=()=>{S.data.settings.colInt=+ci.value;$('#ci-v',el).textContent=ci.value+'%';applyTheme();const sw=$('.cisample i',el);if(sw)sw.style.background=softColor(themeColor());};ci.onchange=()=>save();const wo=$('#wc-op',el);wo.oninput=()=>{S.data.settings.wcOp=+wo.value;$('#wc-v',el).textContent=wo.value+'%';applyTheme();};wo.onchange=()=>save();$('#th-own',el).onchange=e=>{S.data.settings.color=e.target.value;save();render();};$('#th-def',el).onclick=()=>{delete S.data.settings.color;save();render();};
   },
  msgs(el){el.innerHTML=`<div class="card section"><label class="switch"><span><b>Επιβεβαίωση με μήνυμα μόλις κλείνεις ραντεβού</b><small>Με την «Αποθήκευση» ανοίγει έτοιμο μήνυμα προς τον πελάτη (αν έχει τηλέφωνο). Εσύ πατάς μόνο «Αποστολή».</small></span><input type="checkbox" id="cf-on" ${S.data.settings.confOff?'':'checked'}></label>
-   <div class="field" style="margin-top:12px"><label class="f" for="cf-t">Κείμενο επιβεβαίωσης</label><textarea class="in" id="cf-t" style="min-height:80px">${esc(S.data.settings.confTpl||CONF_TPL_DEF)}</textarea><div class="tiny muted" style="margin-top:4px">Λέξεις που αλλάζουν μόνες τους: {όνομα} {ημέρα} {ώρα} {επιχείρηση}</div></div>
+   <div class="field" style="margin-top:12px"><label class="f" for="cf-t">Κείμενο επιβεβαίωσης</label><textarea class="in" id="cf-t" style="min-height:80px">${esc(S.data.settings.confTpl||tr(CONF_TPL_DEF))}</textarea><div class="tiny muted" style="margin-top:4px">Λέξεις που αλλάζουν μόνες τους: {όνομα} {ημέρα} {ώρα} {επιχείρηση}</div></div>
    <div class="row"><button class="btn pri" id="cf-s">${ic('check',16)} Αποθήκευση</button><button class="btn ghost" id="cf-d">Αρχικό κείμενο</button></div></div>
    <div class="card section"><h3>Κείμενο ενημέρωσης και συγκατάθεσης</h3><p class="small muted" style="margin-top:0">Αυτό λες ή στέλνεις στον πελάτη πριν τσεκάρεις τις συγκαταθέσεις στην καρτέλα του. Το αλλάζεις και από την καρτέλα του πελάτη. «ΣΤΟΠ» = όχι προσφορές · «ΣΤΟΠ ΟΛΑ» = κανένα μήνυμα.</p>
-    <textarea class="in" id="cs-t" style="min-height:120px">${esc(S.data.settings.consTpl||CONS_TXT_DEF)}</textarea><div class="tiny muted" style="margin:4px 0 8px">{επιχείρηση} = η επωνυμία σου</div><div class="note small warnnote" style="margin-bottom:8px">⚠️ ${CONS_RESP}</div>
+    <textarea class="in" id="cs-t" style="min-height:120px">${esc(S.data.settings.consTpl||tr(CONS_TXT_DEF))}</textarea><div class="tiny muted" style="margin:4px 0 8px">{επιχείρηση} = η επωνυμία σου</div><div class="note small warnnote" style="margin-bottom:8px">⚠️ ${CONS_RESP}</div>
     <div class="row"><button class="btn pri" id="cs-s">${ic('check',16)} Αποθήκευση</button><button class="btn ghost" id="cs-d">Αρχικό κείμενο</button></div></div>
    <div class="card section"><h3>Μήνυμα προσφοράς</h3><p class="small muted" style="margin-top:0">Πηγαίνει μόνο σε όσους έχουν πει «ναι» στις προσφορές.</p><button class="btn pri" id="of-go">${ic('send',16)} Γράψε μήνυμα προσφοράς</button></div>
    <div class="card"><h3>Υπενθυμίσεις την προηγούμενη μέρα</h3><p class="small muted" style="margin-top:0">Από το «Σήμερα» → «Αύριο» → «Στείλε υπενθυμίσεις», ή από το Ημερολόγιο → ⋯ → «Υπενθυμίσεις».</p></div>`;
-  $('#cs-s',el).onclick=()=>{S.data.settings.consTpl=$('#cs-t',el).value.trim()||CONS_TXT_DEF;save();toast('Αποθηκεύτηκε.','ok');};$('#cs-d',el).onclick=()=>{delete S.data.settings.consTpl;save();render();};$('#of-go',el).onclick=()=>offerDialog();
-  $('#cf-on',el).onchange=e=>{S.data.settings.confOff=!e.target.checked;save();};$('#cf-s',el).onclick=()=>{S.data.settings.confTpl=$('#cf-t',el).value.trim()||CONF_TPL_DEF;save();toast('Αποθηκεύτηκε.','ok');};$('#cf-d',el).onclick=()=>{delete S.data.settings.confTpl;save();render();};},
+  $('#cs-s',el).onclick=()=>{S.data.settings.consTpl=$('#cs-t',el).value.trim()||tr(CONS_TXT_DEF);save();toast('Αποθηκεύτηκε.','ok');};$('#cs-d',el).onclick=()=>{delete S.data.settings.consTpl;save();render();};$('#of-go',el).onclick=()=>offerDialog();
+  $('#cf-on',el).onchange=e=>{S.data.settings.confOff=!e.target.checked;save();};$('#cf-s',el).onclick=()=>{S.data.settings.confTpl=$('#cf-t',el).value.trim()||tr(CONF_TPL_DEF);save();toast('Αποθηκεύτηκε.','ok');};$('#cf-d',el).onclick=()=>{delete S.data.settings.confTpl;save();render();};},
  demo(el){const on=!!S.data.settings.demo;
   el.innerHTML=`<div class="card"><p class="small" style="margin-top:0">Γεμίζει την εφαρμογή με ${DEMO_NAMES.length} ${esc(LX('whoPlL'))}-παραδείγματα και ραντεβού για τις επόμενες μέρες, για να δεις πώς δουλεύει ή να τη δείξεις σε κάποιον. Όσο είναι ενεργή, φαίνεται η κίτρινη ταινία «Δοκιμαστική λειτουργία» πάνω πάνω.</p>
    <p class="small muted">Τα δικά σου ραντεβού και ${esc(LX('whoPlL'))} δεν πειράζονται. Με το «Τέλος δοκιμής» σβήνονται μόνο τα παραδείγματα.</p>
