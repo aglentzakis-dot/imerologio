@@ -706,8 +706,34 @@ async function autoUpdCheck(){try{const r=await fetch('version.json?v='+Date.now
 setTimeout(autoUpdCheck,2500);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoUpdCheck();});
 
+/* ---------- παραδόσεις από τις Παραγγελίες ----------
+   Μόνο όταν ο χρήστης έχει το πακέτο GlenApps και το ενέκρινε μέσα στις Παραγγελίες· εκεί γεμίζει το «γραμματοκιβώτιο».
+   Κάθε παράδοση γίνεται ραντεβού μιας φοράς στο πρόσωπο του πελάτη. Χωρίς ώρα: στην πρώτη ελεύθερη μισή ώρα μέσα στο ωράριο. */
+const IMQ='glen-imerologio-inbox';
+function imInbox(){let q;try{q=JSON.parse(localStorage.getItem(IMQ)||'null');}catch(e){q=null;}
+  if(!Array.isArray(q)||!q.length||!S.data)return 0;let n=0;const done=new Set();const norm10=x=>String(x||'').replace(/\D/g,'').slice(-10);
+  for(const op of q){if(!op||typeof op!=='object')continue;done.add(JSON.stringify(op));
+    if(typeof op.id!=='string'||!/^pg-[\w-]{1,40}$/.test(op.id))continue;
+    const i=appts().findIndex(a=>a.ext===op.id);
+    if(op.op==='del'){if(i>=0){appts().splice(i,1);n++;}continue;}
+    const e=op.e||{};if(!/^\d{4}-\d{2}-\d{2}$/.test(e.date||''))continue;
+    const ph=norm10(e.phone);let p=ph?S.data.students.find(x=>norm10(x.phone)===ph||(x.contacts||[]).some(c=>norm10(c.phone)===ph)):null;
+    if(!p){const nm=String(e.name||'').trim();if(!nm)continue;p=getStudent(IM_NEWPERSON(nm.slice(0,60),{phone:String(e.phone||'').slice(0,20)}));}
+    if(p&&e.addr&&!p.addr)p.addr=String(e.addr).slice(0,140);
+    const old=i>=0?appts()[i]:null;let st=/^\d{1,2}:\d{2}$/.test(e.s||'')?e.s:null,en=/^\d{1,2}:\d{2}$/.test(e.e||'')?e.e:null;
+    if(st&&!en)en=tstr(tmin(st)+30);
+    if(!st){if(old&&old.date===e.date){st=old.s;en=old.e;}else{const c=agCfg();st=c.from;en=tstr(tmin(c.from)+30);
+      for(let t=tmin(c.from);t+30<=tmin(c.to);t+=30){if(!conflicts(e.date,tstr(t),tstr(t+30),old&&old.id).length){st=tstr(t);en=tstr(t+30);break;}}}}
+    const rec={sid:p.id,kind:'once',date:e.date,d:wdOf(e.date),s:st,e:en,note:String(e.note||'').slice(0,300),ext:op.id,src:'paraggelies'};
+    if(old)Object.assign(old,rec);else appts().push(Object.assign({id:uid(),ex:{},created:new Date().toISOString()},rec));n++;}
+  try{const now=JSON.parse(localStorage.getItem(IMQ)||'[]');const left=Array.isArray(now)?now.filter(o=>!done.has(JSON.stringify(o))):[];if(left.length)localStorage.setItem(IMQ,JSON.stringify(left));else localStorage.removeItem(IMQ);}catch(e){}
+  if(n)save();return n;}
+window.addEventListener('storage',e=>{if(e.key===IMQ&&e.newValue&&imInbox()&&!topModal())render();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&imInbox()&&!topModal())render();});
+
 /* ---------- έναρξη ---------- */
 S.data=loadData();applyIdentity();
+imInbox();
 if(!location.hash)history.replaceState(null,'','#/today');
 render();
 setTimeout(autoBackup,5000);
