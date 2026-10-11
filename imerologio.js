@@ -176,8 +176,8 @@ function provById(id){const B=biz();if(id==='me')return{id:'me',name:S.user.name
 const provIni=p=>(p.id==='me'?'Ε':(p.name||'?').trim()[0]||'?').toUpperCase();
 let AGF='';
 function agStaff(){try{const v=localStorage.getItem('imer-agstaff')||'';return providers().some(p=>p.id===v)&&providers().length>1?v:'';}catch(e){return'';}}
-function occ(from,to,{sid,withCancel,by}={}){const out=[];const cl=closedDays();const B=by!==undefined?by:AGF;
-  for(const a of appts()){if(sid&&a.sid!==sid)continue;if(!S.data.students.some(s=>s.id===a.sid))continue;
+function occ(from,to,{sid,withCancel,by}={}){const out=[];const cl=closedDays();const B=by!==undefined?by:AGF;const SID=new Set(S.data.students.map(s=>s.id));
+  for(const a of appts()){if(sid&&a.sid!==sid)continue;if(!SID.has(a.sid))continue;if(a.kind==='once'&&(a.date<from||a.date>to))continue;if(a.kind!=='once'&&(a.date>to||(a.until&&a.until<from)))continue;
     const push=d=>{if(d<from||d>to||isClosed(d))return;const x=(a.ex||{})[d];if(x&&x.st==='moved')return;if(x&&x.st==='cancel'&&!withCancel)return;const done=!!(x&&x.st==='done');out.push({a,date:d,s:a.s,e:a.e,by:(x&&x.by)||undefined,st:x&&x.st==='cancel'?'cancel':x&&x.st==='absent'?'absent':done?'done':'',key:a.id+'|'+d});};
     if(a.kind==='once'){push(a.date);continue;}
     let d=from>a.date?from:a.date;const wd=+a.d;const off=(wd-wdOf(d)+7)%7;d=addDays(d,off);

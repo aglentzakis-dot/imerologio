@@ -20,7 +20,7 @@ function save(){S.data.meta.changes=(S.data.meta.changes||0)+1;try{localStorage.
 
 /* ---------- πρόσωπα (στο κοινό κομμάτι λέγονται «students» για συμβατότητα) ---------- */
 function getStudent(id){return S.data.students.find(x=>x.id===id)||null;}
-function myStudents(){return S.data.students.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','el'));}
+const COLL=new Intl.Collator('el');function myStudents(){return S.data.students.slice().sort((a,b)=>COLL.compare(a.name||'',b.name||''));}
 const stuName=s=>s?(s.name||'—'):'—';
 const initial=n=>((n||'?').trim()[0]||'?').toUpperCase();
 function IM_NEWPERSON(name,c){c=c||{};const p={id:uid(),name:name.trim(),avatar:initial(name),phone:c.phone||'',email:c.email||'',contacts:(c.phone||c.email)?[{name:name.trim(),phone:c.phone||'',email:c.email||''}]:[],created:new Date().toISOString()};S.data.students.push(p);save();return p.id;}
@@ -272,7 +272,14 @@ function parseCsv(t){t=t.replace(/^﻿/,'');const first=t.split(/\r?\n/)[0]||'';
   const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
     else if(ch==='"')q=true;else if(ch===sep){row.push(cur);cur='';}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur='';}else cur+=ch;}
   if(cur||row.length){row.push(cur);rows.push(row);}return rows.filter(r=>r.some(x=>String(x).trim()));}
-function parseVcf(t){const L=[];t.replace(/\r\n[ \t]/g,'').split(/BEGIN:VCARD/i).slice(1).forEach(b=>{const get=re=>{const m=b.match(re);return m?m[1].trim():'';};
+/* παλιά κινητά (vCard 2.1) γράφουν τα ελληνικά ονόματα «κωδικοποιημένα» (QUOTED-PRINTABLE): τα αποκωδικοποιούμε */
+function vcfQP(t){t=String(t).replace(/\r\n/g,'\n');
+  t=t.replace(/^([^:\n]*ENCODING=QUOTED-PRINTABLE[^:\n]*:)((?:.*=\n)*.*)$/gim,(m,h,v)=>{v=v.replace(/=\n/g,'');const cs=(h.match(/CHARSET=([^;:]+)/i)||[])[1]||'utf-8';
+    const bytes=[];for(let i=0;i<v.length;i++){if(v[i]==='='&&/^[0-9A-F]{2}$/i.test(v.substr(i+1,2))){bytes.push(parseInt(v.substr(i+1,2),16));i+=2;}else bytes.push(v.charCodeAt(i)&255);}
+    let out;try{out=new TextDecoder(cs.toLowerCase()).decode(new Uint8Array(bytes));}catch(e){out=new TextDecoder('utf-8').decode(new Uint8Array(bytes));}
+    return h.replace(/;?ENCODING=QUOTED-PRINTABLE/i,'')+out;});
+  return t.replace(/\n/g,'\r\n');}
+function parseVcf(t){t=vcfQP(t);const L=[];t.replace(/\r\n[ \t]/g,'').split(/BEGIN:VCARD/i).slice(1).forEach(b=>{const get=re=>{const m=b.match(re);return m?m[1].trim():'';};
   const dec=v=>v.replace(/\\,/g,',').replace(/\;/g,';').replace(/\\n/gi,' ');let fn=dec(get(/\nFN[^:\n]*:(.*)/i));if(!fn){const nn=get(/\nN[^:\n]*:(.*)/i).split(';');fn=[nn[1],nn[0]].filter(Boolean).join(' ');}
   const adr=get(/\nADR[^:\n]*:(.*)/i).split(';').map(dec).filter(x=>x.trim()).join(', ');
   if(fn||get(/\nTEL[^:\n]*:(.*)/i))L.push({name:fn||get(/\nTEL[^:\n]*:(.*)/i),phone:get(/\nTEL[^:\n]*:(.*)/i),email:get(/\nEMAIL[^:\n]*:(.*)/i),addr:adr,notes:dec(get(/\nNOTE[^:\n]*:(.*)/i))});});return L;}
@@ -399,9 +406,9 @@ document.addEventListener('click',async e=>{const a=e.target.closest('a[data-cg]
   if(!tel&&$('#p-cons'))setTimeout(()=>consCard(p),300);},true);
 
 /* ---------- συχνότητα επισκέψεων ---------- */
-function visitStats(p){const t=todayISO();const from=addDays(t,-730);
-  const V=[...new Set(occ(from,addDays(t,-1),{sid:p.id,withCancel:true,by:''}).filter(o=>o.st!=='cancel'&&o.st!=='absent').map(o=>o.date))].sort();
-  const nextO=occ(t,addDays(t,365),{sid:p.id,by:''}).find(o=>o.st==='');
+function visitStats(p,pre){const t=todayISO();const from=addDays(t,-730);
+  const V=[...new Set((pre?pre.past:occ(from,addDays(t,-1),{sid:p.id,withCancel:true,by:''})).filter(o=>o.st!=='cancel'&&o.st!=='absent').map(o=>o.date))].sort();
+  const nextO=(pre?pre.fut:occ(t,addDays(t,365),{sid:p.id,by:''})).find(o=>o.st==='');
   const last=V[V.length-1]||null;const gaps=[];for(let i=1;i<V.length;i++)gaps.push((new Date(V[i]+'T12:00')-new Date(V[i-1]+'T12:00'))/864e5);
   const avg=gaps.length?Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length):null;const since=last?Math.round((new Date(t+'T12:00')-new Date(last+'T12:00'))/864e5):null;
   const y1=V.filter(d=>d>=addDays(t,-365)).length;
@@ -431,14 +438,14 @@ function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
    :emptyHTML('users',`Δεν υπάρχουν ακόμη ${esc(LX('whoPlL'))}`,`Πρόσθεσε τον πρώτο — ή γράψε απευθείας το όνομα όταν κλείνεις ραντεβού.`,`<a class="btn pri" href="#/person/new">${ic('plus',16)} Νέος</a> <button class="btn" id="p-imp2">${ic('download',16)} Εισαγωγή πολλών μαζί</button>`)}`;
   [$('#p-imp'),$('#p-imp2')].forEach(b=>{if(b)b.onclick=importMenu;});
   if(!all.length)return;
-  const t=todayISO();const VS={};all.forEach(p=>VS[p.id]=visitStats(p));let flt=r.q.f||'all';
+  const t=todayISO();const VS={};const grp=L=>{const G={};L.forEach(o=>(G[o.a.sid]=G[o.a.sid]||[]).push(o));return G;};const PAST=grp(occ(addDays(t,-730),addDays(t,-1),{withCancel:true,by:''})),FUT=grp(occ(t,addDays(t,365),{by:''}));all.forEach(p=>VS[p.id]=visitStats(p,{past:PAST[p.id]||[],fut:FUT[p.id]||[]}));let flt=r.q.f||'all';
   const nLate=all.filter(p=>VS[p.id].late).length,nPromo=all.filter(p=>consOf(p,'promo')===true).length;
   $('#pq').closest('.search').insertAdjacentHTML('afterend',`<div class="pftabs"><button data-pf2="all">Όλοι <i>${all.length}</i></button><button data-pf2="late">Έχουν καιρό να έρθουν <i>${nLate}</i></button><button data-pf2="promo">Δέχονται προσφορές <i>${nPromo}</i></button></div><div id="pfx"></div>`);
   const tabs=()=>{$$('[data-pf2]').forEach(b=>b.classList.toggle('on',b.dataset.pf2===flt));$('#pfx').innerHTML=flt==='promo'&&nPromo?`<button class="btn pri wide" id="pf-offer" style="margin-bottom:10px">${ic('send',16)} Στείλε μήνυμα προσφοράς σε ${nPromo}</button>`:flt==='late'?`<p class="small muted" style="margin:0 0 10px">Όσοι δεν έχουν κλεισμένο ραντεβού και πέρασε πολύ περισσότερος καιρός από τη συνηθισμένη τους συχνότητα (ή πάνω από 2 μήνες, αν έχουν έρθει μία φορά).</p>`:'';const o=$('#pf-offer');if(o)o.onclick=()=>offerDialog();};
   $$('[data-pf2]').forEach(b=>b.onclick=()=>{flt=b.dataset.pf2;tabs();draw();});
   const draw=()=>{const v=$('#pq').value.toLowerCase().trim();let L=all.filter(p=>!v||(p.name||'').toLowerCase().includes(v)||(p.phone||'').replace(/\s/g,'').includes(v.replace(/\s/g,'')));
     if(flt==='late')L=L.filter(p=>VS[p.id].late).sort((a,b)=>VS[b.id].since-VS[a.id].since);if(flt==='promo')L=L.filter(p=>consOf(p,'promo')===true);
-    $('#pl').innerHTML=L.length?L.map(p=>{const nx=occ(t,addDays(t,120),{sid:p.id,by:''}).find(o=>o.st===''&&(o.date>t||tmin(o.e)>nowMin()));
+    $('#pl').innerHTML=L.length?L.map(p=>{const nx=(FUT[p.id]||[]).find(o=>o.date<=addDays(t,120)&&o.st===''&&(o.date>t||tmin(o.e)>nowMin()));
       const vs=VS[p.id];return`<a class="rw" href="#/person/${p.id}"><span class="ricon" style="${p.color?`background:${p.color};color:#fff`:''}">${esc((p.name||'?').trim()[0]||'?')}</span><span class="grow"><b>${esc(stuName(p))}</b><small>${flt==='late'?`τελευταία φορά πριν ${daysTxt(vs.since)}${vs.avg?' · συνήθως κάθε '+daysTxt(vs.avg):''}`:[p.phone?esc(p.phone):'',nx?'επόμενο '+WDAYS_S[wdOf(nx.date)]+' '+fmtShort(nx.date)+' '+nx.s:vs.last?'τελευταία '+fmtShort(vs.last):''].filter(Boolean).join(' · ')||'&nbsp;'}</small></span>${vs.late&&flt!=='late'?'<span class="chip y sm">έχει καιρό</span>':''}${ic('right',16)}</a>`;}).join(''):`<p class="muted small">Κανένα αποτέλεσμα.</p>`;};
   tabs();draw();$('#pq').oninput=draw;}
 
@@ -644,7 +651,7 @@ function backupText(){return JSON.stringify({app:'imerologio',version:APP_VERSIO
 const bkName=()=>'imerologio-'+todayISO()+'.json';
 function bkWays(){return Object.assign({folder:false,cloud:false},S.data.settings.bkWays||{});}
 function markBacked(){S.data.meta.lastBackup=Date.now();S.data.meta.changes=0;try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){}}
-function bkStatusShort(){const m=S.data.meta;return m.lastBackup?'Τελευταίο: '+fmtShort(new Date(m.lastBackup).toISOString().slice(0,10))+(m.changes?' · '+m.changes+' αλλαγές από τότε':''):'Δεν έχει κρατηθεί ακόμα';}
+function bkStatusShort(){const m=S.data.meta;return m.lastBackup?'Τελευταίο: '+fmtShort(isoDate(new Date(m.lastBackup)))+(m.changes?' · '+m.changes+' αλλαγές από τότε':''):'Δεν έχει κρατηθεί ακόμα';}
 async function cloudShare(){const f=new File([backupText()],bkName(),{type:'application/json'});
   if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Αντίγραφο Ημερολογίου'});S.data.meta.cloudLast=Date.now();markBacked();toast('Έτοιμο. Αν διάλεξες το σύννεφο, το αρχείο ανέβηκε εκεί.','ok');return true;}catch(e){if(e&&e.name==='AbortError'){toast('Ακυρώθηκε· δεν ανέβηκε τίποτα.');return false;}}}
   downloadText(bkName(),backupText(),'application/json');markBacked();toast('Το αρχείο κατέβηκε στις λήψεις. Ανέβασέ το στο σύννεφό σου.','ok');return true;}
@@ -655,7 +662,7 @@ async function backupAllNow(){const W=bkWays(),ok=[],no=[];await opfsSave();ok.p
 // αυτόματο: μία φορά τη μέρα μέσα στην εφαρμογή και στον φάκελο (αν έχει ήδη άδεια)
 async function autoBackup(){const m=S.data.meta;if(!S.data.students.length&&!(S.data.appts||[]).length)return;const day=24*36e5;
   if(Date.now()-(m.opfsLast||0)>day)await opfsSave();if(bkWays().folder&&Date.now()-(m.folderLast||0)>day)await fsSave();try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){}}
-async function backupPage(el){const W=bkWays(),m=S.data.meta;const root=fsOK()?await fsGet():null;const ago=t=>t?fmtShort(new Date(t).toISOString().slice(0,10)):'ποτέ';
+async function backupPage(el){const W=bkWays(),m=S.data.meta;const root=fsOK()?await fsGet():null;const ago=t=>t?fmtShort(isoDate(new Date(t))):'ποτέ';
   el.innerHTML=`<div class="card section bkhead"><p class="small" style="margin:0 0 10px">${m.lastBackup?'Τελευταίο αντίγραφο: <b>'+fmtDate(new Date(m.lastBackup).toISOString())+'</b>.':'<b>Δεν έχει κρατηθεί ακόμα αντίγραφο.</b>'} Αλλαγές από τότε: ${m.changes||0}.</p>
    <button class="btn pri wide" id="bk-all">🛟 Κράτα αντίγραφο τώρα</button>
    <p class="tiny muted" style="margin:8px 0 0">Μέσα στην εφαρμογή κρατιέται πάντα αντίγραφο μόνο του. Για ασφάλεια διάλεξε και έναν τρόπο έξω από αυτήν.</p></div>
