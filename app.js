@@ -514,6 +514,47 @@ const SET_SECS=()=>[
 function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_SECS();const sec=L.find(x=>x[0]===id);
   if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}<div class="setlist">${L.map(([k,,i,t,d])=>`<a class="setrow" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div><p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
   M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
+/* ---------- λέξεις: βοήθεια για κάθε κουτάκι ---------- */
+const LXF=[['who','Τίτλος στην καρτέλα: «Νέος ___»','Νέος {}'],['whoAcc','Στο νέο ραντεβού: «Διάλεξε ___»','Διάλεξε {}…'],['whoGen','Κουμπί: «Καρτέλα ___»','Καρτέλα {}'],['whoPl','Στο κάτω μενού: «___»','{}'],['whoPlL','Στη φράση: «Πάγιοι ___»','Πάγιοι {}'],['one','Στο ημερολόγιο του κινητού: «___: Μαρία»','{}: Μαρία']];
+const T2=(el,en)=>window.LANG==='en'?en:el;
+const LXH_EN={
+ who:{how:'<b>One</b> person, the way you name them.',test:'Who came? — The <u>___</u> came.',caps:'Start with a <b>capital</b> letter.',no:['clients','Clients']},
+ whoAcc:{how:'<b>One</b> person, as in “<b>choose a ___</b>”.',test:'Who are you waiting for? — A <u>___</u>.',caps:'All <b>lowercase</b>.',no:['Clients']},
+ whoGen:{how:'<b>One</b> person, as in “<b>the ___ profile</b>”. Usually the same as the box above.',test:'Whose profile is it? — The <u>___</u>’s.',caps:'All <b>lowercase</b>.',no:['clients']},
+ whoPl:{how:'<b>Many</b> people. It is the label of the bottom menu button, so keep it <b>short</b> (one word).',test:'Who is coming? — The <u>___</u>.',caps:'Start with a <b>capital</b> letter.',no:['Client']},
+ whoPlL:{how:'<b>Many</b> people, inside a sentence.',test:'How many? — Ten <u>___</u>.',caps:'All <b>lowercase</b>.',no:['client']},
+ one:{how:'What you <b>book</b>. It goes in the title of each entry in your phone calendar.',test:'What do you have at 10:00? — A <u>___</u>.',caps:'Start with a <b>capital</b> letter.',no:['appointments'],ex:['Appointment','Lesson','Session','Visit','Booking']}};
+const LXH={
+ who:{how:'Τον <b>έναν</b>, όπως τον λες όταν μιλάς <b>για</b> αυτόν.',test:'Ποιος ήρθε; — Ήρθε ο <u>___</u>.',caps:'Με <b>κεφαλαίο</b> το πρώτο γράμμα.',no:['Πελάτη','Πελάτες']},
+ whoAcc:{how:'Τον <b>έναν</b>, όπως λες «<b>βλέπω τον ___</b>».',test:'Ποιον περιμένεις; — Περιμένω τον <u>___</u>.',caps:'Με <b>μικρά</b> γράμματα.',no:['πελάτης','Πελάτες']},
+ whoGen:{how:'Τον <b>έναν</b>, όπως λες «<b>η καρτέλα του ___</b>». Στα περισσότερα επαγγέλματα είναι ίδιο με το από πάνω κουτάκι.',test:'Τίνος είναι η καρτέλα; — Του <u>___</u>.',caps:'Με <b>μικρά</b> γράμματα.',no:['πελάτης','πελατών']},
+ whoPl:{how:'<b>Πολλοί</b> μαζί. Είναι ο τίτλος του κουμπιού στο κάτω μενού, οπότε κράτησέ το <b>σύντομο</b> (μία λέξη).',test:'Ποιοι έρχονται; — Οι <u>___</u>.',caps:'Με <b>κεφαλαίο</b> το πρώτο γράμμα.',no:['Πελάτης','πελατών']},
+ whoPlL:{how:'<b>Πολλοί</b> μαζί, μέσα σε πρόταση.',test:'Πόσοι είναι; — Είναι δέκα <u>___</u>.',caps:'Με <b>μικρά</b> γράμματα.',no:['Πελάτες','πελάτη']},
+ one:{how:'Πώς λέγεται <b>αυτό που κλείνεις</b>. Μπαίνει στον τίτλο κάθε εγγραφής στο ημερολόγιο του κινητού.',test:'Τι έχεις στις 10:00; — Έχω <u>___</u>.',caps:'Με <b>κεφαλαίο</b> το πρώτο γράμμα.',no:['ραντεβούς','Ραντεβού μου'],ex:['Ραντεβού','Μάθημα','Συνεδρία','Επίσκεψη','Κράτηση']}};
+function lxHelp(k,host){const h=(window.LANG==='en'?LXH_EN:LXH)[k],F=LXF.find(x=>x[0]===k);const inp=host&&$('#lx-'+k,host);const cur=(inp&&(inp.value.trim()||inp.placeholder))||LX(k);
+  const ex=h.ex||[...new Set(Object.values(IM_WHO).map(w=>w[k]))].slice(0,6);
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Τι γράφω εδώ;</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <div class="lxh-where"><small>Πού φαίνεται</small><b>${esc(F[1].split(':')[0])}</b><div class="lxh-demo">${esc(F[2]).replace('{}','<mark>'+esc(cur)+'</mark>')}</div></div>
+   <div class="lxh-step"><span>1</span><div><b>Τι γράφεις</b><p>${h.how}</p></div></div>
+   <div class="lxh-step"><span>2</span><div><b>Το κόλπο για να βγει σωστό</b><p>${T2('Πες δυνατά τη φράση και βάλε τη λέξη σου στο κενό:','Say the sentence out loud with your word in the gap:')}<br><i>«${h.test}»</i></p></div></div>
+   <div class="lxh-step"><span>3</span><div><b>Γράμματα</b><p>${h.caps}</p></div></div>
+   <div class="lxh-ok"><small>✓ Σωστά παραδείγματα</small><div>${ex.map(x=>`<span class="chip">${esc(x)}</span>`).join(' ')}</div></div>
+   <div class="lxh-no"><small>✗ Όχι έτσι</small><div>${h.no.map(x=>`<span class="chip">${esc(x)}</span>`).join(' ')}</div></div>
+   <button type="button" class="btn pri" data-close style="width:100%;margin-top:12px">Κατάλαβα</button>`,{guard:false});}
+/* από μία λέξη (π.χ. «Ιδιοκτήτης») φτιάχνει όλες τις μορφές */
+function lxGuess(w){w=w.trim();if(window.LANG==='en'&&!/[\u0370-\u03FF]/.test(w)){const c=w.charAt(0).toUpperCase()+w.slice(1).toLowerCase(),l=c.toLowerCase(),p=/(s|x|ch|sh)$/.test(l)?l+'es':/[^aeiou]y$/.test(l)?l.slice(0,-1)+'ies':l+'s';return{who:c,whoAcc:l,whoGen:l,whoPl:p.charAt(0).toUpperCase()+p.slice(1),whoPlL:p,known:false};}const cap=x=>x.charAt(0).toLocaleUpperCase('el')+x.slice(1),low=x=>x.charAt(0).toLocaleLowerCase('el')+x.slice(1);
+  const K=Object.values(IM_WHO).find(x=>[x.who,x.whoAcc,x.whoPl,x.whoPlL].some(v=>v&&v.toLocaleLowerCase('el')===w.toLocaleLowerCase('el')));
+  if(K)return{who:K.who,whoAcc:K.whoAcc,whoGen:K.whoGen,whoPl:K.whoPl,whoPlL:K.whoPlL,known:true};
+  const s=low(w);let acc=s,pl=s,gen=null;
+  if(/ής$/.test(s)){acc=s.slice(0,-1);pl=s.slice(0,-2)+'ές';}
+  else if(/ης$/.test(s)){acc=s.slice(0,-1);pl=s.slice(0,-2)+'ες';}
+  else if(/ός$/.test(s)){acc=s.slice(0,-1);pl=s.slice(0,-2)+'οί';gen=s.slice(0,-2)+'ού';}
+  else if(/ος$/.test(s)){acc=s.slice(0,-1);pl=s.slice(0,-2)+'οι';gen=s.slice(0,-2)+'ου';}
+  else if(/άς$/.test(s)){acc=s.slice(0,-1);pl=s.slice(0,-2)+'άδες';}
+  else if(/ας$/.test(s)){acc=s.slice(0,-1);pl=s.slice(0,-2)+'ες';}
+  else if(/[αη]$/.test(s)){pl=s.slice(0,-1)+'ες';gen=s+'ς';}
+  else if(/[άή]$/.test(s)){pl=s.slice(0,-1)+'ές';gen=s+'ς';}
+  return{who:cap(s),whoAcc:acc,whoGen:gen||acc,whoPl:cap(pl),whoPlL:pl,known:false};}
 function langDialog(){const md=modal(`<div class="spread" style="margin-bottom:10px"><h3 style="margin:0">🌐 Γλώσσα · Language</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>${langPickHTML()}`,{guard:false});langPickBind(md.el);}
 function langPickHTML(){return`<div class="langpick">${LANGS.map(l=>`<button type="button" class="langbtn ${l.k===LANG?'on':''}" data-lang="${l.k}" data-notr><span class="lflag">${l.f}</span><b>${l.n}</b>${l.k===LANG?'<small>✓</small>':''}</button>`).join('')}</div>`;}
 function langPickBind(el){$$('[data-lang]',el).forEach(b=>b.onclick=()=>{if(b.dataset.lang!==LANG)setLang(b.dataset.lang);});}
@@ -571,12 +612,18 @@ const SETP={
    <div class="chips">${['Ραντεβού','Μάθημα','Συνεδρία','Προπόνηση','Δουλειά','Κράτηση','Επίσκεψη'].map(o=>`<button type="button" class="chipt ${LX('one')===o?'on':''}" data-one="${o}">${o}</button>`).join('')}</div>
    ${Object.keys(S.data.settings.lex||{}).length?`<button class="btn sm ghost" id="lx-def" style="margin-top:14px">Όπως ήταν στο επάγγελμα</button>`:''}
    <details style="margin-top:14px"><summary class="small muted">Για προχωρημένους: γράψε μόνος σου κάθε λέξη</summary>
-   <p class="small muted" style="margin:8px 0 10px">Η ίδια λέξη αλλάζει κατάληξη ανάλογα με τη φράση. Γράψε στο κουτάκι τη λέξη όπως ταιριάζει στη φράση από πάνω του. Από κάτω βλέπεις πώς θα φαίνεται.</p>
-   ${[['who','Τίτλος στην καρτέλα: «Νέος ___»','Νέος {}'],['whoAcc','Στο νέο ραντεβού: «Διάλεξε ___»','Διάλεξε {}…'],['whoGen','Κουμπί: «Καρτέλα ___»','Καρτέλα {}'],['whoPl','Στο κάτω μενού: «___»','{}'],['whoPlL','Στη φράση: «Πάγιοι ___»','Πάγιοι {}'],['one','Στο ημερολόγιο του κινητού: «___: Μαρία»','{}: Μαρία']].map(([k,l,ex])=>`<div class="lxrow"><label class="f" for="lx-${k}">${l}</label><input class="in" id="lx-${k}" data-lx="${k}" data-ex="${esc(ex)}" value="${esc(L[k]||'')}" placeholder="${esc(base[k]||'')}"><div class="lxprev" id="lxp-${k}">${esc(ex.replace('{}',L[k]||LX(k)))}</div></div>`).join('')}
+   <div class="lxeasy"><b>Ο εύκολος τρόπος</b><p class="small" style="margin:4px 0 8px">${T2('Γράψε <b>μία</b> λέξη, όπως λες τον <b>έναν</b> (π.χ. <i>Ιδιοκτήτης</i>), και πάτα «Συμπλήρωσε τα υπόλοιπα». Η εφαρμογή γράφει μόνη της όλες τις μορφές· εσύ απλώς τις κοιτάς.','Type <b>one</b> word for <b>one</b> person (e.g. <i>Owner</i>) and tap “Fill in the rest”. The app writes all the forms for you; you just check them.')}</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><input class="in" id="lx-one-word" placeholder="π.χ. Ιδιοκτήτης" style="flex:1 1 160px;min-width:0"><button type="button" class="btn pri" id="lx-guess">✨ Συμπλήρωσε τα υπόλοιπα</button></div></div>
+   <p class="small muted" style="margin:12px 0 6px">${T2(`Κάθε κουτάκι είναι η <b>ίδια λέξη</b> σε άλλη φράση, γι' αυτό αλλάζει λίγο η κατάληξη. Πάτα το <b class="lxq-ex">?</b> δίπλα σε κάθε κουτάκι για να δεις ακριβώς τι γράφεις.`,`Each box is the <b>same word</b> in a different phrase. Tap the <b class="lxq-ex">?</b> next to each box to see exactly what to type.`)}</p>
+   ${LXF.map(([k,l,ex])=>`<div class="lxrow"><div class="lxlab"><label class="f" for="lx-${k}">${l}</label><button type="button" class="lxq" data-lxq="${k}" aria-label="Τι γράφω εδώ;">?</button></div><input class="in" id="lx-${k}" data-lx="${k}" data-ex="${esc(ex)}" value="${esc(L[k]||'')}" placeholder="${esc(base[k]||'')}"><div class="lxprev"><span class="muted">Θα φαίνεται:</span> <b id="lxp-${k}">${esc(ex.replace('{}',L[k]||LX(k)))}</b></div></div>`).join('')}
    <button class="btn pri" id="st-lx">${ic('check',15)} Αποθήκευση</button></details></div>`;
   $$('[data-who]',el).forEach(b=>b.onclick=()=>{const w=IM_WHO[b.dataset.who];const L=Object.assign({},S.data.settings.lex||{});['who','whoAcc','whoGen','whoPl','whoPlL'].forEach(k=>{if(w[k]===base[k])delete L[k];else L[k]=w[k];});S.data.settings.lex=L;save();toast('Τώρα λέγονται «'+w.whoPl+'».','ok');render();});
   $$('[data-one]',el).forEach(b=>b.onclick=()=>{const L=Object.assign({},S.data.settings.lex||{});if(b.dataset.one===base.one)delete L.one;else L.one=b.dataset.one;S.data.settings.lex=L;save();render();});
   $$('[data-lx]',el).forEach(x=>x.oninput=()=>{const p=$('#lxp-'+x.dataset.lx,el);if(p)p.textContent=x.dataset.ex.replace('{}',x.value.trim()||x.placeholder);});
+  $$('[data-lxq]',el).forEach(b=>b.onclick=()=>lxHelp(b.dataset.lxq,el));
+  $('#lx-guess',el).onclick=()=>{const w=$('#lx-one-word',el).value.trim();if(!w)return toast('Γράψε πρώτα μία λέξη, π.χ. Ιδιοκτήτης.','bad');const G=lxGuess(w);
+    ['who','whoAcc','whoGen','whoPl','whoPlL'].forEach(k=>{const i=$('#lx-'+k,el);i.value=G[k];i.oninput();i.classList.add('lxfilled');});
+    toast(G.known?'Έτοιμο. Πάτα «Αποθήκευση».':'Έτοιμο. Κοίτα τα κουτάκια — αν κάποιο δεν «ακούγεται» σωστά, διόρθωσέ το — και πάτα «Αποθήκευση».','ok');$('#lx-who',el).scrollIntoView({behavior:'smooth',block:'center'});};
   const ld=$('#lx-def',el);if(ld)ld.onclick=()=>{S.data.settings.lex={};save();render();};
   $('#st-lx',el).onclick=()=>{const o={};$$('[data-lx]',el).forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};},
  backup(el){backupPage(el);},
