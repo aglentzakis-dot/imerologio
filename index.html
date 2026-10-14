@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.39">
+<meta name="app-version" content="1.40">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -439,6 +439,27 @@ button.chip[data-av]{padding:7px 12px;font-size:.85rem}button.chip.on{background
 .proul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:7px}.proul li{font-size:.92rem;line-height:1.35}
 .prook{padding:12px 14px;border-radius:14px;background:linear-gradient(135deg,rgba(255,215,106,.25),rgba(255,159,67,.18));margin-bottom:8px}
 .freenote{background:linear-gradient(135deg,rgba(255,215,106,.22),rgba(255,159,67,.12))}
+/* 1.40: στατιστικά, κράτημα ωρών, ποσό */
+.statbar{text-decoration:none;margin-top:-6px;background:color-mix(in srgb,#5A8DC8 9%,var(--paper));border-color:color-mix(in srgb,#5A8DC8 35%,var(--line));box-shadow:0 3px 0 color-mix(in srgb,#5A8DC8 25%,var(--line))}
+.statbar b{display:inline-flex;align-items:center;gap:6px}.statbar small,.bookbar small{display:block}
+.prochip{font-size:.66rem;font-weight:800;padding:2px 7px;border-radius:999px;background:linear-gradient(135deg,#ffd76a,#ff9f43);color:#5a3500;letter-spacing:.03em}
+.aglegend i.hold{background:repeating-linear-gradient(135deg,#F7D9A6 0 3px,#FFF1D8 3px 6px);border-color:#E39B2D}
+.prrow{display:flex;align-items:center;gap:8px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--ok) 6%,var(--paper))}
+.prrow span{flex:1;font-weight:600;font-size:.92rem}.prrow .in{width:110px;flex:none;text-align:right;padding:8px 10px}
+.statwrap{position:relative}.statwrap.locked{filter:blur(6px);pointer-events:none;user-select:none;max-height:900px;overflow:hidden}
+.statlock{position:relative;margin-top:-760px;display:flex;justify-content:center;padding:0 8px 40px;z-index:2}.statlock .card{max-width:440px;text-align:center;box-shadow:0 18px 40px rgba(0,0,0,.18)}
+.sbars{display:flex;align-items:flex-end;gap:6px;height:180px;padding-top:26px}
+.seg.segwrap{flex-wrap:wrap;height:auto}.seg.segwrap button{flex:1 0 auto}
+.sbar{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
+.sbar i{display:block;width:100%;max-width:34px;min-height:2px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--brand),color-mix(in srgb,var(--brand) 60%,#fff))}
+.sbar small{font-size:.66rem;color:var(--ink2)}.sbv{font-size:.62rem;color:var(--ink2);white-space:nowrap}
+.heat{display:grid;gap:3px;align-items:center}.heat small{font-size:.62rem;color:var(--ink2);text-align:center}.heat i{display:block;height:16px;border-radius:4px;background:var(--brand)}
+.slist{display:flex;flex-direction:column}.srow{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none}.srow small{display:block;color:var(--ink2);font-size:.8rem}
+.tblw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.stbl{width:100%;border-collapse:collapse;font-size:.88rem}.stbl th{text-align:left;font-size:.72rem;color:var(--ink2);font-weight:700;padding:6px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+.stbl td{padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}.stbl tr[data-go]{cursor:pointer}.stbl tr[data-go]:hover td{background:var(--brand-soft)}
+.stbl .pvb{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;color:#fff;font-size:.7rem;font-weight:800;vertical-align:middle}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){.wcbg i{animation:none!important}}
 .app{position:relative;z-index:1}
 body{background:var(--cream)}

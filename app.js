@@ -117,9 +117,9 @@ function render(){document.body&&document.body.classList.toggle('hidenames',!!(S
   window.AGPOS=null;if(/^#\/agenda/.test(S.curHash||'')&&/^#\/agenda/.test(location.hash)&&typeof agPosSave==='function')agPosSave();
   S.curHash=location.hash;
   {const qb=new URLSearchParams(location.search).get('book');if(qb){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';setTimeout(()=>bookImport(qb),200);}}
-  const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(()=>bookImport(c),150);return render();}const sec=r.name==='person'?'people':r.name;
+  const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(()=>bookImport(c),150);return render();}const sec=r.name==='person'?'people':r.name==='stats'?'today':r.name;
   shellHTML(sec);
-  const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewMap,settings:viewSettingsPage}[r.name]||viewToday;
+  const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewMap,settings:viewSettingsPage,stats:viewStats}[r.name]||viewToday;
   if(!window.AGPOS)window.scrollTo(0,0);
   setTimeout(()=>dirtyWatch(M()),60);setTimeout(mineMsgShow,500);
   try{V(r);}catch(e){console.error(e);M().innerHTML=`<div class="card"><h2>Κάτι πήγε στραβά</h2><p class="muted">${esc(e.message)}</p><a class="btn" href="#/agenda">Ραντεβού</a></div>`;}
@@ -177,6 +177,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
    <div class="hero-date">${WDAYS[wdOf(t)]} ${+t.slice(8)} ${MONTHS_G[+t.slice(5,7)-1]}</div>
    <div class="hero-sum">${closed?esc(closed):act.length?`<b>${act.length}</b> ${act.length===1?'ραντεβού':'ραντεβού'} σήμερα${left?` · <b>${left}</b> ακόμα`:''}`:'Κανένα ραντεβού σήμερα'}</div></div></section>
   <button type="button" class="bookbar" id="tBook"><span class="bb-i">📲</span><span class="grow"><b>Να κλείνουν μόνοι τους</b><small>Στείλε σύνδεσμο με τις ελεύθερες ώρες σου</small></span>${ic('right',18)}</button>
+  ${isPrivate()?'':`<a class="bookbar statbar" href="#/stats"><span class="bb-i">📊</span><span class="grow"><b>Στατιστικά${isPro()?'':' <span class="prochip">Pro</span>'}</b><small>Έσοδα, επισκέψεις, ποιοι έχουν καιρό να έρθουν</small></span>${ic('right',18)}</a>`}
   ${next?`<button class="nextcard ${live?'live':''}" data-ap="${next.key}"><span class="nc-time"><b>${next.s}</b><small>${next.e}</small></span><span class="nc-main"><small>${live?'Τώρα':'Επόμενο'}</small><b>${esc(stuName(nst))}</b>${next.a.note?`<span>${esc(next.a.note)}</span>`:''}${pvBadge(next,1)}</span>${ic('right',20)}</button>
     ${ph?`<div class="ncact"><a class="btn" data-cg="${nst.id}" href="tel:${telLink(ph)}">${ic('l-phone',16)} Κλήση</a><a class="btn" data-cg="${nst.id}" href="${smsHref(ph,remText(next))}">${ic('send',16)} Υπενθύμιση</a></div>`:''}`:''}
   <section class="tsec"><div class="tsec-h"><h2>Το πρόγραμμα της ημέρας</h2><span class="row" style="gap:8px;align-items:center"><button class="eyebtn ${S.data.settings.hideNames?'off':''}" id="tEye" aria-label="${S.data.settings.hideNames?'Εμφάνιση ονομάτων':'Απόκρυψη ονομάτων'}">${ic('eye',18)}</button><a href="#/agenda?view=day&d=${t}">Ημέρα ${ic('right',14)}</a></span></div>
@@ -468,7 +469,7 @@ function offerDialog(preIds){const all=myStudents().filter(p=>!p.demo||S.data.se
 
 /* ---------- πρόσωπα: λίστα ---------- */
 function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
-  M().innerHTML=`${pageHead(esc(LX('whoPl')),`${all.length}`,`<button class="btn" id="p-bk" title="Σύνδεσμος κράτησης">📲 Σύνδεσμος</button><a class="btn pri" href="#/person/new">${ic('plus',17)} Νέος</a>`)}
+  M().innerHTML=`${pageHead(esc(LX('whoPl')),`${all.length}`,`<a class="btn" href="#/stats" title="Στατιστικά">📊</a><button class="btn" id="p-bk" title="Σύνδεσμος κράτησης">📲 Σύνδεσμος</button><a class="btn pri" href="#/person/new">${ic('plus',17)} Νέος</a>`)}
   ${all.length?`<div class="search field">${ic('search',17)}<input class="in" id="pq" type="search" placeholder="Όνομα ή τηλέφωνο" value="${esc(q)}" aria-label="Αναζήτηση"></div><div class="list" id="pl"></div>`
    :emptyHTML('users',`Δεν υπάρχουν ακόμη ${esc(LX('whoPlL'))}`,`Πρόσθεσε τον πρώτο — ή γράψε απευθείας το όνομα όταν κλείνεις ραντεβού.`,`<a class="btn pri" href="#/person/new">${ic('plus',16)} Νέος</a> <button class="btn" id="p-imp2">${ic('download',16)} Εισαγωγή πολλών μαζί</button>`)}`;
   [$('#p-imp2')].forEach(b=>{if(b)b.onclick=importMenu;});{const bk=$('#p-bk');if(bk)bk.onclick=()=>bookShareDialog();}
@@ -555,12 +556,13 @@ const SET_SECS=()=>[
   ['msgs','cli','💬','Μηνύματα και συγκαταθέσεις','Επιβεβαιώσεις, κείμενο συγκατάθεσης, προσφορές'],
   ['backup','data','🛟','Αντίγραφα ασφαλείας',bkStatusShort()],
   ['demo','data','🧪','Δοκιμαστική λειτουργία',S.data.settings.demo?'Ενεργή — βλέπεις παραδείγματα':'Δες την εφαρμογή με παραδείγματα'],
-  ['pro','gl','⭐','Ημερολόγιο Pro',(st=>st.pro?'Ενεργό έως '+fmtDate(st.until)+(st.full?' · GlenApps Full':''):PRO_PRICE+' € τον χρόνο · σύνδεσμος κρατήσεων και QR')(proState())],
+  ['pro','gl','⭐','Ημερολόγιο Pro',(st=>st.pro?'Ενεργό έως '+fmtDate(st.until)+(st.full?' · GlenApps Full':''):PRO_FIRST+' € τον πρώτο χρόνο · κρατήσεις, στατιστικά')(proState())],
+  ['stats','gl','📊','Στατιστικά','Έσοδα, επισκέψεις, πληρότητα, καλύτεροι '+LX('whoPlL')],
   ['apps','gl','🧩','Οι εφαρμογές μας','Δρομολόγιο, Ταμεία, Παραγγελίες και άλλες'],
   ['about','gl','ℹ️','Εγκατάσταση και έκδοση','Έκδοση '+APP_VERSION]];
 const SET_GRPS=[['me','💼','Η δουλειά σου'],['cli','📇','Πελάτες και μηνύματα'],['view','🎨','Εμφάνιση και γλώσσα'],['data','🛟','Δεδομένα και ασφάλεια'],['gl','⭐','GlenApps']];
 function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_SECS();const sec=L.find(x=>x[0]===id);
-  if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}${SET_GRPS.map(([g,gi,gt])=>{const R=L.filter(x=>x[1]===g);return R.length?`<h4 class="setgrp"><span>${gi}</span>${esc(g==='cli'?LX('whoPl')+' και μηνύματα':gt)}</h4><div class="setlist grp">${R.map(([k,,i,t,d])=>`<a class="setrow${k==='pro'&&!isPro()?' prorow':''}" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div>`:'';}).join('')}<p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
+  if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}${SET_GRPS.map(([g,gi,gt])=>{const R=L.filter(x=>x[1]===g);return R.length?`<h4 class="setgrp"><span>${gi}</span>${esc(g==='cli'?LX('whoPl')+' και μηνύματα':gt)}</h4><div class="setlist grp">${R.map(([k,,i,t,d])=>`<a class="setrow${k==='pro'&&!isPro()?' prorow':''}" href="#/${k==='stats'?'stats':'settings/'+k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div>`:'';}).join('')}<p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
   M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
 
 /* Viber «forward» κόβει τα μεγάλα κείμενα (π.χ. συνδέσμους): για μεγάλα κείμενα πάμε από το μενού κοινοποίησης */
@@ -624,7 +626,7 @@ async function packZ(obj){const bytes=new TextEncoder().encode(JSON.stringify(ob
   if(window.CompressionStream){const cs=new CompressionStream('deflate-raw');const z=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(cs)).arrayBuffer());return 'z'+b64uEnc(z);}
   return 'j'+b64uEnc(bytes);}
 function bookSlots(days){const out=[];const t=todayISO();const du=IM_DEF.dur();const PV=providers();
-  for(let i=0;i<days;i++){const d=addDays(t,i);const set=new Set();PV.forEach(p=>slotsFor(d,p.id,du).forEach(x=>set.add(tmin(x))));if(set.size)out.push([d,[...set].sort((a,b)=>a-b)]);}
+  for(let i=0;i<days;i++){const d=addDays(t,i);const set=new Set();PV.forEach(p=>slotsFor(d,p.id,du,null,true).forEach(x=>set.add(tmin(x))));if(set.size)out.push([d,[...set].sort((a,b)=>a-b)]);}
   return out;}
 /* οι ελεύθερες ώρες γράφονται ως «χάρτης» ανά 15λεπτο (δεκαεξαδικό ανά μέρα): μικρός σύνδεσμος, χωρίς συμπίεση,
    ώστε να ανοίγει σε κάθε κινητό και σε κάθε εσωτερικό φυλλομετρητή (Viber, Gmail…) */
@@ -632,11 +634,17 @@ function slotPack(S2,days){const t=todayISO();const all=S2.flatMap(x=>x[1]);if(!
   const t0=Math.floor(Math.min(...all)/15)*15,n=Math.floor((Math.max(...all)-t0)/15)+1;const M=new Map(S2);const d=[];
   for(let i=0;i<days;i++){const L=M.get(addDays(t,i));if(!L){d.push('');continue;}const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);d.push(h.replace(/0+$/,''));}
   while(d.length&&!d[d.length-1])d.pop();return{b:t,t0,d};}
+/* ελεύθερες ώρες ανά άτομο (για να διαλέγει ο πελάτης με ποιον θα εξυπηρετηθεί) */
+const pvPub=p=>p.id==='me'?(((S.data.settings.myName||'').trim().split(/\s+/)[0])||'Υπεύθυνος/η'):p.short;
+const hexOf=(L,t0)=>{if(!L.length)return'';const n=Math.floor((Math.max(...L)-t0)/15)+1;const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{if(m>=t0)bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);return h.replace(/0+$/,'');};
+function pvPack(P,days){const PV=providers();if(PV.length<2)return{};const du=IM_DEF.dur(),t=todayISO();
+  return{pv:PV.map(p=>{const d=[];for(let i=0;i<days;i++)d.push(hexOf(slotsFor(addDays(t,i),p.id,du,null,true).map(tmin),P.t0));while(d.length&&!d[d.length-1])d.pop();return{i:p.id,n:pvPub(p),c:p.color,d};})};}
 function weekTemplate(){const c=agCfg(),du=IM_DEF.dur(),t=todayISO();const W=[[],[],[],[],[],[],[]];
-  for(let i=0;i<7;i++){const d=addDays(t,i);const wd=wdOf(d);if(!agCfg().days.includes(wd))continue;for(let m=tmin(c.from);m+du<=tmin(c.to);m+=30)if(inWork(m,du))W[wd].push(m);}return W;}
+  for(let i=0;i<7;i++){const d=addDays(t,i);const wd=wdOf(d);if(!agCfg().days.includes(wd))continue;const PV=providers();const held=m=>PV.every(p=>blocks().some(b=>b.hold&&b.kind==='weekly'&&(b.days||[]).includes(wd)&&(b.by||'me')===p.id&&tmin(b.s)<m+du&&m<tmin(b.e)));
+    for(let m=tmin(c.from);m+du<=tmin(c.to);m+=30)if(inWork(m,du)&&!held(m))W[wd].push(m);}return W;}
 async function bookLinkPerm(){const B=biz(),c=bkCfg();const W=weekTemplate();const all=W.flat();const t0=all.length?Math.floor(Math.min(...all)/15)*15:0;
   const w=W.map(L=>{if(!L.length)return'';const n=Math.floor((Math.max(...all)-t0)/15)+1;const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);return h.replace(/0+$/,'');});
-  const D={v:2,pm:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,dd:c.days,t0,w,x:proState().until||''};
+  const D={v:2,pm:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,dd:c.days,t0,w,x:proState().until||''};if(providers().length>1)D.pv=providers().map(p=>({i:p.id,n:pvPub(p),c:p.color}));
   return new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k=c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));}
 async function qrDialog(){await loadScript('qr.js');const now=(await bookLink()).url,perm=await bookLinkPerm();const B=biz();const name=(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'';
   let tab='now';const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">🔳 Κωδικός QR για κρατήσεις</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
@@ -654,13 +662,13 @@ function qrPrint(url,name){const w=window.open('','_blank');if(!w)return toast('
    <p>Άνοιξε την κάμερα του κινητού σου, στόχευσε τον κωδικό και πάτα τον σύνδεσμο που εμφανίζεται. Διαλέγεις ώρα και μας τη στέλνεις.</p><p class="s">Ημερολόγιο · GlenApps</p>
    <script>setTimeout(function(){window.print()},400)<\/script></body></html>`);w.document.close();}
 async function bookLink(p){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
-  const D=Object.assign({v:2,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},p?{pc:{i:p.id,n:stuName(p),ph:p.phone||((p.contacts||[])[0]||{}).phone||''},my:occ(todayISO(),addDays(todayISO(),c.days),{sid:p.id,by:''}).filter(o=>o.st==='').map(o=>[o.date,o.s]).slice(0,20)}:{},slotPack(S2,c.days));
+  const D=Object.assign({v:2,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},p?{pc:{i:p.id,n:stuName(p),ph:p.phone||((p.contacts||[])[0]||{}).phone||''},my:occ(todayISO(),addDays(todayISO(),c.days),{sid:p.id,by:''}).filter(o=>o.st==='').map(o=>[o.date,o.s]).slice(0,20)}:{},slotPack(S2,c.days));Object.assign(D,pvPack(D,c.days));
   const k='c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));
   return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k='+k,slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
 /* ---------- Ημερολόγιο Pro (15 € τον χρόνο): ο σύνδεσμος κρατήσεων για τους πελάτες ----------
    Κλειδί «IM2…» (υπογραφή «I|») ή το κλειδί GlenApps Full «GA2…» (υπογραφή «GA|»), δεμένο με το email.
    Δωρεάν μένει μία αποστολή, για να δει κανείς πώς δουλεύει. Όλα τα υπόλοιπα του Ημερολογίου είναι δωρεάν. */
-const PRO_PRICE=15,PRO_FREE=1,PAY_EMAIL='aglentzakis.apps@gmail.com';
+const PRO_PRICE=39,PRO_FIRST=29,PRO_FREE=1,PAY_EMAIL='aglentzakis.apps@gmail.com';
 const LIC_PUB={kty:"EC",crv:"P-256",x:"vz6Lkoa7PzVQ1xGOcUyYmYPdOYYjbsp5t1xSsgc8cwg",y:"x9KzKNLFp5OKklXt6VcEaFlwr3wzvRjb1OJ9t1cBR1Q"};
 const B32K="0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 function b32dec(t){let e=0,n=0;const o=[];for(const a of t){const i=B32K.indexOf(a);if(i<0)return null;n=n<<5|i;e+=5;if(e>=8){e-=8;o.push(n>>e&255);}}return new Uint8Array(o);}
@@ -686,20 +694,21 @@ async function licBoot(){if(!S.data||!S.data.settings)return;const L=S.data.sett
   if(L.key){const v=await licVerify(L.email,L.key);if(!v){delete S.data.settings.lic;save();}}
   if(!isPro())try{const g=JSON.parse(localStorage.getItem('glenapps-kleidi')||'null');if(g&&g.kleidi&&g.email){const v=await licVerify(g.email,g.kleidi);if(v&&v.until>=todayISO()){S.data.settings.lic=Object.assign(v,{ok:true,at:new Date().toISOString(),auto:true});save();}}}catch(_){}}
 setTimeout(licBoot,800);
-function proFeatHTML(){return`<ul class="proul"><li>📲 Σύνδεσμος κρατήσεων χωρίς όριο αποστολών</li><li>👤 Προσωπικός σύνδεσμος για τον καθένα: δεν γράφει στοιχεία, βλέπει και τα ραντεβού του</li><li>🔳 Κωδικός QR για βιτρίνα ή ταμείο (μόνιμος, για εκτύπωση)</li><li>📥 Οι κρατήσεις έρχονται στο κινητό σου με Viber / SMS / WhatsApp / email και μπαίνουν με ένα πάτημα</li></ul>`;}
+function proPriceHTML(){return`<div class="probig"><b>${PRO_FIRST} €</b><span>τον πρώτο χρόνο · μετά ${PRO_PRICE} € τον χρόνο · με ΦΠΑ, μόνο ετήσιο</span></div>`;}
+function proFeatHTML(){return`<ul class="proul"><li>📲 Σύνδεσμος κρατήσεων χωρίς όριο αποστολών</li><li>👤 Προσωπικός σύνδεσμος για τον καθένα: δεν γράφει στοιχεία, βλέπει και τα ραντεβού του</li><li>🔳 Κωδικός QR για βιτρίνα ή ταμείο (μόνιμος, για εκτύπωση)</li><li>📥 Οι κρατήσεις έρχονται στο κινητό σου με Viber / SMS / WhatsApp / email και μπαίνουν με ένα πάτημα</li><li>👥 Ο πελάτης διαλέγει και με ποιον θέλει να εξυπηρετηθεί</li><li>📊 Στατιστικά: έσοδα και επισκέψεις ανά πελάτη, ποιοι έχουν καιρό να έρθουν, πληρότητα, γεμάτες μέρες και ώρες, ανά άτομο προσωπικού, εξαγωγή σε Excel</li></ul>`;}
 function proKeyHTML(){const L=S.data.settings.lic||{};return`<div class="field"><label class="f" for="pk-em">Email με το οποίο πήρες το κλειδί</label><input class="in" id="pk-em" type="email" inputmode="email" autocapitalize="none" value="${esc(L.email||'')}"></div>
   <div class="field"><label class="f" for="pk-k">Κλειδί</label><textarea class="in" id="pk-k" rows="3" placeholder="IM2… ή GA2…" autocapitalize="characters" spellcheck="false" style="font-family:ui-monospace,monospace;font-size:13px"></textarea></div><div id="pk-err"></div>
-  <div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn pri" id="pk-ok">${ic('check',16)} Ενεργοποίηση</button><button type="button" class="btn" id="pk-ask">✉️ Ζήτα κλειδί (${PRO_PRICE} €)</button></div>`;}
+  <div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn pri" id="pk-ok">${ic('check',16)} Ενεργοποίηση</button><button type="button" class="btn" id="pk-ask">✉️ Ζήτα κλειδί (${PRO_FIRST} €)</button></div>`;}
 function proKeyBind(el,done){const ok=$('#pk-ok',el),ask=$('#pk-ask',el);
   if(ok)ok.onclick=async()=>{const em=$('#pk-em',el).value,k=$('#pk-k',el).value;if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(licMail(em)))return $('#pk-err',el).innerHTML='<div class="note small warnnote">Γράψε το email με το οποίο πήρες το κλειδί.</div>';
     ok.disabled=true;const r=await licApply(em,k);ok.disabled=false;if(r.err)return $('#pk-err',el).innerHTML=`<div class="note small warnnote">${esc(r.err)}</div>`;
     toast('⭐ Το Pro ενεργοποιήθηκε έως '+fmtDate(r.until)+'.','ok');done&&done();};
   if(ask)ask.onclick=()=>{const em=licMail(($('#pk-em',el)||{}).value);const B=biz();
-    location.href=`mailto:${PAY_EMAIL}?subject=${encodeURIComponent('[IM-PRO] Ημερολόγιο Pro · '+PRO_PRICE+' €')}&body=${encodeURIComponent(['Γεια σας,','','Θα ήθελα κλειδί για το Ημερολόγιο Pro για έναν χρόνο ('+PRO_PRICE+' € με ΦΠΑ).','',(isPrivate()?'Όνομα':'Επιχείρηση')+': '+((isPrivate()?S.data.settings.myName:B.name)||'—'),'Email για το κλειδί: '+(em||'—'),'','Παρακαλώ στείλτε μου πώς να πληρώσω.'].join('\n'))}`;};}
-function proSheet(why){const st=proState();const W={bk:'Η δωρεάν αποστολή συνδέσμου κρατήσεων χρησιμοποιήθηκε.',qr:'Ο κωδικός QR για κρατήσεις είναι μέρος του Pro.'}[why]||'';
+    location.href=`mailto:${PAY_EMAIL}?subject=${encodeURIComponent('[IM-PRO] Ημερολόγιο Pro')}&body=${encodeURIComponent(['Γεια σας,','','Θα ήθελα κλειδί για το Ημερολόγιο Pro για έναν χρόνο ('+(S.data.settings.lic&&S.data.settings.lic.ok?PRO_PRICE+' € με ΦΠΑ, ανανέωση':PRO_FIRST+' € με ΦΠΑ, πρώτος χρόνος')+').','',(isPrivate()?'Όνομα':'Επιχείρηση')+': '+((isPrivate()?S.data.settings.myName:B.name)||'—'),'Email για το κλειδί: '+(em||'—'),'','Παρακαλώ στείλτε μου πώς να πληρώσω.'].join('\n'))}`;};}
+function proSheet(why){const st=proState();const W={bk:'Η δωρεάν αποστολή συνδέσμου κρατήσεων χρησιμοποιήθηκε.',qr:'Ο κωδικός QR για κρατήσεις είναι μέρος του Pro.',st:'Τα στατιστικά είναι μέρος του Pro.'}[why]||'';
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">⭐ Ημερολόγιο Pro</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    ${W?`<div class="note small" style="margin-bottom:10px">${W}${st.expired?' Το κλειδί σου έληξε στις '+fmtDate(st.until)+'.':''}</div>`:''}
-   <div class="probig"><b>${PRO_PRICE} €</b><span>τον χρόνο, με ΦΠΑ · μόνο ετήσιο</span></div>${proFeatHTML()}
+   ${proPriceHTML()}${proFeatHTML()}
    <p class="small muted" style="margin:6px 0 12px">Όλα τα υπόλοιπα του Ημερολογίου μένουν <b>δωρεάν</b>. Το κλειδί <b>GlenApps Full</b> (όλες οι εφαρμογές) ξεκλειδώνει και αυτό.</p>
    <div id="pk-box">${proKeyHTML()}</div>`,{guard:false});proKeyBind(md.el,()=>{md.close();render();});}
 async function bookShareDialog(p){const B=biz();
@@ -711,7 +720,7 @@ async function bookShareDialog(p){const B=biz();
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📲 Σύνδεσμος κρατήσεων</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <p class="small" style="margin-top:0">Ο ${esc(LX('who')).toLowerCase()} ανοίγει τον σύνδεσμο, διαλέγει μέρα και ώρα από τις <b>ελεύθερες</b> σου και σου στέλνει την κράτηση με Viber, SMS, WhatsApp ή email. Εσύ πατάς τον σύνδεσμο στο μήνυμα και μπαίνει στο ημερολόγιο.</p>
    <div class="note small">📅 Μέσα: <b>${L0.slots}</b> ελεύθερες ώρες σε <b>${L0.days}</b> μέρες (επόμενες ${bkCfg().days}).<br>⏱️ Οι ώρες είναι όπως είναι <b>τώρα</b>· για φρέσκες ώρες στείλε νέο σύνδεσμο.</div>
-   ${isPro()?'':`<div class="note small freenote" style="margin-top:8px">🎁 <b>Δωρεάν δοκιμή:</b> ${PRO_FREE===1?'μία αποστολή':PRO_FREE+' αποστολές'}, για να δεις πώς δουλεύει. Μετά χρειάζεται το <b>Ημερολόγιο Pro</b> (${PRO_PRICE} € τον χρόνο). <button type="button" class="linkbtn small" id="bk-pro">Τι περιλαμβάνει →</button></div>`}
+   ${isPro()?'':`<div class="note small freenote" style="margin-top:8px">🎁 <b>Δωρεάν δοκιμή:</b> ${PRO_FREE===1?'μία αποστολή':PRO_FREE+' αποστολές'}, για να δεις πώς δουλεύει. Μετά χρειάζεται το <b>Ημερολόγιο Pro</b> (${PRO_FIRST} € τον πρώτο χρόνο). <button type="button" class="linkbtn small" id="bk-pro">Τι περιλαμβάνει →</button></div>`}
    ${p?`<p class="small" style="margin:10px 0 4px">Προς: <b>${esc(stuName(p))}</b> · ο σύνδεσμος είναι προσωπικός: δεν θα χρειαστεί να γράψει όνομα και τηλέφωνο.</p>`:''}
    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
     ${ph?`<a class="btn" href="${smsHref(ph,txt)}">${ic('l-message-square',15)} SMS</a><a class="btn" target="_blank" rel="noopener" href="${waHref(ph,txt)}">WhatsApp</a>`:''}
@@ -739,20 +748,21 @@ async function bookShareDialog(p){const B=biz();
 /* το πάτημα του συνδέσμου από το μήνυμα του πελάτη */
 function bookDecode(r){try{if(!r||r[0]!=='j')return null;const o=JSON.parse(new TextDecoder().decode(b64uDec(r.slice(1))));
   if(!o||o.v!==1||!/^\d{4}-\d{2}-\d{2}$/.test(o.d)||!/^\d{2}:\d{2}$/.test(o.s))return null;
-  const c=(x,n)=>String(x||'').replace(/\s+/g,' ').trim().slice(0,n);return{ad:c(o.ad,120),ca:o.ca===undefined?null:!!o.ca,ts:+o.ts||0,sid:c(o.sid,60),d:o.d,s:o.s,u:Math.min(Math.max(+o.u||IM_DEF.dur(),10),480),n:c(o.n,80),ph:c(o.ph,25),no:c(o.no,200),pr:!!o.pr,id:c(o.id,20)};}catch(e){return null;}}
+  const c=(x,n)=>String(x||'').replace(/\s+/g,' ').trim().slice(0,n);return{ad:c(o.ad,120),ca:o.ca===undefined?null:!!o.ca,ts:+o.ts||0,sid:c(o.sid,60),d:o.d,s:o.s,u:Math.min(Math.max(+o.u||IM_DEF.dur(),10),480),n:c(o.n,80),ph:c(o.ph,25),no:c(o.no,200),pr:!!o.pr,id:c(o.id,20),pv:c(o.pv,40),pn:c(o.pn,40)};}catch(e){return null;}}
 function bookImport(code){const q=bookDecode(code);if(!q)return toast('Ο σύνδεσμος κράτησης δεν είναι σωστός.','bad');
   const seen=(S.data.bookSeen=S.data.bookSeen||{});const key=q.id+'|'+q.d+'|'+q.s;
-  const e=tstr(tmin(q.s)+q.u);const PV=providers();const freeP=PV.find(p=>!conflicts(q.d,q.s,e,'',p.id).length&&inWork(tmin(q.s),q.u));
+  const e=tstr(tmin(q.s)+q.u);const PV=providers();const isFreeP=p=>!conflicts(q.d,q.s,e,'',p.id).length&&!holdAt(q.d,q.s,e,p.id)&&inWork(tmin(q.s),q.u);
+  const want=q.pv&&PV.find(p=>p.id===q.pv);const freeP=want&&isFreeP(want)?want:PV.find(isFreeP);const swap=!!(want&&freeP&&freeP.id!==want.id);
   const existing=(q.sid&&getStudent(q.sid))||(q.ph&&byPhone(q.ph));
   const past=q.d<todayISO();const closed=isClosed(q.d)||!workDay(q.d);
-  const alt=()=>{const out=[];let d=q.d<todayISO()?todayISO():q.d;for(let k=0;k<30&&out.length<3;k++,d=addDays(d,1)){const set=new Set();PV.forEach(p=>slotsFor(d,p.id,q.u).forEach(x=>set.add(x)));[...set].sort().forEach(x=>{if(out.length<3&&!(d===q.d&&x===q.s))out.push([d,x]);});}return out;};
+  const alt=()=>{const out=[];let d=q.d<todayISO()?todayISO():q.d;for(let k=0;k<30&&out.length<3;k++,d=addDays(d,1)){const set=new Set();PV.forEach(p=>slotsFor(d,p.id,q.u,null,true).forEach(x=>set.add(x)));[...set].sort().forEach(x=>{if(out.length<3&&!(d===q.d&&x===q.s))out.push([d,x]);});}return out;};
   const when=WDAYS[wdOf(q.d)]+' '+fmtShort(q.d)+' · '+q.s+'–'+e;
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📲 Νέα κράτηση</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <div class="qsum"><span class="av lg">${esc((q.n||'?')[0].toUpperCase())}</span><div><b>${esc(q.n)}</b><div class="small">${esc(q.ph)}${existing?` · <span style="color:var(--ok)">υπάρχει ήδη στους ${esc(LX('whoPlL'))}</span>`:` · <span class="muted">νέος ${esc(LX('who')).toLowerCase()}</span>`}</div></div></div>
-   <div class="note" style="margin:10px 0"><b>📅 ${esc(when)}</b>${q.no?`<div class="small" style="margin-top:4px">📝 ${esc(q.no)}</div>`:''}${q.ad?`<div class="small" style="margin-top:4px">📍 ${esc(q.ad)}</div>`:''}<div class="tiny muted" style="margin-top:4px">Δήλωσε ο ίδιος: μηνύματα ραντεβού <b>${q.ca===false?'ΟΧΙ':'ΝΑΙ'}</b> · προσφορές <b>${q.pr?'ΝΑΙ':'ΟΧΙ'}</b></div></div>
+   <div class="note" style="margin:10px 0"><b>📅 ${esc(when)}</b>${want||q.pn?`<div class="small" style="margin-top:4px">👤 Θέλει: <b>${esc(want?want.short:q.pn)}</b></div>`:''}${q.no?`<div class="small" style="margin-top:4px">📝 ${esc(q.no)}</div>`:''}${q.ad?`<div class="small" style="margin-top:4px">📍 ${esc(q.ad)}</div>`:''}<div class="tiny muted" style="margin-top:4px">Δήλωσε ο ίδιος: μηνύματα ραντεβού <b>${q.ca===false?'ΟΧΙ':'ΝΑΙ'}</b> · προσφορές <b>${q.pr?'ΝΑΙ':'ΟΧΙ'}</b></div></div>
    ${seen[key]?`<div class="note small warnnote">Αυτή η κράτηση έχει ήδη καταχωρηθεί (${esc(atTxt(seen[key]))}).</div><div class="row" style="justify-content:flex-end;margin-top:10px"><a class="btn pri" href="#/agenda?view=day&d=${q.d}" data-close>Δες τη μέρα</a></div>`
    :past?`<div class="note small warnnote">Η μέρα αυτή έχει περάσει.</div>`
-   :(freeP&&!closed)?`<div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px"><button type="button" class="btn" data-close>Όχι τώρα</button><button type="button" class="btn pri" id="bi-ok">${ic('check',16)} Καταχώρηση</button></div>`
+   :(freeP&&!closed)?`${swap?`<div class="note small warnnote">⚠️ ${esc(want.short)} είναι πιασμένος/η εκείνη την ώρα· ελεύθερος/η είναι ${esc(freeP.short)}. Αν θέλεις, ρώτα πρώτα τον ${esc(LX('who')).toLowerCase()}.</div>`:''}<div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px"><button type="button" class="btn" data-close>Όχι τώρα</button><button type="button" class="btn pri" id="bi-ok">${ic('check',16)} Καταχώρηση${PV.length>1?' με '+esc(freeP.short):''}</button></div>`
    :`<div class="note small warnnote">⚠️ ${closed?'Εκείνη τη μέρα είσαι κλειστά.':'Η ώρα αυτή πιάστηκε στο μεταξύ.'} Στείλε του άλλες ώρες:</div><div id="bi-alt" style="margin-top:8px"></div>`}`,{guard:false});
   const ok=$('#bi-ok',md.el);if(ok)ok.onclick=()=>{let sid=existing&&existing.id;
     if(!sid)sid=IM_NEWPERSON(q.n,{phone:q.ph,cons:'yes',consHow:'από τη σελίδα κρατήσεων'});const p=getStudent(sid);
@@ -883,7 +893,7 @@ const SETP={
   const ld=$('#lx-def',el);if(ld)ld.onclick=()=>{S.data.settings.lex={};save();render();};
   $('#st-lx',el).onclick=()=>{const o={};$$('[data-lx]',el).forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};},
  backup(el){backupPage(el);},
- pro(el){const st=proState();el.innerHTML=`<div class="card section">${st.pro?`<div class="prook">⭐ <b>Το Pro είναι ενεργό</b> έως <b>${fmtDate(st.until)}</b>${st.full?' · με το κλειδί GlenApps Full':''}<br><span class="small muted">${esc(st.email||'')}</span></div>`:`<div class="probig"><b>${PRO_PRICE} €</b><span>τον χρόνο, με ΦΠΑ · μόνο ετήσιο</span></div>`}
+ pro(el){const st=proState();el.innerHTML=`<div class="card section">${st.pro?`<div class="prook">⭐ <b>Το Pro είναι ενεργό</b> έως <b>${fmtDate(st.until)}</b>${st.full?' · με το κλειδί GlenApps Full':''}<br><span class="small muted">${esc(st.email||'')}</span></div>`:proPriceHTML()}
    ${proFeatHTML()}<p class="small muted" style="margin:6px 0 0"><span>Όλα τα υπόλοιπα του Ημερολογίου μένουν δωρεάν.</span>${st.pro?'':` <span>${st.left?'Δωρεάν δοκιμή: σου μένει 1 αποστολή συνδέσμου.':'Η δωρεάν αποστολή χρησιμοποιήθηκε.'}</span>`} <span>Το κλειδί GlenApps Full (όλες οι εφαρμογές, ένα κλειδί) ξεκλειδώνει και αυτό.</span></p></div>
   <div class="card section"><h3>${st.pro?'Ανανέωση ή άλλο κλειδί':'Έχω κλειδί'}</h3>${proKeyHTML()}</div>`;proKeyBind(el,()=>render());},
  async apps(el){el.innerHTML=`<p class="small muted" style="margin-top:0">Κι άλλες εφαρμογές GlenApps για τη δουλειά και το σπίτι. Πάτα για να ανοίξει.</p><div id="efm-l" class="efm-page"><p class="small muted">Φόρτωση…</p></div>`;
@@ -1028,6 +1038,118 @@ async function autoUpdCheck(){try{const r=await fetch('version.json?v='+Date.now
   b.querySelector('button').onclick=async()=>{b.querySelector('button').textContent='Ενημέρωση…';try{if(swReg)await swReg.update();const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('imerologio-')).map(k=>caches.delete(k)));}catch(e){}location.reload();};}catch(e){}}
 setTimeout(autoUpdCheck,2500);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoUpdCheck();});
+
+/* ---------- κράτημα ωρών «για δικούς μου πελάτες» ----------
+   Δέσμευση με hold:true: για σένα η ώρα μένει ελεύθερη (κλείνεις κανονικά), αλλά ΔΕΝ φαίνεται
+   στον σύνδεσμο κρατήσεων ούτε στον κωδικό QR. Στο ημερολόγιο: «🔒 Κράτημα ωρών» και πατάς πάνω στις ώρες. */
+window.HOLD_MODE=(()=>{try{return sessionStorage.getItem('im-hold')==='1';}catch(_){return false;}})();
+function holdSet(on){window.HOLD_MODE=on;try{sessionStorage.setItem('im-hold',on?'1':'');}catch(_){}render();
+  if(on)toast('🔒 Πάτα πάνω στις κενές ώρες για να τις κρατήσεις για τους δικούς σου '+LX('whoPlL')+'. Ξαναπάτα για να τις ελευθερώσεις.','ok');}
+document.addEventListener('click',e=>{if(e.target.closest('#agHold')){e.preventDefault();holdSet(!window.HOLD_MODE);}});
+const holdAt=(date,s,e,by)=>blockOcc(date,date,{by:by||'me'}).some(o=>o.blk.hold&&tmin(o.s)<tmin(e)&&tmin(s)<tmin(o.e));
+function holdToggle(date,s,by){const pv=by||'me';const L=blocks();const m=tmin(s),step=30;
+  const same=b=>b.hold&&b.kind==='once'&&b.date===date&&(b.by||'me')===pv;
+  const hit=L.find(b=>same(b)&&tmin(b.s)<=m&&m<tmin(b.e));
+  if(hit){// ελευθέρωση μόνο αυτού του μισάωρου (σπάει σε δύο αν χρειαστεί)
+    const a=tmin(hit.s),z=tmin(hit.e);if(z-a<=step)S.data.blocks=L.filter(b=>b!==hit);
+    else if(m<=a)hit.s=tstr(m+step);else if(m+step>=z)hit.e=tstr(m);
+    else{L.push(Object.assign({},hit,{id:uid(),s:tstr(m+step)}));hit.e=tstr(m);}
+    save();render();return;}
+  if(occ(date,date,{by:pv}).some(o=>tmin(o.s)<m+step&&m<tmin(o.e)))return toast('Εκεί υπάρχει ήδη ραντεβού.','bad');
+  let b=L.find(x=>same(x)&&tmin(x.e)===m);const nx=L.find(x=>same(x)&&tmin(x.s)===m+step);
+  if(b){b.e=tstr(m+step);if(nx){b.e=nx.e;S.data.blocks=L.filter(x=>x!==nx);}}
+  else if(nx)nx.s=s;
+  else L.push({id:uid(),kind:'once',date,s,e:tstr(m+step),by:pv==='me'?undefined:pv,hold:true,cat:'hold',ex:{},created:new Date().toISOString()});
+  save();render();}
+window.holdToggle=holdToggle;
+window.IM_BLKTAP=key=>{const[id,date]=key.split('|');const b=blocks().find(x=>x.id===id);if(!b||!b.hold)return false;
+  if(window.HOLD_MODE){if(b.kind==='once')S.data.blocks=blocks().filter(x=>x!==b);else{b.ex=b.ex||{};b.ex[date]='skip';}save();render();return true;}
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">🔒 Κρατημένη ώρα</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <p class="small" style="margin-top:0"><b>${WDAYS[wdOf(date)]} ${fmtShort(date)} · ${b.s}–${b.e}</b>${b.by?' · '+esc(provById(b.by).short):''}<br><span class="muted">Για τους δικούς σου ${esc(LX('whoPlL'))}: δεν φαίνεται στον σύνδεσμο κρατήσεων, εσύ κλείνεις κανονικά.</span></p>
+   <div class="actgrid"><button class="btn pri" data-h="new">${ic('plus',16)}<span>Κλείσε ραντεβού εδώ</span></button>
+    <button class="btn" data-h="free">${ic('x',16)}<span>${b.kind==='once'?'Ελευθέρωσέ την':'Ελευθέρωσέ την μόνο '+fmtShort(date)}</span></button>
+    ${b.kind==='once'?`<button class="btn" data-h="week">${ic('calendar',16)}<span>Κάθε ${WDAYS[wdOf(date)]}</span></button>`:`<button class="btn" data-h="stop">${ic('l-flag',16)}<span>Τέλος (κάθε εβδομάδα)</span></button>`}
+    <button class="btn" data-h="edit">${ic('edit',16)}<span>Αλλαγή ωρών</span></button></div>`,{guard:false});
+  md.el.addEventListener('click',e=>{const k=(e.target.closest('[data-h]')||{}).dataset;if(!k||!k.h)return;md.close();
+    if(k.h==='new')return apptDialog({date,s:b.s,e:b.e,by:b.by});
+    if(k.h==='free'){if(b.kind==='once')S.data.blocks=blocks().filter(x=>x!==b);else{b.ex=b.ex||{};b.ex[date]='skip';}}
+    if(k.h==='week'){Object.assign(b,{kind:'weekly',days:[wdOf(date)]});toast('Κρατιέται κάθε '+WDAYS[wdOf(date)]+'.','ok');}
+    if(k.h==='stop')S.data.blocks=blocks().filter(x=>x!==b);
+    if(k.h==='edit')return blockDialog({b});
+    save();render();});return true;};
+
+/* ---------- ποσό ανά ραντεβού ---------- */
+const occPrice=o=>{const x=((o.a.ex||{})[o.date])||{};return x.pr!=null?+x.pr:o.a.price!=null?+o.a.price:null;};
+window.IM_LASTPRICE=sid=>{const L=appts().filter(a=>a.sid===sid&&a.price!=null).sort((x,y)=>(y.created||'').localeCompare(x.created||''));return L.length?L[0].price:null;};
+window.IM_PRICEROW=(a,date,o)=>{const x=((a.ex||{})[date])||{};const v=x.pr!=null?x.pr:a.price!=null?a.price:'';
+  return`<label class="prrow"><span>💶 Ποσό${a.kind!=='once'?' αυτή τη φορά':''}</span><input class="in" id="ap-pr" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(v)}" placeholder="—"><b>€</b></label>`;};
+window.IM_PRICEBIND=(el,a,date)=>{const pe=$('#ap-pr',el);if(!pe)return;pe.onchange=()=>{const v=pe.value.trim();const n=v===''?null:+v;if(v!==''&&(isNaN(n)||n<0))return;
+  a.ex=a.ex||{};const cur=Object.assign({},a.ex[date]||{});
+  if(a.kind==='once'){if(n==null)delete a.price;else a.price=n;delete cur.pr;}else{if(n==null||n===a.price)delete cur.pr;else cur.pr=n;}
+  if(Object.keys(cur).length)a.ex[date]=cur;else delete a.ex[date];save();toast('Το ποσό αποθηκεύτηκε.','ok');};};
+
+/* ---------- στατιστικά (Pro) ---------- */
+let STP=(()=>{try{return sessionStorage.getItem('im-stp')||'90';}catch(_){return'90';}})(),STSORT='rev';
+function statsCalc(per){const t=todayISO();const from=per==='all'?((appts().map(a=>a.date).sort()[0])||t):per==='year'?t.slice(0,4)+'-01-01':addDays(t,-(+per)+1);
+  const first0=(appts().map(a=>a.date).sort()[0])||t;const ALL=occ(first0<from?first0:from,t,{withCancel:true,by:''});
+  const visit=o=>o.st==='done'||(o.st===''&&o.date<t);
+  const firstV={},cnt={},rev={},last={},dates={};
+  for(const o of ALL){if(!visit(o))continue;const s=o.a.sid;if(!firstV[s]||o.date<firstV[s])firstV[s]=o.date;(dates[s]=dates[s]||[]).push(o.date);}
+  const P=ALL.filter(o=>o.date>=from);const V=P.filter(visit);
+  const R={from,to:t,visits:V.length,cancel:P.filter(o=>o.st==='cancel').length,absent:P.filter(o=>o.st==='absent').length,rev:0,priced:0,clients:new Set(),newC:new Set(),online:0,byPv:{},heat:[...Array(7)].map(()=>[...Array(24)].fill(0)),mon:{}};
+  for(const o of V){const s=o.a.sid,p=occPrice(o);R.clients.add(s);if(firstV[s]>=from)R.newC.add(s);cnt[s]=(cnt[s]||0)+1;if(p!=null){R.rev+=p;R.priced++;rev[s]=(rev[s]||0)+p;}
+    if(!last[s]||o.date>last[s])last[s]=o.date;const pv=provOcc(o)||'me';const B=(R.byPv[pv]=R.byPv[pv]||{v:0,rev:0,min:0});B.v++;B.rev+=p||0;B.min+=tmin(o.e)-tmin(o.s);
+    R.heat[wdOf(o.date)][+o.s.slice(0,2)]++;}
+  R.online=appts().filter(a=>a.src==='link'&&(a.created||'').slice(0,10)>=from).length;
+  // επιστροφή: νέοι της περιόδου που ήρθαν και 2η φορά (οποτεδήποτε μετά)
+  R.ret=[...R.newC].filter(s=>(dates[s]||[]).length>1).length;
+  // πληρότητα: λεπτά ραντεβού / διαθέσιμα λεπτά εργασίας (ανά άτομο)
+  const c=agCfg();let avail=0;const PV=providers();for(let d=from;d<t;d=addDays(d,1)){if(!workDay(d)||isClosed(d))continue;let m=0;for(let x=tmin(c.from);x+15<=tmin(c.to);x+=15)if(inWork(x,15))m+=15;avail+=m*PV.length;}
+  const used=Object.values(R.byPv).reduce((a,b)=>a+b.min,0);R.util=avail?Math.min(100,Math.round(used/avail*100)):null;R.availPer=avail/PV.length;
+  // ανά μήνα (τελευταίοι 12)
+  const M12=occ(addDays(t.slice(0,7)+'-01',-335).slice(0,7)+'-01',t,{withCancel:true,by:''}).filter(visit);
+  for(const o of M12){const k=o.date.slice(0,7);const X=(R.mon[k]=R.mon[k]||{v:0,rev:0});X.v++;X.rev+=occPrice(o)||0;}
+  // πελάτες
+  R.list=Object.keys(cnt).map(s=>{const L=(dates[s]||[]).slice().sort();let gap=null;if(L.length>1)gap=Math.round((new Date(L[L.length-1])-new Date(L[0]))/864e5/(L.length-1));
+    return{s,p:stOf(s),v:cnt[s],rev:rev[s]||0,avg:rev[s]?rev[s]/cnt[s]:0,last:last[s],gap,all:L.length};}).filter(x=>x.p);
+  // σε κίνδυνο: ήρθαν 2+ φορές, έχουν περάσει > 1,5× το συνηθισμένο τους διάστημα και δεν έχουν επόμενο ραντεβού
+  const fut=new Set(occ(t,addDays(t,180),{by:''}).map(o=>o.a.sid));
+  R.risk=Object.keys(dates).map(s=>{const L=dates[s].slice().sort();if(L.length<2)return null;const gap=(new Date(L[L.length-1])-new Date(L[0]))/864e5/(L.length-1);const since=Math.round((new Date(t)-new Date(L[L.length-1]))/864e5);
+    return gap>=3&&since>gap*1.5&&!fut.has(s)&&stOf(s)?{s,p:stOf(s),since,gap:Math.round(gap),tot:L.reduce((a,d)=>a,0)}:null;}).filter(Boolean).sort((a,b)=>b.since/b.gap-a.since/a.gap);
+  return R;}
+const eur=n=>(Math.round(n*100)/100).toLocaleString(window.LANG==='en'?'en-GB':'el-GR',{maximumFractionDigits:n%1?2:0})+' €';
+function viewStats(){const fb=$('#fab');if(fb)fb.remove();const pro=isPro()||S.data.settings.demo;const R=statsCalc(STP);const PV=providers();const t=todayISO();
+  const pct=(a,b)=>b?Math.round(a/b*100)+'%':'—';const sched=R.visits+R.cancel+R.absent;
+  const kpi=(k,v,s,cls)=>`<div class="kpi ${cls||''}"><div class="k">${k}</div><div class="v sm">${v}</div>${s?`<div class="tiny muted">${s}</div>`:''}</div>`;
+  const months=[];{let d=t.slice(0,7)+'-01';for(let i=0;i<12;i++){months.unshift(d.slice(0,7));d=addDays(d,-1).slice(0,7)+'-01';}}
+  const hasRev=R.priced>0;const mx=Math.max(1,...months.map(m=>hasRev?(R.mon[m]||{}).rev||0:(R.mon[m]||{}).v||0));
+  const bars=months.map(m=>{const X=R.mon[m]||{v:0,rev:0};const val=hasRev?X.rev:X.v;return`<div class="sbar" title="${MONTHS[+m.slice(5)-1]} ${m.slice(0,4)}: ${X.v} επισκέψεις${hasRev?' · '+eur(X.rev):''}"><span class="sbv">${val?(hasRev?Math.round(val):val):''}</span><i style="height:${Math.round(val/mx*100)}%"></i><small>${MONTHS[+m.slice(5)-1].slice(0,3)}</small></div>`;}).join('');
+  const hm=Math.max(1,...R.heat.flat());const c=agCfg();const h0=Math.floor(tmin(c.from)/60),h1=Math.ceil(tmin(c.to)/60);const hrs=[];for(let h=h0;h<h1;h++)hrs.push(h);
+  const heat=`<div class="heat" style="grid-template-columns:auto repeat(${hrs.length},1fr)"><span></span>${hrs.map(h=>`<small>${h}</small>`).join('')}${DAY_ORDER.map(d=>`<small>${WDAYS_S[d]}</small>${hrs.map(h=>{const n=R.heat[d][h];return`<i style="opacity:${n?.15+.85*n/hm:.06}" title="${WDAYS[d]} ${h}:00 · ${n}"></i>`;}).join('')}`).join('')}</div>`;
+  const dayTot=DAY_ORDER.map(d=>[d,R.heat[d].reduce((a,b)=>a+b,0)]).filter(x=>agCfg().days.includes(x[0]));const best=dayTot.slice().sort((a,b)=>b[1]-a[1]);
+  const L=R.list.slice().sort((a,b)=>STSORT==='v'?b.v-a.v||b.rev-a.rev:STSORT==='last'?(b.last||'').localeCompare(a.last||''):b.rev-a.rev||b.v-a.v);
+  const per=[['30','30 μέρες'],['90','3 μήνες'],['365','12 μήνες'],['year','Φέτος'],['all','Από την αρχή']];
+  M().innerHTML=`${pageHead('📊 Στατιστικά',fmtShort(R.from)+' – '+fmtShort(R.to),`<button class="btn" id="st-csv">${ic('download',16)} Excel</button>`)}
+  <div class="seg field segwrap" id="st-per">${per.map(([k,l])=>`<button type="button" data-per="${k}" class="${STP===k?'on':''}">${l}</button>`).join('')}</div>
+  <div class="statwrap ${pro?'':'locked'}">
+  <div class="kpis section">${kpi('Επισκέψεις',R.visits,R.clients.size+' '+LX('whoPlL'))}${kpi('Έσοδα',hasRev?eur(R.rev):'—',hasRev?(R.priced<R.visits?'από '+R.priced+' με ποσό':''):'γράψε ποσό στα ραντεβού')}${kpi('Μέση απόδειξη',hasRev?eur(R.rev/R.priced):'—','ανά επίσκεψη')}${kpi('Νέοι '+LX('whoPlL'),R.newC.size,R.newC.size?'ξαναήρθαν '+pct(R.ret,R.newC.size):'')}
+   ${kpi('Πληρότητα',R.util==null?'—':R.util+'%','χρόνος με ραντεβού / ωράριο')}${kpi('Ακυρώσεις',pct(R.cancel,sched),R.cancel+' φορές')}${kpi('Δεν ήρθαν',pct(R.absent,sched),R.absent+' φορές','')}${kpi('Από τον σύνδεσμο',R.online,'κρατήσεις μόνοι τους')}</div>
+  <div class="card section"><div class="card-h"><h3>${hasRev?'Έσοδα':'Επισκέψεις'} ανά μήνα</h3><span class="tiny muted">τελευταίοι 12 μήνες</span></div><div class="sbars">${bars}</div></div>
+  <div class="grid g2" style="align-items:start">
+   <div class="card section"><div class="card-h"><h3>Πότε έρχονται</h3></div>${heat}<p class="small" style="margin:10px 0 0">${best.length&&best[0][1]?`<span>Πιο γεμάτη μέρα: ${WDAYS[best[0][0]]}</span> · <span>πιο άδεια: ${WDAYS[best[best.length-1][0]]}</span>`:'Δεν υπάρχουν ακόμα επισκέψεις.'}</p></div>
+   <div class="card section"><div class="card-h"><h3>⚠️ Έχουν καιρό να έρθουν</h3><span class="tiny muted">${R.risk.length}</span></div>${R.risk.length?`<div class="slist">${R.risk.slice(0,12).map(x=>`<a class="srow" href="#/person/${x.s}"><span class="grow"><b>${esc(stuName(x.p))}</b><small>συνήθως κάθε ${x.gap} μέρες · τώρα ${x.since}</small></span>${ic('right',16)}</a>`).join('')}</div><p class="tiny muted" style="margin:8px 0 0">Στείλε τους ένα μήνυμα ή τον σύνδεσμο κρατήσεων από την καρτέλα τους.</p>`:'<p class="small muted" style="margin:0">Κανείς — όλοι έρχονται στην ώρα τους. 👌</p>'}</div></div>
+  ${PV.length>1?`<div class="card section"><div class="card-h"><h3>Ανά άτομο</h3></div><div class="tblw"><table class="stbl"><tr><th></th><th>Επισκέψεις</th>${hasRev?'<th>Έσοδα</th>':''}<th>Πληρότητα</th></tr>${PV.map(p=>{const B=R.byPv[p.id]||{v:0,rev:0,min:0};return`<tr><td><i class="pvb" style="background:${p.color}">${provIni(p)}</i> ${esc(p.short)}</td><td>${B.v}</td>${hasRev?`<td>${eur(B.rev)}</td>`:''}<td>${R.availPer?Math.min(100,Math.round(B.min/R.availPer*100))+'%':'—'}</td></tr>`;}).join('')}</table></div></div>`:''}
+  <div class="card section"><div class="card-h" style="flex-wrap:wrap;gap:8px"><h3>${esc(LX('whoPl'))}</h3><div class="seg" id="st-sort"><button type="button" data-ss="rev" class="${STSORT==='rev'?'on':''}">Έσοδα</button><button type="button" data-ss="v" class="${STSORT==='v'?'on':''}">Επισκέψεις</button><button type="button" data-ss="last" class="${STSORT==='last'?'on':''}">Πρόσφατοι</button></div></div>
+   ${L.length?`<div class="tblw"><table class="stbl"><tr><th>#</th><th></th><th>Επισκ.</th>${hasRev?'<th>Έσοδα</th><th>Μέση</th>':''}<th>Τελευταία</th><th>Κάθε</th></tr>${L.slice(0,50).map((x,i)=>`<tr data-go="${x.s}"><td class="muted">${i+1}</td><td><b>${esc(stuName(x.p))}</b></td><td>${x.v}</td>${hasRev?`<td>${x.rev?eur(x.rev):'—'}</td><td>${x.avg?eur(x.avg):'—'}</td>`:''}<td>${fmtShort(x.last)}</td><td>${x.gap?x.gap+' μ.':'—'}</td></tr>`).join('')}</table></div>${L.length>50?`<p class="tiny muted">και ${L.length-50} ακόμα — όλοι στο Excel.</p>`:''}`:'<p class="small muted" style="margin:0">Δεν υπάρχουν επισκέψεις σε αυτό το διάστημα.</p>'}
+   ${hasRev?'':`<div class="note small" style="margin-top:10px">💶 Για έσοδα ανά ${esc(LX('who')).toLowerCase()}: γράψε <b>Ποσό</b> όταν κλείνεις ραντεβού, ή πάτα ένα ραντεβού που έγινε και γράψε πόσο πλήρωσε.</div>`}</div>
+  </div>${pro?'':`<div class="statlock"><div class="card"><h3 style="margin-top:0">⭐ Τα στατιστικά είναι μέρος του Pro</h3><p class="small">Δες ποιοι ${esc(LX('whoPlL'))} φέρνουν τα περισσότερα έσοδα, πόσο συχνά έρχεται ο καθένας, ποιοι έχουν καιρό να έρθουν, ποιες μέρες και ώρες γεμίζεις και πόσο γεμάτο είναι το πρόγραμμά σου.</p><button class="btn pri" id="st-pro">⭐ Δες το Pro</button></div></div>`}`;
+  $$('[data-per]').forEach(b=>b.onclick=()=>{STP=b.dataset.per;try{sessionStorage.setItem('im-stp',STP);}catch(_){}render();});
+  $$('[data-ss]').forEach(b=>b.onclick=()=>{STSORT=b.dataset.ss;render();});
+  $$('tr[data-go]').forEach(r=>r.onclick=()=>go('person/'+r.dataset.go));
+  const sp=$('#st-pro');if(sp)sp.onclick=()=>proSheet('st');
+  $('#st-csv').onclick=()=>{if(!pro)return proSheet('st');const rows=[['Όνομα','Τηλέφωνο','Επισκέψεις','Έσοδα €','Μέση €','Τελευταία','Κάθε (μέρες)']].concat(R.list.sort((a,b)=>b.rev-a.rev).map(x=>[stuName(x.p),x.p.phone||'',x.v,x.rev||'',x.avg?Math.round(x.avg*100)/100:'',x.last,x.gap||'']));
+    const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v);return/[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(';')).join('\r\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='statistika-'+R.from+'-'+R.to+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);};}
 
 /* ---------- έναρξη ---------- */
 S.data=loadData();applyIdentity();
