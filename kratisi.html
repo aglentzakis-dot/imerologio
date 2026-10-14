@@ -43,6 +43,18 @@ input.in:focus,textarea.in:focus{outline:none;border-color:var(--brand)}
 .done{text-align:center;padding:26px 16px}.done .big{font-size:3rem}
 .err{color:var(--bad);font-size:.85rem;margin-top:6px;min-height:1em}
 .hidden{display:none}
+.vtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);padding:4px;border-radius:12px;margin-bottom:12px}
+.vtabs button{border:0;background:none;padding:9px;border-radius:9px;font:inherit;font-weight:600;color:var(--ink2);cursor:pointer}.vtabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.wnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.wbtn{border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:34px;font-size:1.2rem;cursor:pointer}.wbtn:disabled{opacity:.35}
+.wgrid{display:grid;grid-template-columns:40px repeat(7,1fr);gap:3px;max-height:56vh;overflow-y:auto;overscroll-behavior:contain}
+.wh{text-align:center;position:sticky;top:0;background:var(--paper);z-index:1;padding:2px 0 4px}.wh small{display:block;font-size:.68rem;color:var(--ink3)}.wh b{font-size:.95rem}.wh.today b{color:#fff;background:var(--brand);border-radius:999px;padding:1px 7px}
+.wt{font-size:.68rem;color:var(--ink3);text-align:right;padding-right:4px;line-height:26px}
+.wc{height:26px;border-radius:6px;border:0;padding:0;font:inherit;font-size:.7rem;font-weight:700;display:grid;place-items:center}
+.wc.free{background:#DDF3E4;border:1px solid #9FD7B1;cursor:pointer;color:#fff}.wc.free.on{background:var(--ink);border-color:var(--ink)}
+.wc.busy{background:#E6E2DA}.wc.closed{background:repeating-linear-gradient(45deg,#F1EEE8,#F1EEE8 4px,#E8E4DC 4px,#E8E4DC 8px)}.wc.past{background:#F3F1EC}
+.wc.mine{background:var(--brand);color:#fff;font-size:.62rem}
+.wleg{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:.78rem;color:var(--ink2)}.wleg span{display:flex;align-items:center;gap:5px}.wleg i{width:16px;height:12px;display:inline-block}
+.promo{text-align:center}.promo a.time{display:inline-block;text-decoration:none}
 .linkb{border:0;background:none;color:var(--ink3);font:inherit;font-size:.82rem;text-decoration:underline;padding:6px 0 0;cursor:pointer}
 footer{text-align:center;color:var(--ink3);font-size:.75rem;margin-top:18px}
 </style>
@@ -63,6 +75,8 @@ const T={
   msg:(o,when,n,ph,no,link,pr)=>`Καλησπέρα! Θα ήθελα ${o.toLowerCase()} ${when}.\nΌνομα: ${n}\nΤηλ: ${ph}${no?'\nΣημείωση: '+no:''}${pr?'\nΔέχομαι και προσφορές.':''}\n\nΓια καταχώρηση στο ημερολόγιο πατήστε:\n${link}`,
   vbHint:b=>`Viber: διάλεξε τη συνομιλία με «${b}». Αν το μήνυμα δεν μπήκε μόνο του, πάτα παρατεταμένα στο κουτί γραφής → «Επικόλληση» → Αποστολή.`,cut:'Ο σύνδεσμος κόπηκε στη μέση από την εφαρμογή μηνυμάτων. Ζήτησε να σου τον στείλουν ξανά με SMS ή με «Κοινοποίηση».',
   hi:f=>`Γεια σου ${f}! Διάλεξε ώρα και πάτα αποστολή`,hiTop:f=>`Γεια σου ${f} 👋 Διάλεξε μέρα και ώρα`,notMe:n=>`Δεν είσαι ο/η ${n}; Γράψε τα στοιχεία σου`,
+  calV:'Ημερολόγιο',listV:'Λίστα',legFree:'Ελεύθερο',legBusy:'Πιασμένο',yours:'Το ραντεβού σου',yoursS:'Εσύ',tapGreen:'Πάτα ένα πράσινο κουτάκι για να διαλέξεις ώρα.',
+  addCal:'Βάλ\' το στο ημερολόγιο του κινητού μου',pending:'Περιμένει επιβεβαίωση από την επιχείρηση.',ownT:'Θέλεις κι εσύ τέτοιο ημερολόγιο;',ownP:'Για τη δουλειά σου ή για εσένα — δωρεάν, στα ελληνικά, τα δεδομένα μένουν στο κινητό σου.',ownB:'Κατέβασε το Ημερολόγιο',
   at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
  en:{title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
   you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',promo:'I also want to receive offers and news (I can stop anytime).',
@@ -74,6 +88,8 @@ const T={
   msg:(o,when,n,ph,no,link,pr)=>`Hello! I would like to book ${when}.\nName: ${n}\nPhone: ${ph}${no?'\nNote: '+no:''}${pr?'\nI accept offers too.':''}\n\nTo add it to the calendar tap:\n${link}`,
   vbHint:b=>`Viber: pick the chat with “${b}”. If the message didn’t appear, long-press the text box → “Paste” → Send.`,cut:'The link was cut short by the messaging app. Ask them to send it again by SMS or “Share”.',
   hi:f=>`Hi ${f}! Pick a time and send`,hiTop:f=>`Hi ${f} 👋 Pick a day and time`,notMe:n=>`Not ${n}? Enter your details`,
+  calV:'Calendar',listV:'List',legFree:'Free',legBusy:'Taken',yours:'Your appointment',yoursS:'You',tapGreen:'Tap a green box to pick a time.',
+  addCal:'Add it to my phone calendar',pending:'Waiting for confirmation from the business.',ownT:'Want a calendar like this?',ownP:'For your work or for yourself — free, your data stays on your phone.',ownB:'Get the Calendar app',
   at:'at',subj:'Appointment booking',wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],wdL:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],today:'Today',tomorrow:'Tomorrow'}};
 let L=(()=>{try{const s=localStorage.getItem('glen-lang');if(s==='el'||s==='en')return s;}catch(_){}return String(navigator.language||'el').toLowerCase().startsWith('el')?'el':'en';})();
 const t=k=>T[L][k];
@@ -96,7 +112,7 @@ const intl=ph=>{let d=String(ph||'').replace(/[^\d+]/g,'');if(d.startsWith('00')
 const clip=(s,n)=>String(s||'').replace(/\s+/g,' ').trim().slice(0,n);
 
 /* ---------- κατάσταση ---------- */
-let D=null,day=null,slot=null,PC=null,other=false;
+let D=null,day=null,slot=null,PC=null,other=false,mode='cal',wk=0;
 function applyColor(c){if(!/^#[0-9a-f]{6}$/i.test(c||''))return;const r=document.documentElement.style;r.setProperty('--brand',c);
   const n=parseInt(c.slice(1),16),R=n>>16,G=n>>8&255,B=n&255;r.setProperty('--brand-soft',`rgba(${R},${G},${B},.16)`);document.querySelector('meta[name=theme-color]').content=c;}
 function dayLabel(d){const td=isoDate(new Date()),tm=isoDate(new Date(Date.now()+864e5));const dt=new Date(d+'T12:00');
@@ -113,8 +129,10 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
   const g=new Date(D.g);const ch=String(D.ch||'svwe');
   const saved=(()=>{try{return JSON.parse(localStorage.getItem('kr-me')||'{}');}catch(_){return{};}})();
   app.innerHTML=head+`
-  <div class="card"><h2>${esc(t('pick'))}</h2><div class="days">${S.map(([d,l])=>{const x=dayLabel(d);return`<button class="day ${d===day?'on':''}" data-d="${d}"><small>${esc(x.top)}</small><b>${esc(x.num)}</b><i>${esc(t('free')(l.length))}</i></button>`;}).join('')}</div>
+  <div class="card"><div class="vtabs"><button class="${mode==='cal'?'on':''}" data-mode="cal">📅 ${esc(t('calV'))}</button><button class="${mode==='list'?'on':''}" data-mode="list">☰ ${esc(t('listV'))}</button></div>
+  ${mode==='cal'?weekHTML(S):`<div><h2>${esc(t('pick'))}</h2><div class="days">${S.map(([d,l])=>{const x=dayLabel(d);return`<button class="day ${d===day?'on':''}" data-d="${d}"><small>${esc(x.top)}</small><b>${esc(x.num)}</b><i>${esc(t('free')(l.length))}</i></button>`;}).join('')}</div>
    <h2 style="margin-top:14px">${esc(t('time'))}</h2><div class="times">${cur.map(m=>`<button class="time ${m===slot?'on':''}" data-m="${m}">${tstr(m)}</button>`).join('')||`<p class="muted small">${esc(t('none'))}</p>`}</div>
+</div>`}
    <p class="tiny muted" style="margin:10px 0 0">${esc(t('asOf')(g.toLocaleString(L==='el'?'el-GR':'en-GB',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})))}</p></div>
   <div class="card"><h2>${esc(PC&&!other?t('hi')(PC.n.split(' ')[0]):t('you'))}</h2>
    ${slot?`<div class="sum">📅 ${esc(dayLabel(day).long)} · ${tstr(slot)}</div>`:''}
@@ -130,8 +148,30 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
   <footer>Ημερολόγιο · GlenApps</footer>`;
   bindLang();const nm2=$('#notme');if(nm2)nm2.onclick=()=>{other=true;draw();};
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{day=b.dataset.d;slot=null;draw();});
+  app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;draw();});
+  app.querySelectorAll('[data-wk]').forEach(b=>b.onclick=()=>{wk+=+b.dataset.wk;draw();});
+  app.querySelectorAll('[data-wd]').forEach(b=>b.onclick=()=>{const keep=['nm','ph','no'].map(k=>$('#'+k).value),pr=$('#pr').checked;day=b.dataset.wd;slot=+b.dataset.wm;draw();['nm','ph','no'].forEach((k,i)=>$('#'+k).value=keep[i]);$('#pr').checked=pr;$('.sum').scrollIntoView({behavior:'smooth',block:'center'});});
   app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{slot=+b.dataset.m;const n=$('#nm').value,p=$('#ph').value,no=$('#no').value,pr=$('#pr').checked;draw();$('#nm').value=n;$('#ph').value=p;$('#no').value=no;$('#pr').checked=pr;$('.sum').scrollIntoView({behavior:'smooth',block:'center'});});
   app.querySelectorAll('[data-via]').forEach(a=>a.onclick=e=>{e.preventDefault();send(a.dataset.via);});}
+/* εβδομάδα σαν το ημερολόγιο: πράσινο = ελεύθερο, γκρι = πιασμένο (χωρίς ονόματα), χρώμα = δικό σου ραντεβού */
+function mondayOf(d){const x=new Date(d+'T12:00');const k=(x.getDay()+6)%7;x.setDate(x.getDate()-k);return isoDate(x);}
+function addD(d,n){const x=new Date(d+'T12:00');x.setDate(x.getDate()+n);return isoDate(x);}
+function weekHTML(S){const map=new Map(S);const td=isoDate(new Date());const first=mondayOf(S[0][0]),last=mondayOf(S[S.length-1][0]);
+  const weeks=[];for(let w=first;w<=last;w=addD(w,7))weeks.push(w);if(wk>=weeks.length)wk=weeks.length-1;if(wk<0)wk=0;const w0=weeks[wk];
+  const days=[...Array(7)].map((_,i)=>addD(w0,i));const mine=new Map((D.my||[]).map(([d,s])=>[d+' '+s,1]));
+  const all=S.flatMap(x=>x[1]).concat((D.my||[]).map(x=>{const[h,m]=x[1].split(':');return +h*60+ +m;}));
+  let lo=Math.floor(Math.min(...all)/30)*30,hi=Math.max(...all);const rows=[];for(let m=lo;m<=hi;m+=30)rows.push(m);
+  const nowM=new Date().getHours()*60+new Date().getMinutes();
+  const head=days.map(d=>{const x=dayLabel(d);return`<div class="wh ${d===td?'today':''}"><small>${esc(t('wd')[new Date(d+'T12:00').getDay()])}</small><b>${new Date(d+'T12:00').getDate()}</b></div>`;}).join('');
+  const body=rows.map(m=>`<div class="wt">${tstr(m)}</div>`+days.map(d=>{const L=map.get(d)||[];const key=d+' '+tstr(m);
+     if(mine.has(key))return`<div class="wc mine" title="${esc(t('yours'))}">${esc(t('yoursS'))}</div>`;
+     const free=L.includes(m)||(L.includes(m+15));const mm=L.includes(m)?m:m+15;
+     if(free)return`<button class="wc free ${d===day&&mm===slot?'on':''}" data-wd="${d}" data-wm="${mm}" aria-label="${esc(dayLabel(d).long+' '+tstr(mm))}">${d===day&&mm===slot?'✓':''}</button>`;
+     const past=d<td||(d===td&&m<nowM);const closed=!map.has(d);return`<div class="wc ${past?'past':closed?'closed':'busy'}"></div>`;}).join('')).join('');
+  return`<div class="wnav"><button class="wbtn" data-wk="-1" ${wk?'':'disabled'}>‹</button><b>${esc(dayLabel(days[0]).num)} – ${esc(dayLabel(days[6]).num)}</b><button class="wbtn" data-wk="1" ${wk<weeks.length-1?'':'disabled'}>›</button></div>
+   <div class="wgrid"><div></div>${head}${body}</div>
+   <div class="wleg"><span><i class="wc free"></i>${esc(t('legFree'))}</span><span><i class="wc busy"></i>${esc(t('legBusy'))}</span>${(D.my||[]).length?`<span><i class="wc mine"></i>${esc(t('yours'))}</span>`:''}</div>
+   ${slot?'':`<p class="small muted" style="margin:8px 0 0">${esc(t('tapGreen'))}</p>`}`;}
 function bindLang(){const b=$('#lg');if(b)b.onclick=()=>{L=L==='el'?'en':'el';draw();};}
 
 function send(via){const er=$('#er');er.textContent='';
@@ -153,7 +193,14 @@ function send(via){const er=$('#er');er.textContent='';
   else href=`mailto:${encodeURIComponent(D.em)}?subject=${encodeURIComponent(t('subj')+' — '+when)}&body=${encodeURIComponent(txt)}`;
   if(via==='w')window.open(href,'_blank','noopener');else location.href=href;
   setTimeout(()=>showSent(when,via==='v'),700);}
-function showSent(when,vb){$('#app').innerHTML=`<div class="card done"><div class="big">✅</div><h2>${esc(t('sentT'))}</h2><p class="small">📅 ${esc(when)}</p>${vb?`<p class="note small">${esc(t('vbHint')(D.n||''))}</p>`:''}<p class="muted small">${esc(t('sentP')(D.n||''))}</p><button class="time" id="bk">${esc(t('again'))}</button></div>`;$('#bk').onclick=draw;}
+function icsFile(){const p=n=>String(n).padStart(2,'0');const st=new Date(day+'T'+tstr(slot)+':00');const en=new Date(st.getTime()+(D.u||45)*60000);
+  const f=d=>d.getUTCFullYear()+p(d.getUTCMonth()+1)+p(d.getUTCDate())+'T'+p(d.getUTCHours())+p(d.getUTCMinutes())+'00Z';const e=x=>String(x||'').replace(/[\\,;]/g,m=>'\\'+m).replace(/\n/g,'\\n');
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//GlenApps Imerologio//EL','BEGIN:VEVENT','UID:'+Date.now()+'@imerologio','DTSTAMP:'+f(new Date()),'DTSTART:'+f(st),'DTEND:'+f(en),'SUMMARY:'+e((D.o||'Ραντεβού')+' — '+(D.n||'')),'DESCRIPTION:'+e(t('pending')),'BEGIN:VALARM','TRIGGER:-PT2H','ACTION:DISPLAY','DESCRIPTION:'+e(D.o||'Ραντεβού'),'END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download='rantevou.ics';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);}
+function showSent(when,vb){$('#app').innerHTML=`<div class="card done"><div class="big">✅</div><h2>${esc(t('sentT'))}</h2><p class="small">📅 ${esc(when)}</p>${vb?`<p class="note small">${esc(t('vbHint')(D.n||''))}</p>`:''}<p class="muted small">${esc(t('sentP')(D.n||''))}</p>
+   <button class="send sms" id="ics" style="display:block;width:100%;margin:12px 0 8px">📲 ${esc(t('addCal'))}</button><button class="time" id="bk">${esc(t('again'))}</button></div>
+   <div class="card promo"><b>${esc(t('ownT'))}</b><p class="small muted" style="margin:4px 0 8px">${esc(t('ownP'))}</p><a class="time" href="${esc(new URL('./',location.href).href)}" target="_blank" rel="noopener">⬇️ ${esc(t('ownB'))}</a></div>`;
+  $('#bk').onclick=draw;$('#ics').onclick=icsFile;}
 
 /* ---------- εκκίνηση ---------- */
 (async()=>{try{const k=new URLSearchParams(location.search).get('k')||new URLSearchParams(location.hash.slice(1)).get('k');if(!k)throw new Error('χωρίς δεδομένα');
