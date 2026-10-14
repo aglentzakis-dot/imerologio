@@ -119,14 +119,14 @@ function render(){document.body&&document.body.classList.toggle('hidenames',!!(S
   {const qb=new URLSearchParams(location.search).get('book');if(qb){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';setTimeout(()=>bookImport(qb),200);}}
   const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(()=>bookImport(c),150);return render();}const sec=r.name==='person'?'people':r.name==='stats'?'today':r.name;
   shellHTML(sec);
-  const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewMap,settings:viewSettingsPage,stats:viewStats}[r.name]||viewToday;
+  const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewKonta,settings:viewSettingsPage,stats:viewStats}[r.name]||viewToday;
   if(!window.AGPOS)window.scrollTo(0,0);
   setTimeout(()=>dirtyWatch(M()),60);setTimeout(mineMsgShow,500);
   try{V(r);}catch(e){console.error(e);M().innerHTML=`<div class="card"><h2>Κάτι πήγε στραβά</h2><p class="muted">${esc(e.message)}</p><a class="btn" href="#/agenda">Ραντεβού</a></div>`;}
 }
 function shellHTML(sec){
-  const nav=[['today','home','Σήμερα'],['agenda','l-calendar-clock','Ημερολόγιο'],['people','users',LX('whoPl')||'Πρόσωπα'],['map','l-map','Χάρτης'],['settings','settings','Ρυθμίσεις']];
-  const title={today:'Σήμερα',agenda:'Ημερολόγιο',people:LX('whoPl'),map:'Χάρτης',settings:'Ρυθμίσεις'}[sec]||'Ημερολόγιο';
+  const nav=[['today','home','Σήμερα'],['agenda','l-calendar-clock','Ημερολόγιο'],['people','users',LX('whoPl')||'Πρόσωπα'],['map','l-map','Κοντά μου'],['settings','settings','Ρυθμίσεις']];
+  const title={today:'Σήμερα',agenda:'Ημερολόγιο',people:LX('whoPl'),map:'Κοντά μου',settings:'Ρυθμίσεις'}[sec]||'Ημερολόγιο';
   const a=([k,i,l])=>`<a href="#/${k}" class="${sec===k?'on':''}">${ic(i,19)}<span>${esc(l)}</span></a>`;
   const fab=['today','agenda','people'].includes(sec);
   document.body.innerHTML=`<div class="wcbg" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="app"><aside class="side noprint"><a class="brand" href="#/today">${LOGO}<div><b>Ημερολόγιο</b><span>${esc(S.meta.org||prof().p.n)}</span></div></a><nav class="nav">${nav.map(a).join('')}</nav><div class="side-ver tiny muted">Έκδοση ${APP_VERSION}</div></aside>
@@ -176,8 +176,6 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
   <section class="hero"><div class="hero-in"><div class="hero-hi">${greet()}${first?', '+esc(first):''}</div>
    <div class="hero-date">${WDAYS[wdOf(t)]} ${+t.slice(8)} ${MONTHS_G[+t.slice(5,7)-1]}</div>
    <div class="hero-sum">${closed?esc(closed):act.length?`<b>${act.length}</b> ${act.length===1?'ραντεβού':'ραντεβού'} σήμερα${left?` · <b>${left}</b> ακόμα`:''}`:'Κανένα ραντεβού σήμερα'}</div></div></section>
-  <button type="button" class="bookbar" id="tBook"><span class="bb-i">📲</span><span class="grow"><b>Να κλείνουν μόνοι τους</b><small>Στείλε σύνδεσμο με τις ελεύθερες ώρες σου</small></span>${ic('right',18)}</button>
-  ${isPrivate()?'':`<a class="bookbar statbar" href="#/stats"><span class="bb-i">📊</span><span class="grow"><b>Στατιστικά${isPro()?'':' <span class="prochip">Pro</span>'}</b><small>Έσοδα, επισκέψεις, ποιοι έχουν καιρό να έρθουν</small></span>${ic('right',18)}</a>`}
   ${next?`<button class="nextcard ${live?'live':''}" data-ap="${next.key}"><span class="nc-time"><b>${next.s}</b><small>${next.e}</small></span><span class="nc-main"><small>${live?'Τώρα':'Επόμενο'}</small><b>${esc(stuName(nst))}</b>${next.a.note?`<span>${esc(next.a.note)}</span>`:''}${pvBadge(next,1)}</span>${ic('right',20)}</button>
     ${ph?`<div class="ncact"><a class="btn" data-cg="${nst.id}" href="tel:${telLink(ph)}">${ic('l-phone',16)} Κλήση</a><a class="btn" data-cg="${nst.id}" href="${smsHref(ph,remText(next))}">${ic('send',16)} Υπενθύμιση</a></div>`:''}`:''}
   <section class="tsec"><div class="tsec-h"><h2>Το πρόγραμμα της ημέρας</h2><span class="row" style="gap:8px;align-items:center"><button class="eyebtn ${S.data.settings.hideNames?'off':''}" id="tEye" aria-label="${S.data.settings.hideNames?'Εμφάνιση ονομάτων':'Απόκρυψη ονομάτων'}">${ic('eye',18)}</button><a href="#/agenda?view=day&d=${t}">Ημέρα ${ic('right',14)}</a></span></div>
@@ -188,7 +186,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
    <div class="tmrw"><span><b>${T.length}</b> ${T.length===1?'ραντεβού':'ραντεβού'}${T.length?' — πρώτο στις '+T[0].s:''}</span>${T.length?`<button class="btn sm" id="tRem">${ic('bell',15)} Στείλε υπενθυμίσεις</button>`:''}</div></section>
   ${installCardHTML()}`;
   const n=$('#tNew');if(n)n.onclick=()=>apptDialog({date:t});
-  $('#tEye').onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();render();};const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);const tb=$('#tBook');if(tb)tb.onclick=()=>bookShareDialog();if(isPrivate())monthDotsBind();
+  $('#tEye').onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();render();};const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);if(isPrivate())monthDotsBind();
   bindInstall();}
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
@@ -264,6 +262,15 @@ function geocodePerson(p,say){if(!p.loc||!p.loc.addr||S.data.settings.geoOff)ret
   const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&accept-language=el&countrycodes=gr&q='+encodeURIComponent(p.loc.addr));const j=await r.json();
   if(j&&j[0]){const a=j[0].address||{};Object.assign(p.loc,{lat:+j[0].lat,lng:+j[0].lon,area:a.suburb||a.city_district||a.neighbourhood||a.town||a.village||a.city||a.municipality||''});save();if(say)toast('Βρέθηκε στον χάρτη: '+(p.loc.area||p.loc.addr),'ok');await new Promise(z=>setTimeout(z,1100));return true;}
   if(say)toast('Η διεύθυνση δεν βρέθηκε στον χάρτη. Βάλε την πινέζα με το χέρι από τον Χάρτη.','bad');}catch(e){if(say)toast('Χωρίς σύνδεση — ο χάρτης θα ενημερωθεί αργότερα.','bad');}await new Promise(z=>setTimeout(z,1100));return false;});return GEOQ;}
+/* «Κοντά μου» μέσα στο Ημερολόγιο: η ΑΥΘΕΝΤΙΚΗ εφαρμογή (ίδια διεύθυνση), οπότε κάθε αναβάθμισή της φαίνεται και εδώ αμέσως */
+function viewKonta(r){const fb=$('#fab');if(fb)fb.remove();const tab=(r&&r.q&&r.q.v)==='clients'?'clients':'km';
+  if(tab==='clients'){const ins=()=>{if($('#km-tabs'))return;const ph=$('#main .page-head');if(ph)ph.insertAdjacentHTML('afterend',kmTabs('clients'));else M().insertAdjacentHTML('afterbegin',kmTabs('clients'));};
+    const pr=viewMap(r);setTimeout(ins,0);Promise.resolve(pr).then(()=>setTimeout(ins,0),()=>setTimeout(ins,0));setTimeout(ins,1500);return;}
+  const url=new URL('../kontamou/',location.href).href;
+  M().innerHTML=`${kmTabs('km')}<p class="small muted" style="margin:0 0 8px">Έτσι σε βρίσκουν οι πελάτες της περιοχής σου στο <b>Κοντά μου</b> της GlenApps.</p>
+   <div class="kmwrap"><iframe src="${esc(url)}" title="Κοντά μου" loading="lazy" allow="geolocation"></iframe></div>
+   <a class="tiny muted" href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px">Άνοιγμα σε ξεχωριστό παράθυρο ↗</a>`;}
+const kmTabs=t=>`<div class="seg field" id="km-tabs" style="margin-top:4px"><a href="#/map" class="${t==='km'?'on':''}">📍 Κοντά μου</a><a href="#/map?v=clients" class="${t==='clients'?'on':''}">🗺️ Οι ${esc(LX('whoPlL'))} μου</a></div>`;
 async function viewMap(){setTimeout(()=>{const g=$('#geo-on');if(g)g.onchange=()=>{S.data.settings.geoOff=!g.checked;save();toast(g.checked?'Ο εντοπισμός άνοιξε.':'Ο εντοπισμός έκλεισε — καμία διεύθυνση δεν στέλνεται.','ok');render();};},0);const all=myStudents();const on=all.filter(p=>p.loc&&p.loc.lat!=null),noPin=all.filter(p=>!(p.loc&&p.loc.lat!=null));
   const areas={};on.forEach(p=>{const k=p.loc.area||'Χωρίς περιοχή';areas[k]=(areas[k]||0)+1;});const AR=Object.entries(areas).sort((a,b)=>b[1]-a[1]);
   M().innerHTML=`<div class="mapwrap"><div id="imap"></div>${PLACE?`<div class="placebar">📍 Πάτα στον χάρτη πού βρίσκεται: <b>${esc(stuName(getStudent(PLACE)))}</b> <button class="btn sm" id="plx">Άκυρο</button></div>`:''}</div>
@@ -474,10 +481,10 @@ function offerDialog(preIds){const all=myStudents().filter(p=>!p.demo||S.data.se
 
 /* ---------- πρόσωπα: λίστα ---------- */
 function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
-  M().innerHTML=`${pageHead(esc(LX('whoPl')),`${all.length}`,`<a class="btn" href="#/stats" title="Στατιστικά">📊</a><button class="btn" id="p-bk" title="Σύνδεσμος κράτησης">📲 Σύνδεσμος</button><a class="btn pri" href="#/person/new">${ic('plus',17)} Νέος</a>`)}
+  M().innerHTML=`${pageHead(esc(LX('whoPl')),`${all.length}`,`<a class="btn" href="#/stats" title="Στατιστικά">📊</a><a class="btn pri" href="#/person/new">${ic('plus',17)} Νέος</a>`)}
   ${all.length?`<div class="search field">${ic('search',17)}<input class="in" id="pq" type="search" placeholder="Όνομα ή τηλέφωνο" value="${esc(q)}" aria-label="Αναζήτηση"></div><div class="list" id="pl"></div>`
    :emptyHTML('users',`Δεν υπάρχουν ακόμη ${esc(LX('whoPlL'))}`,`Πρόσθεσε τον πρώτο — ή γράψε απευθείας το όνομα όταν κλείνεις ραντεβού.`,`<a class="btn pri" href="#/person/new">${ic('plus',16)} Νέος</a> <button class="btn" id="p-imp2">${ic('download',16)} Εισαγωγή πολλών μαζί</button>`)}`;
-  [$('#p-imp2')].forEach(b=>{if(b)b.onclick=importMenu;});{const bk=$('#p-bk');if(bk)bk.onclick=()=>bookShareDialog();}
+  [$('#p-imp2')].forEach(b=>{if(b)b.onclick=importMenu;});{const bk=$('#p-bk');if(bk)bk.onclick=()=>bookShareDialog();}{const ph=$('#main .page-head');if(ph&&!$('#p-bk')){const b=document.createElement('button');b.type='button';b.className='bookbar';b.id='p-bk';b.innerHTML=`<span class="bb-i">📲</span><span class="grow"><b>Να κλείνουν μόνοι τους</b><small>Στείλε σύνδεσμο με τις ελεύθερες ώρες σου · Viber, SMS, WhatsApp, QR</small></span>${ic('right',18)}`;b.onclick=()=>bookShareDialog();ph.after(b);}}
   if(!all.length)return;
   const t=todayISO();const VS={};const grp=L=>{const G={};L.forEach(o=>(G[o.a.sid]=G[o.a.sid]||[]).push(o));return G;};const PAST=grp(occ(addDays(t,-730),addDays(t,-1),{withCancel:true,by:''})),FUT=grp(occ(t,addDays(t,365),{by:''}));all.forEach(p=>VS[p.id]=visitStats(p,{past:PAST[p.id]||[],fut:FUT[p.id]||[]}));let flt=r.q.f||'all';
   const nLate=all.filter(p=>VS[p.id].late).length,nPromo=all.filter(p=>consOf(p,'promo')===true).length;
