@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Κράτηση ραντεβού</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#F2C66D">
+<link rel="icon" href="icon-192.png">
+<!-- © 2026 Ανδρέας Μ. Γλεντζάκης. Με την επιφύλαξη παντός δικαιώματος.
+     Σελίδα κράτησης του «Ημερολογίου» (GlenApps). Δεν αποθηκεύει και δεν στέλνει τίποτα σε διακομιστή:
+     οι ελεύθερες ώρες έρχονται μέσα στον σύνδεσμο, και η κράτηση φεύγει από την εφαρμογή μηνυμάτων του πελάτη. -->
+<style>
+:root{--brand:#E9B949;--brand-soft:#FBF1D9;--brand-txt:#7A5A10;--ink:#24211C;--ink2:#5D574D;--ink3:#8A8377;--line:#EAE3D6;--paper:#FFFDF8;--bg:#F7F2E8;--ok:#2E8B57;--bad:#C0392B}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45;-webkit-text-size-adjust:100%;overflow-x:hidden}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 40px}
+.head{display:flex;align-items:center;gap:12px;margin:6px 0 14px}
+.logo{width:48px;height:48px;border-radius:14px;background:var(--brand);display:grid;place-items:center;font-size:24px;box-shadow:0 3px 0 rgba(0,0,0,.12);flex:none}
+.head h1{font-size:1.25rem;margin:0}.head p{margin:2px 0 0;color:var(--ink3);font-size:.88rem}
+.lang{margin-left:auto;border:0;background:var(--paper);border-radius:10px;font-size:1.3rem;width:40px;height:36px;box-shadow:0 2px 0 var(--line);cursor:pointer;flex:none}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 2px 0 var(--line)}
+h2{font-size:1rem;margin:0 0 10px}
+.days{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;overscroll-behavior-x:contain}
+.days::-webkit-scrollbar{display:none}
+.day{flex:none;min-width:62px;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:8px 6px;text-align:center;cursor:pointer;font:inherit;color:var(--ink)}
+.day small{display:block;color:var(--ink3);font-size:.75rem}.day b{display:block;font-size:1.15rem}.day i{display:block;font-style:normal;font-size:.7rem;color:var(--ok)}
+.day.on{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 2px 0 var(--brand)}
+.times{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.time{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;color:var(--ink)}
+.time.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+label.f{display:block;font-size:.85rem;color:var(--ink2);margin:10px 0 4px}
+input.in,textarea.in{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;font:inherit;background:#fff;color:var(--ink)}
+input.in:focus,textarea.in:focus{outline:none;border-color:var(--brand)}
+.chk{display:flex;gap:10px;align-items:flex-start;margin-top:12px;font-size:.9rem;color:var(--ink2)}.chk input{width:20px;height:20px;margin-top:1px;flex:none}
+.sum{background:var(--brand-soft);border-radius:12px;padding:10px 12px;font-weight:600;margin-bottom:6px}
+.sends{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.send{border:0;border-radius:14px;padding:13px 8px;font:inherit;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 3px 0 rgba(0,0,0,.18);text-decoration:none;text-align:center}
+.send.viber{background:#7360F2}.send.sms{background:#2F80ED}.send.wa{background:#25A35A}.send.mail{background:#6B7280}
+.send:active{transform:translateY(2px);box-shadow:none}
+.muted{color:var(--ink3)}.small{font-size:.85rem}.tiny{font-size:.76rem}
+.note{background:#fff;border:1px dashed var(--line);border-radius:12px;padding:10px 12px}
+.done{text-align:center;padding:26px 16px}.done .big{font-size:3rem}
+.err{color:var(--bad);font-size:.85rem;margin-top:6px;min-height:1em}
+.hidden{display:none}
+footer{text-align:center;color:var(--ink3);font-size:.75rem;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="muted">…</p></div>
+<script>
+'use strict';
+/* ---------- γλώσσα ---------- */
+const T={
+ el:{title:'Κράτηση ραντεβού',pick:'Διάλεξε μέρα',time:'Διάλεξε ώρα',free:n=>n+(n===1?' ώρα':' ώρες'),none:'Δεν υπάρχουν ελεύθερες ώρες αυτή τη μέρα.',
+  you:'Τα στοιχεία σου',name:'Ονοματεπώνυμο',phone:'Τηλέφωνο',note:'Σημείωση (προαιρετικό)',promo:'Θέλω να λαμβάνω και προσφορές και νέα (μπορώ να το σταματήσω όποτε θέλω).',
+  sendWith:'Στείλε την κράτηση με',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
+  priv:b=>`Τα στοιχεία σου πηγαίνουν μόνο στον/στην «${b}», μέσα από την εφαρμογή μηνυμάτων σου. Η σελίδα αυτή δεν τα αποθηκεύει και δεν τα στέλνει πουθενά αλλού.`,
+  asOf:d=>'Ελεύθερες ώρες όπως ήταν στις '+d,expired:'Ο σύνδεσμος έχει λήξει. Ζήτησε νέο σύνδεσμο.',bad:'Ο σύνδεσμος δεν είναι σωστός. Ζήτησε νέο σύνδεσμο.',
+  needName:'Γράψε το όνομά σου.',needPhone:'Γράψε ένα τηλέφωνο για να σε ειδοποιήσουν.',needSlot:'Διάλεξε πρώτα μέρα και ώρα.',
+  sentT:'Η κράτηση στάλθηκε!',sentP:b=>`Μόλις την επιβεβαιώσει ο/η «${b}», θα σου απαντήσει. Αν δεν άνοιξε η εφαρμογή μηνυμάτων, δοκίμασε άλλο κουμπί.`,again:'Πίσω',
+  msg:(o,when,n,ph,no,link,pr)=>`Καλησπέρα! Θα ήθελα ${o.toLowerCase()} ${when}.\nΌνομα: ${n}\nΤηλ: ${ph}${no?'\nΣημείωση: '+no:''}${pr?'\nΔέχομαι και προσφορές.':''}\n\nΓια καταχώρηση στο ημερολόγιο πατήστε:\n${link}`,
+  at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
+ en:{title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
+  you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',promo:'I also want to receive offers and news (I can stop anytime).',
+  sendWith:'Send the booking via',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
+  priv:b=>`Your details go only to “${b}”, through your own messaging app. This page does not store them or send them anywhere else.`,
+  asOf:d=>'Free times as of '+d,expired:'This link has expired. Please ask for a new one.',bad:'This link is not valid. Please ask for a new one.',
+  needName:'Please type your name.',needPhone:'Please type a phone number so they can reach you.',needSlot:'Choose a day and time first.',
+  sentT:'Booking sent!',sentP:b=>`“${b}” will reply once they confirm it. If your messaging app didn’t open, try another button.`,again:'Back',
+  msg:(o,when,n,ph,no,link,pr)=>`Hello! I would like to book ${when}.\nName: ${n}\nPhone: ${ph}${no?'\nNote: '+no:''}${pr?'\nI accept offers too.':''}\n\nTo add it to the calendar tap:\n${link}`,
+  at:'at',subj:'Appointment booking',wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],wdL:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],today:'Today',tomorrow:'Tomorrow'}};
+let L=(()=>{try{const s=localStorage.getItem('glen-lang');if(s==='el'||s==='en')return s;}catch(_){}return String(navigator.language||'el').toLowerCase().startsWith('el')?'el':'en';})();
+const t=k=>T[L][k];
+
+/* ---------- βοηθητικά ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const isoDate=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const tstr=m=>pad(Math.floor(m/60))+':'+pad(m%60);
+function b64uDec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+function b64uEnc(u){let b='';for(let i=0;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+async function unpack(s){const k=s[0],body=s.slice(1);let bytes=b64uDec(body);
+  if(k==='z'){const ds=new DecompressionStream('deflate-raw');bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer());}
+  return JSON.parse(new TextDecoder().decode(bytes));}
+const intl=ph=>{let d=String(ph||'').replace(/[^\d+]/g,'');if(d.startsWith('00'))d='+'+d.slice(2);if(!d.startsWith('+')){d=d.replace(/\D/g,'');if(/^(69|2)\d{8}$/.test(d))d='+30'+d;else d='+'+d;}return d;};
+const clip=(s,n)=>String(s||'').replace(/\s+/g,' ').trim().slice(0,n);
+
+/* ---------- κατάσταση ---------- */
+let D=null,day=null,slot=null;
+function applyColor(c){if(!/^#[0-9a-f]{6}$/i.test(c||''))return;const r=document.documentElement.style;r.setProperty('--brand',c);
+  const n=parseInt(c.slice(1),16),R=n>>16,G=n>>8&255,B=n&255;r.setProperty('--brand-soft',`rgba(${R},${G},${B},.16)`);document.querySelector('meta[name=theme-color]').content=c;}
+function dayLabel(d){const td=isoDate(new Date()),tm=isoDate(new Date(Date.now()+864e5));const dt=new Date(d+'T12:00');
+  return{top:d===td?t('today'):d===tm?t('tomorrow'):t('wd')[dt.getDay()],num:dt.getDate()+'/'+(dt.getMonth()+1),long:t('wdL')[dt.getDay()]+' '+dt.getDate()+'/'+(dt.getMonth()+1)};}
+function liveSlots(){const now=new Date(),td=isoDate(now),nm=now.getHours()*60+now.getMinutes()+30;const out=[];
+  for(const[d,list]of D.s){if(d<td)continue;const L2=list.filter(m=>d>td||m>=nm);if(L2.length)out.push([d,L2]);}return out;}
+
+function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');document.documentElement.lang=L;
+  if(!D){app.innerHTML=`<div class="card done"><div class="big">🔗</div><p>${esc(window.__err||t('bad'))}</p></div>`;return;}
+  const S=liveSlots();
+  const head=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(t('title'))}</p></div><button class="lang" id="lg" aria-label="Language">${L==='el'?'🇬🇧':'🇬🇷'}</button></div>`;
+  if(!S.length){app.innerHTML=head+`<div class="card done"><div class="big">⏳</div><p>${esc(t('expired'))}</p></div>`;bindLang();return;}
+  if(!day||!S.some(x=>x[0]===day))day=S[0][0];const cur=(S.find(x=>x[0]===day)||[,[]])[1];if(slot&&!cur.includes(slot))slot=null;
+  const g=new Date(D.g);const ch=String(D.ch||'svwe');
+  const saved=(()=>{try{return JSON.parse(localStorage.getItem('kr-me')||'{}');}catch(_){return{};}})();
+  app.innerHTML=head+`
+  <div class="card"><h2>${esc(t('pick'))}</h2><div class="days">${S.map(([d,l])=>{const x=dayLabel(d);return`<button class="day ${d===day?'on':''}" data-d="${d}"><small>${esc(x.top)}</small><b>${esc(x.num)}</b><i>${esc(t('free')(l.length))}</i></button>`;}).join('')}</div>
+   <h2 style="margin-top:14px">${esc(t('time'))}</h2><div class="times">${cur.map(m=>`<button class="time ${m===slot?'on':''}" data-m="${m}">${tstr(m)}</button>`).join('')||`<p class="muted small">${esc(t('none'))}</p>`}</div>
+   <p class="tiny muted" style="margin:10px 0 0">${esc(t('asOf')(g.toLocaleString(L==='el'?'el-GR':'en-GB',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})))}</p></div>
+  <div class="card"><h2>${esc(t('you'))}</h2>
+   ${slot?`<div class="sum">📅 ${esc(dayLabel(day).long)} · ${tstr(slot)}</div>`:''}
+   <label class="f" for="nm">${esc(t('name'))}</label><input class="in" id="nm" autocomplete="name" maxlength="80" value="${esc(saved.n||'')}">
+   <label class="f" for="ph">${esc(t('phone'))}</label><input class="in" id="ph" type="tel" inputmode="tel" autocomplete="tel" maxlength="25" value="${esc(saved.p||'')}">
+   <label class="f" for="no">${esc(t('note'))}</label><textarea class="in" id="no" rows="2" maxlength="200"></textarea>
+   <label class="chk"><input type="checkbox" id="pr"><span>${esc(t('promo'))}</span></label>
+   <div class="err" id="er"></div>
+   <h2 style="margin-top:12px">${esc(t('sendWith'))}</h2>
+   <div class="sends">${D.ph&&ch.includes('v')?`<a class="send viber" data-via="v">${esc(t('viber'))}</a>`:''}${D.ph&&ch.includes('s')?`<a class="send sms" data-via="s">${esc(t('sms'))}</a>`:''}${D.ph&&ch.includes('w')?`<a class="send wa" data-via="w">${esc(t('wa'))}</a>`:''}${D.em&&ch.includes('e')?`<a class="send mail" data-via="e">${esc(t('mail'))}</a>`:''}</div>
+   <p class="tiny muted" style="margin:12px 0 0">🔒 ${esc(t('priv')(D.n||''))}</p></div>
+  <footer>Ημερολόγιο · GlenApps</footer>`;
+  bindLang();
+  app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{day=b.dataset.d;slot=null;draw();});
+  app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{slot=+b.dataset.m;const n=$('#nm').value,p=$('#ph').value,no=$('#no').value,pr=$('#pr').checked;draw();$('#nm').value=n;$('#ph').value=p;$('#no').value=no;$('#pr').checked=pr;$('.sum').scrollIntoView({behavior:'smooth',block:'center'});});
+  app.querySelectorAll('[data-via]').forEach(a=>a.onclick=e=>{e.preventDefault();send(a.dataset.via);});}
+function bindLang(){const b=$('#lg');if(b)b.onclick=()=>{L=L==='el'?'en':'el';draw();};}
+
+function send(via){const er=$('#er');er.textContent='';
+  if(!slot)return er.textContent=t('needSlot');
+  const n=clip($('#nm').value,80),ph=clip($('#ph').value,25),no=clip($('#no').value,200),pr=$('#pr').checked;
+  if(n.length<2)return er.textContent=t('needName');
+  if(ph.replace(/\D/g,'').length<8)return er.textContent=t('needPhone');
+  try{localStorage.setItem('kr-me',JSON.stringify({n,p:ph}));}catch(_){}
+  const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,g:D.g,id:Math.random().toString(36).slice(2,10)};
+  const link=new URL(D.a||'./',location.href).href.split('#')[0]+'#/book?r=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(req)));
+  const when=dayLabel(day).long+' '+t('at')+' '+tstr(slot);
+  const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,no,link,pr);
+  let href;const num=intl(D.ph);
+  if(via==='s')href=`sms:${num}${/iPhone|iPad|Mac/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(txt)}`;
+  else if(via==='w')href=`https://wa.me/${num.replace(/^\+/,'')}?text=${encodeURIComponent(txt)}`;
+  else if(via==='v')href=`viber://chat?number=${encodeURIComponent(num)}&draft=${encodeURIComponent(txt)}`;
+  else href=`mailto:${encodeURIComponent(D.em)}?subject=${encodeURIComponent(t('subj')+' — '+when)}&body=${encodeURIComponent(txt)}`;
+  if(via==='w')window.open(href,'_blank','noopener');else location.href=href;
+  if(via==='v'&&navigator.clipboard)navigator.clipboard.writeText(txt).catch(()=>{});
+  setTimeout(()=>{$('#app').innerHTML=`<div class="card done"><div class="big">✅</div><h2>${esc(t('sentT'))}</h2><p class="small">📅 ${esc(when)}</p><p class="muted small">${esc(t('sentP')(D.n||''))}</p><button class="time" id="bk">${esc(t('again'))}</button></div>`;$('#bk').onclick=draw;},700);}
+
+/* ---------- εκκίνηση ---------- */
+(async()=>{try{const q=new URLSearchParams(location.hash.slice(1));const k=q.get('k');if(!k)throw 0;
+    D=await unpack(k);if(!D||D.v!==1||!Array.isArray(D.s))throw 0;
+    D.n=clip(D.n,60);D.o=clip(D.o,30);D.ph=clip(D.ph,25);D.em=clip(D.em,80);
+    if(D.l==='en'||D.l==='el'){try{if(!localStorage.getItem('glen-lang'))L=String(navigator.language||'').toLowerCase().startsWith('el')?'el':(D.l||L);}catch(_){}}
+    applyColor(D.c);}catch(e){D=null;window.__err=(T[L]||T.el).bad;}
+  draw();})();
+</script>
+</body>
+</html>

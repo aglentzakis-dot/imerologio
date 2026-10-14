@@ -24,7 +24,7 @@ const COLL=new Intl.Collator('el');function myStudents(){return S.data.students.
 const stuName=s=>s?(s.name||'—'):'—';
 const initial=n=>((n||'?').trim()[0]||'?').toUpperCase();
 function IM_NEWPERSON(name,c){c=c||{};const p={id:uid(),name:name.trim(),avatar:initial(name),phone:c.phone||'',email:c.email||'',contacts:(c.phone||c.email)?[{name:name.trim(),phone:c.phone||'',email:c.email||''}]:[],created:new Date().toISOString()};
-  if(c.addr)p.loc={addr:c.addr,home:true};if(c.notes)p.notes=c.notes;if(c.cons)setCons(p,'appt',c.cons==='yes','στο νέο ραντεβού');
+  if(c.addr)p.loc={addr:c.addr,home:true};if(c.notes)p.notes=c.notes;if(c.cons)setCons(p,'appt',c.cons==='yes',c.consHow||'στο νέο ραντεβού');
   S.data.students.push(p);save();if(p.loc&&window.geocodePerson)geocodePerson(p,false);return p.id;}
 /* γρήγορη καρτέλα νέου πελάτη μέσα από το «Νέο ραντεβού»: όνομα, τηλέφωνο και, αν θέλεις, τα υπόλοιπα — αποθηκεύεται κανονικά στους πελάτες */
 const phKey=x=>String(x||'').replace(/\D/g,'').slice(-10);
@@ -112,7 +112,7 @@ function render(){document.body&&document.body.classList.toggle('hidenames',!!(S
   applyTheme();if(!S.data.settings.prof){shellHTML('today');M().innerHTML='';return firstRun();}
   window.AGPOS=null;if(/^#\/agenda/.test(S.curHash||'')&&/^#\/agenda/.test(location.hash)&&typeof agPosSave==='function')agPosSave();
   S.curHash=location.hash;
-  const r=parseRoute();const sec=r.name==='person'?'people':r.name;
+  const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(()=>bookImport(c),150);return render();}const sec=r.name==='person'?'people':r.name;
   shellHTML(sec);
   const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewMap,settings:viewSettingsPage}[r.name]||viewToday;
   if(!window.AGPOS)window.scrollTo(0,0);
@@ -165,6 +165,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
   <section class="hero"><div class="hero-in"><div class="hero-hi">${greet()}${first?', '+esc(first):''}</div>
    <div class="hero-date">${WDAYS[wdOf(t)]} ${+t.slice(8)} ${MONTHS_G[+t.slice(5,7)-1]}</div>
    <div class="hero-sum">${closed?esc(closed):act.length?`<b>${act.length}</b> ${act.length===1?'ραντεβού':'ραντεβού'} σήμερα${left?` · <b>${left}</b> ακόμα`:''}`:'Κανένα ραντεβού σήμερα'}</div></div></section>
+  <button type="button" class="bookbar" id="tBook"><span class="bb-i">📲</span><span class="grow"><b>Να κλείνουν μόνοι τους</b><small>Στείλε σύνδεσμο με τις ελεύθερες ώρες σου</small></span>${ic('right',18)}</button>
   ${next?`<button class="nextcard ${live?'live':''}" data-ap="${next.key}"><span class="nc-time"><b>${next.s}</b><small>${next.e}</small></span><span class="nc-main"><small>${live?'Τώρα':'Επόμενο'}</small><b>${esc(stuName(nst))}</b>${next.a.note?`<span>${esc(next.a.note)}</span>`:''}${pvBadge(next,1)}</span>${ic('right',20)}</button>
     ${ph?`<div class="ncact"><a class="btn" data-cg="${nst.id}" href="tel:${telLink(ph)}">${ic('l-phone',16)} Κλήση</a><a class="btn" data-cg="${nst.id}" href="${smsHref(ph,remText(next))}">${ic('send',16)} Υπενθύμιση</a></div>`:''}`:''}
   <section class="tsec"><div class="tsec-h"><h2>Το πρόγραμμα της ημέρας</h2><span class="row" style="gap:8px;align-items:center"><button class="eyebtn ${S.data.settings.hideNames?'off':''}" id="tEye" aria-label="${S.data.settings.hideNames?'Εμφάνιση ονομάτων':'Απόκρυψη ονομάτων'}">${ic('eye',18)}</button><a href="#/agenda?view=day&d=${t}">Ημέρα ${ic('right',14)}</a></span></div>
@@ -175,7 +176,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
    <div class="tmrw"><span><b>${T.length}</b> ${T.length===1?'ραντεβού':'ραντεβού'}${T.length?' — πρώτο στις '+T[0].s:''}</span>${T.length?`<button class="btn sm" id="tRem">${ic('bell',15)} Στείλε υπενθυμίσεις</button>`:''}</div></section>
   ${installCardHTML()}`;
   const n=$('#tNew');if(n)n.onclick=()=>apptDialog({date:t});
-  $('#tEye').onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();render();};const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);
+  $('#tEye').onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();render();};const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);const tb=$('#tBook');if(tb)tb.onclick=()=>bookShareDialog();
   bindInstall();}
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
@@ -493,7 +494,7 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
    <div class="field"><label class="f">Χρώμα στο ημερολόγιο</label><div class="scols">${pr.map(c=>`<button type="button" data-pc="${c}" style="background:${c}" class="${p.color===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}<button type="button" data-pc="" class="none ${p.color?'':'on'}" aria-label="Χωρίς χρώμα">${ic('x',12)}</button></div></div>
    <div class="savebar"><button class="btn pri">${ic('check',16)} Αποθήκευση</button>${isNew?'':`<button type="button" class="btn danger" id="p-del">${ic('trash',16)} Διαγραφή</button>`}</div></form>
   ${isNew?'':`<div class="card"><div class="card-h"><h3>Ραντεβού</h3><button class="btn sm pri" id="p-new">${ic('plus',15)} Νέο ραντεβού</button></div>
-   ${p.phone?`<div class="row" style="gap:6px;margin-bottom:12px"><a class="btn sm" data-cg="${p.id}" href="tel:${telLink(p.phone)}">Κλήση</a>${chBtnsHTML({contacts:[{name:p.name,phone:p.phone,email:p.email}]},'Καλησπέρα!','Μήνυμα',`data-cg="${p.id}"`)}</div>`:''}
+   ${p.phone?`<div class="row" style="gap:6px;margin-bottom:12px"><a class="btn sm" data-cg="${p.id}" href="tel:${telLink(p.phone)}">Κλήση</a><button type="button" class="btn sm" id="p-book">📲 Να διαλέξει ώρα</button>${chBtnsHTML({contacts:[{name:p.name,phone:p.phone,email:p.email}]},'Καλησπέρα!','Μήνυμα',`data-cg="${p.id}"`)}</div>`:''}
    ${fut.length?`<div class="aglist">${fut.slice(0,6).map(o=>`<div class="small muted" style="margin:8px 0 2px">${WDAYS[wdOf(o.date)]} ${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div>${fut.length>6?`<p class="small muted" style="margin:8px 0 0">και ${fut.length-6} ακόμα μέσα στους επόμενους 6 μήνες.</p>`:''}`:'<p class="small muted">Κανένα επόμενο ραντεβού.</p>'}
    ${past.length?`<details style="margin-top:12px"><summary class="small"><b>Προηγούμενα</b> (${past.length})</summary><div class="aglist" style="margin-top:6px">${past.map(o=>`<div class="small muted" style="margin:8px 0 2px">${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div></details>`:''}</div>`}</div>
   ${isNew?`<div class="card conscard"><h3>🛡️ Συγκαταθέσεις για μηνύματα</h3><p class="small muted" style="margin:0">Μπαίνουν μόλις αποθηκεύσεις ${esc(LX('whoAcc'))}.</p></div>`:`<div class="card conscard" id="p-cons"></div>`}`;
@@ -516,7 +517,7 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   const dl=$('#p-del');if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.sid===p0.id).length;if(!await confirmDlg(`Διαγραφή «${esc(stuName(p0))}»${n?` και ${n===1?'του ραντεβού του':'των '+n+' ραντεβού του'}`:''}; Δεν αναιρείται.`,{ok:'Διαγραφή',danger:true}))return;
     clearDraft();S.data.students=S.data.students.filter(x=>x.id!==p0.id);S.data.appts=appts().filter(a=>a.sid!==p0.id);S.data.waitlist=(S.data.waitlist||[]).filter(w=>w.sid!==p0.id);save();toast('Διαγράφηκε.');go('people');};
   const nb=$('#p-new');if(nb)nb.onclick=()=>apptDialog({date:todayISO(),sids:[p0.id]});
-  if(rb){scrollTo(0,0);setTimeout(()=>scrollTo(0,0),120);setTimeout(()=>scrollTo(0,0),400);}if(!isNew)consCard(p0);const rbb=$("#p-remback");if(rbb)rbb.onclick=()=>remBackGo();}
+  {const pb=$('#p-book');if(pb)pb.onclick=()=>bookShareDialog(p0);}if(rb){scrollTo(0,0);setTimeout(()=>scrollTo(0,0),120);setTimeout(()=>scrollTo(0,0),400);}if(!isNew)consCard(p0);const rbb=$("#p-remback");if(rbb)rbb.onclick=()=>remBackGo();}
 const PERS_COLORS=['#7462B4','#3A8A61','#2F7FA8','#C77A3A','#B4527A','#8A7A2E','#C46A7A','#5A6ACF','#2E8C8C','#9C5BB5'];
 
 /* ---------- ρυθμίσεις: λίστα κατηγοριών, κάθε κατηγορία σε δική της σελίδα ---------- */
@@ -536,6 +537,77 @@ const SET_SECS=()=>[
 function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_SECS();const sec=L.find(x=>x[0]===id);
   if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}<div class="setlist">${L.map(([k,,i,t,d])=>`<a class="setrow" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div><p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
   M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
+
+/* ---------- κρατήσεις από πελάτες (τρόπος Α: σύνδεσμος, χωρίς διακομιστή) ----------
+   Ο σύνδεσμος κουβαλά τις ελεύθερες ώρες (συμπιεσμένες). Ο πελάτης διαλέγει ώρα στη σελίδα kratisi.html
+   και στέλνει μήνυμα (Viber / SMS / WhatsApp / email) με σύνδεσμο «#/book?r=…». Το πάτημά του
+   ανοίγει το Ημερολόγιο και η κράτηση μπαίνει με ένα «Καταχώρηση». Τίποτα δεν περνά από δικό μας διακομιστή. */
+function bkCfg(){return Object.assign({days:14,ch:'vswe'},S.data.settings.book||{});}
+function b64uEnc(u){let b='';for(let i=0;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64uDec(x){x=x.replace(/-/g,'+').replace(/_/g,'/');while(x.length%4)x+='=';const b=atob(x);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+async function packZ(obj){const bytes=new TextEncoder().encode(JSON.stringify(obj));
+  if(window.CompressionStream){const cs=new CompressionStream('deflate-raw');const z=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(cs)).arrayBuffer());return 'z'+b64uEnc(z);}
+  return 'j'+b64uEnc(bytes);}
+function bookSlots(days){const out=[];const t=todayISO();const du=IM_DEF.dur();const PV=providers();
+  for(let i=0;i<days;i++){const d=addDays(t,i);const set=new Set();PV.forEach(p=>slotsFor(d,p.id,du).forEach(x=>set.add(tmin(x))));if(set.size)out.push([d,[...set].sort((a,b)=>a-b)]);}
+  return out;}
+async function bookLink(){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
+  const D={v:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,a:new URL('./',location.href).href,s:S2};
+  return{url:new URL('kratisi.html',location.href).href.split('#')[0]+'#k='+(await packZ(D)),slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
+async function bookShareDialog(p){const B=biz();
+  if(!B.phone&&!B.email){if(await confirmDlg('Για να σου στέλνουν κρατήσεις, χρειάζεται το τηλέφωνο της επιχείρησης (για Viber / SMS) ή email. Να πας να το γράψεις;',{ok:'Πάμε'}))go('settings/info');return;}
+  const L0=await bookLink();const nm=p?(p.name||'').split(' ')[0]:'';
+  const txt=window.LANG==='en'?(nm?'Hello '+nm+'! ':'Hello! ')+'Pick a time that suits you here:\n'+L0.url:(nm?'Καλησπέρα '+nm+'! ':'Καλησπέρα! ')+'Διάλεξε μόνος σου ώρα για '+LX('one').toLowerCase()+' εδώ:\n'+L0.url;
+  const ph=p&&(p.phone||((p.contacts||[])[0]||{}).phone);
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📲 Σύνδεσμος κρατήσεων</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <p class="small" style="margin-top:0">Ο ${esc(LX('who')).toLowerCase()} ανοίγει τον σύνδεσμο, διαλέγει μέρα και ώρα από τις <b>ελεύθερες</b> σου και σου στέλνει την κράτηση με Viber, SMS, WhatsApp ή email. Εσύ πατάς τον σύνδεσμο στο μήνυμα και μπαίνει στο ημερολόγιο.</p>
+   <div class="note small">📅 Μέσα: <b>${L0.slots}</b> ελεύθερες ώρες σε <b>${L0.days}</b> μέρες (επόμενες ${bkCfg().days}).<br>⏱️ Οι ώρες είναι όπως είναι <b>τώρα</b>· για φρέσκες ώρες στείλε νέο σύνδεσμο.</div>
+   ${p?`<p class="small" style="margin:10px 0 4px">Προς: <b>${esc(stuName(p))}</b></p>`:''}
+   <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
+    ${ph?`<a class="btn" href="${smsHref(ph,txt)}">${ic('l-message-square',15)} SMS</a><a class="btn" target="_blank" rel="noopener" href="${waHref(ph,txt)}">WhatsApp</a>`:''}
+    <a class="btn" href="${viberHref(txt)}">Viber</a>
+    ${navigator.share?`<button type="button" class="btn" id="bk-sh">${ic('send',15)} Κοινοποίηση…</button>`:''}
+    <button type="button" class="btn" id="bk-cp">${ic('copy',15)} Αντιγραφή</button>
+    <a class="btn ghost" href="${esc(L0.url)}" target="_blank" rel="noopener">👀 Δες τη σελίδα</a></div>
+   <details style="margin-top:12px"><summary class="small"><b>Ρυθμίσεις κρατήσεων</b></summary>
+    <div class="field" style="margin-top:8px"><label class="f">Πόσες μέρες μπροστά</label><div class="seg" id="bk-days">${[7,14,21,30].map(n=>`<button type="button" data-bd="${n}" class="${bkCfg().days===n?'on':''}">${n}</button>`).join('')}</div></div>
+    <div class="field"><label class="f">Πώς μπορούν να σου στείλουν</label><div class="chips">${[['v','Viber'],['s','SMS'],['w','WhatsApp'],['e','Email']].map(([k,l])=>`<button type="button" class="chipt ${bkCfg().ch.includes(k)?'on':''}" data-bch="${k}">${l}</button>`).join('')}</div>
+     <div class="tiny muted" style="margin-top:4px">Viber / SMS / WhatsApp στο ${esc(B.phone||'— (λείπει τηλέφωνο)')} · Email στο ${esc(B.email||'— (λείπει email)')}</div></div></details>`,{guard:false});
+  const sh=$('#bk-sh',md.el);if(sh)sh.onclick=()=>navigator.share({title:'Κράτηση ραντεβού',text:txt}).catch(()=>{});
+  $('#bk-cp',md.el).onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('Αντιγράφηκε — επικόλλησέ το όπου θέλεις.','ok'));};
+  if(p)$$('a.btn',md.el).forEach(a=>{if(/^(sms|viber|https:\/\/wa)/.test(a.getAttribute('href')))a.addEventListener('click',()=>logMsg(p,'Σύνδεσμος κρατήσεων',a.textContent.trim()));});
+  $$('[data-bd]',md.el).forEach(b=>b.onclick=()=>{S.data.settings.book=Object.assign(bkCfg(),{days:+b.dataset.bd});save();md.close();bookShareDialog(p);});
+  $$('[data-bch]',md.el).forEach(b=>b.onclick=()=>{let ch=bkCfg().ch;ch=ch.includes(b.dataset.bch)?ch.replace(b.dataset.bch,''):ch+b.dataset.bch;if(!ch)return toast('Άφησε τουλάχιστον έναν τρόπο.','bad');S.data.settings.book=Object.assign(bkCfg(),{ch});save();md.close();bookShareDialog(p);});}
+/* το πάτημα του συνδέσμου από το μήνυμα του πελάτη */
+function bookDecode(r){try{if(!r||r[0]!=='j')return null;const o=JSON.parse(new TextDecoder().decode(b64uDec(r.slice(1))));
+  if(!o||o.v!==1||!/^\d{4}-\d{2}-\d{2}$/.test(o.d)||!/^\d{2}:\d{2}$/.test(o.s))return null;
+  const c=(x,n)=>String(x||'').replace(/\s+/g,' ').trim().slice(0,n);return{d:o.d,s:o.s,u:Math.min(Math.max(+o.u||IM_DEF.dur(),10),480),n:c(o.n,80),ph:c(o.ph,25),no:c(o.no,200),pr:!!o.pr,id:c(o.id,20)};}catch(e){return null;}}
+function bookImport(code){const q=bookDecode(code);if(!q)return toast('Ο σύνδεσμος κράτησης δεν είναι σωστός.','bad');
+  const seen=(S.data.bookSeen=S.data.bookSeen||{});const key=q.id+'|'+q.d+'|'+q.s;
+  const e=tstr(tmin(q.s)+q.u);const PV=providers();const freeP=PV.find(p=>!conflicts(q.d,q.s,e,'',p.id).length&&inWork(tmin(q.s),q.u));
+  const existing=S.data.students.find(p=>q.ph&&phKey(p.phone||((p.contacts||[])[0]||{}).phone)===phKey(q.ph));
+  const past=q.d<todayISO();const closed=isClosed(q.d)||!workDay(q.d);
+  const alt=()=>{const out=[];let d=q.d<todayISO()?todayISO():q.d;for(let k=0;k<30&&out.length<3;k++,d=addDays(d,1)){const set=new Set();PV.forEach(p=>slotsFor(d,p.id,q.u).forEach(x=>set.add(x)));[...set].sort().forEach(x=>{if(out.length<3&&!(d===q.d&&x===q.s))out.push([d,x]);});}return out;};
+  const when=WDAYS[wdOf(q.d)]+' '+fmtShort(q.d)+' · '+q.s+'–'+e;
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📲 Νέα κράτηση</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <div class="qsum"><span class="av lg">${esc((q.n||'?')[0].toUpperCase())}</span><div><b>${esc(q.n)}</b><div class="small">${esc(q.ph)}${existing?` · <span style="color:var(--ok)">υπάρχει ήδη στους ${esc(LX('whoPlL'))}</span>`:` · <span class="muted">νέος ${esc(LX('who')).toLowerCase()}</span>`}</div></div></div>
+   <div class="note" style="margin:10px 0"><b>📅 ${esc(when)}</b>${q.no?`<div class="small" style="margin-top:4px">📝 ${esc(q.no)}</div>`:''}${q.pr?`<div class="tiny muted" style="margin-top:4px">✓ Δέχεται και προσφορές</div>`:''}</div>
+   ${seen[key]?`<div class="note small warnnote">Αυτή η κράτηση έχει ήδη καταχωρηθεί (${esc(atTxt(seen[key]))}).</div><div class="row" style="justify-content:flex-end;margin-top:10px"><a class="btn pri" href="#/agenda?view=day&d=${q.d}" data-close>Δες τη μέρα</a></div>`
+   :past?`<div class="note small warnnote">Η μέρα αυτή έχει περάσει.</div>`
+   :(freeP&&!closed)?`<div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px"><button type="button" class="btn" data-close>Όχι τώρα</button><button type="button" class="btn pri" id="bi-ok">${ic('check',16)} Καταχώρηση</button></div>`
+   :`<div class="note small warnnote">⚠️ ${closed?'Εκείνη τη μέρα είσαι κλειστά.':'Η ώρα αυτή πιάστηκε στο μεταξύ.'} Στείλε του άλλες ώρες:</div><div id="bi-alt" style="margin-top:8px"></div>`}`,{guard:false});
+  const ok=$('#bi-ok',md.el);if(ok)ok.onclick=()=>{let sid=existing&&existing.id;
+    if(!sid)sid=IM_NEWPERSON(q.n,{phone:q.ph,cons:'yes',consHow:'από τη σελίδα κρατήσεων'});const p=getStudent(sid);
+    if(q.pr)setCons(p,'promo',true,'από τη σελίδα κρατήσεων');else if(!p.cons||!p.cons.appt)setCons(p,'appt',true,'από τη σελίδα κρατήσεων');
+    const a={id:uid(),sid,kind:'once',date:q.d,d:wdOf(q.d),s:q.s,e,note:q.no||'',ex:{},by:freeP.id==='me'?undefined:freeP.id,created:new Date().toISOString(),src:'link'};
+    appts().push(a);seen[key]=new Date().toISOString();logMsg(p,'Κράτηση από τον σύνδεσμο: '+fmtShort(q.d)+' '+q.s,'σύνδεσμος');save();md.close();render();
+    toast('Καταχωρήθηκε. Στείλε επιβεβαίωση.','ok');setTimeout(()=>{const txt=confText(a);const ph=q.ph;
+      const m2=modal(`<h3 style="margin-top:0">✅ Στείλε επιβεβαίωση</h3><p class="small muted" style="margin-top:0">${esc(txt)}</p><div class="row" style="gap:8px;flex-wrap:wrap">${chBtnsHTML({contacts:[{name:q.n,phone:ph}]},txt,'Επιβεβαίωση ραντεβού','data-bcf="1"')}</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" data-close>Κλείσιμο</button></div>`,{guard:false});
+      m2.el.addEventListener('click',ev=>{const b=ev.target.closest('[data-bcf]');if(b)logMsg(p,'Επιβεβαίωση κράτησης '+fmtShort(q.d)+' '+q.s,b.textContent.trim());});},250);};
+  const al=$('#bi-alt',md.el);if(al){(async()=>{const A=alt();const L0=await bookLink();
+    const fm=A.map(([d,x])=>WDAYS_S[wdOf(d)]+' '+fmtShort(d)+' '+x).join(', ');const first=(q.n||'').split(' ')[0];const slot=WDAYS[wdOf(q.d)]+' '+fmtShort(q.d)+' '+q.s;
+    const txt=window.LANG==='en'?'Hello '+first+'! Sorry, '+slot+' is no longer free.'+(A.length?' I can do: '+fm+'.':'')+'\nOr pick another time here:\n'+L0.url:'Καλησπέρα '+first+'! Δυστυχώς η ώρα '+slot+' δεν είναι πια ελεύθερη.'+(A.length?' Μπορώ: '+fm+'.':'')+'\nΉ διάλεξε άλλη ώρα εδώ:\n'+L0.url;
+    al.innerHTML=`<p class="small" style="margin:0 0 6px">${A.length?'Πρώτες ελεύθερες: <b>'+A.map(([d,x])=>esc(WDAYS_S[wdOf(d)]+' '+fmtShort(d)+' '+x)).join(' · ')+'</b>':'Δεν βρέθηκαν ελεύθερες ώρες τις επόμενες 30 μέρες.'}</p><div class="row" style="gap:8px;flex-wrap:wrap">${chBtnsHTML({contacts:[{name:q.n,phone:q.ph}]},txt,'Κράτηση ραντεβού','')}</div>`;})();}}
 /* ---------- λέξεις: βοήθεια για κάθε κουτάκι ---------- */
 const LXF=[['who','Τίτλος στην καρτέλα: «Νέος ___»','Νέος {}'],['whoAcc','Στο νέο ραντεβού: «Διάλεξε ___»','Διάλεξε {}…'],['whoGen','Κουμπί: «Καρτέλα ___»','Καρτέλα {}'],['whoPl','Στο κάτω μενού: «___»','{}'],['whoPlL','Στη φράση: «Πάγιοι ___»','Πάγιοι {}'],['one','Στο ημερολόγιο του κινητού: «___: Μαρία»','{}: Μαρία']];
 const T2=(el,en)=>window.LANG==='en'?en:el;
