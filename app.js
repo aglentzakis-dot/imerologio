@@ -193,6 +193,11 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
 function viewAgendaApp(r){viewAgenda(r);
+  /* «Όλοι ▾» στην ίδια σειρά με την ημερομηνία· οι πληροφορίες του μήνα κάτω από την ημέρα */
+  {const pb=$('#main .pvbar'),dh=$('#main .dstrip-h'),ph=$('#main .perhd');
+   if(pb){if(dh){dh.classList.add('withpv');dh.insertBefore(pb,dh.children[1]||null);}else if(ph){ph.classList.add('withpv');ph.appendChild(pb);}}
+   const tl=$('#main .tl');if(tl&&dh){const st=$('#main .dstat'),rw=st&&st.nextElementSibling&&st.nextElementSibling.classList.contains('row')?st.nextElementSibling:null;
+     const box=document.createElement('div');box.className='aginfo';if(rw)box.appendChild(rw);if(st)box.appendChild(st);if(box.children.length)tl.after(box);}}
   $$('#main .tl-ev:not(.tl-blk) b').forEach(b=>{if(!b.querySelector('.nm')){const t=b.textContent.trim();const sp=t.indexOf(' ');b.innerHTML=(sp>0&&sp<3?esc(t.slice(0,sp))+' ':'')+'<span class="nm">'+esc(sp>0&&sp<3?t.slice(sp+1):t)+'</span>';}});
   {const h=$('.page-head .actions');if(h){const e=document.createElement('button');e.className='eyebtn '+(S.data.settings.hideNames?'off':'');e.setAttribute('aria-label',S.data.settings.hideNames?'Εμφάνιση ονομάτων':'Απόκρυψη ονομάτων');e.title=e.getAttribute('aria-label');e.innerHTML=ic('eye',20);
     e.onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();document.body.classList.toggle('hidenames',!!S.data.settings.hideNames);e.classList.toggle('off',!!S.data.settings.hideNames);toast(S.data.settings.hideNames?'Τα ονόματα κρύφτηκαν. Πάτα ξανά το μάτι για να φανούν.':'Τα ονόματα φαίνονται.');};h.insertBefore(e,h.firstChild);}}
