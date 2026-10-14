@@ -43,6 +43,8 @@ input.in:focus,textarea.in:focus{outline:none;border-color:var(--brand)}
 .done{text-align:center;padding:26px 16px}.done .big{font-size:3rem}
 .err{color:var(--bad);font-size:.85rem;margin-top:6px;min-height:1em}
 .hidden{display:none}
+.adr{margin-top:12px}.adr summary{color:var(--brand-txt);font-weight:600;cursor:pointer}
+.cons{margin-top:14px;padding:12px;border-radius:12px;background:var(--bg)}.cons .chk{margin-top:8px}
 .vtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);padding:4px;border-radius:12px;margin-bottom:12px}
 .vtabs button{border:0;background:none;padding:9px;border-radius:9px;font:inherit;font-weight:600;color:var(--ink2);cursor:pointer}.vtabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .wnav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}.wbtn{border:1px solid var(--line);background:#fff;border-radius:10px;width:40px;height:34px;font-size:1.2rem;cursor:pointer}.wbtn:disabled{opacity:.35}
@@ -69,12 +71,12 @@ const T={
   you:'Τα στοιχεία σου',name:'Ονοματεπώνυμο',phone:'Τηλέφωνο',note:'Σημείωση (προαιρετικό)',promo:'Θέλω να λαμβάνω και προσφορές και νέα (μπορώ να το σταματήσω όποτε θέλω).',
   sendWith:'Στείλε την κράτηση με',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
   priv:b=>`Τα στοιχεία σου πηγαίνουν μόνο στον/στην «${b}», μέσα από την εφαρμογή μηνυμάτων σου. Η σελίδα αυτή δεν τα αποθηκεύει και δεν τα στέλνει πουθενά αλλού.`,
-  asOf:d=>'Ελεύθερες ώρες όπως ήταν στις '+d,expired:'Ο σύνδεσμος έχει λήξει. Ζήτησε νέο σύνδεσμο.',bad:'Ο σύνδεσμος δεν είναι σωστός. Ζήτησε νέο σύνδεσμο.',
+  asOf:d=>'Ελεύθερες ώρες όπως ήταν στις '+d,expired:'Ο σύνδεσμος έχει λήξει. Ζήτησε νέο σύνδεσμο.',off:'Η κράτηση από εδώ δεν είναι ενεργή αυτή τη στιγμή. Επικοινώνησε μαζί μας για ραντεβού.',call:'Κάλεσε',bad:'Ο σύνδεσμος δεν είναι σωστός. Ζήτησε νέο σύνδεσμο.',
   needName:'Γράψε το όνομά σου.',needPhone:'Γράψε ένα τηλέφωνο για να σε ειδοποιήσουν.',needSlot:'Διάλεξε πρώτα μέρα και ώρα.',
   sentT:'Η κράτηση στάλθηκε!',sentP:b=>`Μόλις την επιβεβαιώσει ο/η «${b}», θα σου απαντήσει. Αν δεν άνοιξε η εφαρμογή μηνυμάτων, δοκίμασε άλλο κουμπί.`,again:'Πίσω',
-  msg:(o,when,n,ph,no,link,pr)=>`Καλησπέρα! Θα ήθελα ${o.toLowerCase()} ${when}.\nΌνομα: ${n}\nΤηλ: ${ph}${no?'\nΣημείωση: '+no:''}${pr?'\nΔέχομαι και προσφορές.':''}\n\nΓια καταχώρηση στο ημερολόγιο πατήστε:\n${link}`,
+  msg:(o,when,n,ph,no,link,pr,ca,ad)=>`Καλησπέρα! Θα ήθελα ${o.toLowerCase()} ${when}.\nΌνομα: ${n}\nΤηλ: ${ph}${ad?'\nΔιεύθυνση: '+ad:''}${no?'\nΣημείωση: '+no:''}\nΜηνύματα για το ραντεβού: ${ca?'ΝΑΙ':'ΟΧΙ'} · Προσφορές: ${pr?'ΝΑΙ':'ΟΧΙ'}\n\nΓια καταχώρηση στο ημερολόγιο πατήστε:\n${link}`,
   vbHint:b=>`Viber: διάλεξε τη συνομιλία με «${b}». Αν το μήνυμα δεν μπήκε μόνο του, πάτα παρατεταμένα στο κουτί γραφής → «Επικόλληση» → Αποστολή.`,cut:'Ο σύνδεσμος κόπηκε στη μέση από την εφαρμογή μηνυμάτων. Ζήτησε να σου τον στείλουν ξανά με SMS ή με «Κοινοποίηση».',
-  hi:f=>`Γεια σου ${f}! Διάλεξε ώρα και πάτα αποστολή`,hiTop:f=>`Γεια σου ${f} 👋 Διάλεξε μέρα και ώρα`,useMe:n=>`Είσαι ο/η ${n}; Πάτα για να μπουν τα στοιχεία σου`,notMe:n=>`Δεν είσαι ο/η ${n}; Γράψε τα στοιχεία σου`,
+  hi:f=>`Γεια σου ${f}! Διάλεξε ώρα και πάτα αποστολή`,hiTop:f=>`Γεια σου ${f} 👋 Διάλεξε μέρα και ώρα`,permNote:b=>`Αυτές είναι οι ώρες λειτουργίας. Ο/Η «${b}» θα σου επιβεβαιώσει την ώρα ή θα σου προτείνει άλλη.`,addrS:'+ Διεύθυνση (προαιρετικό — π.χ. αν έρχονται στο σπίτι σου)',addrP:'Οδός, αριθμός, περιοχή',consT:'Τι θέλεις να σου στέλνουν;',consA:b=>`Μηνύματα για το ραντεβού μου (επιβεβαίωση, υπενθύμιση, αλλαγή) από «${b}»`,consNote:'Τα αλλάζεις όποτε θέλεις: απάντησε ΣΤΟΠ για τις προσφορές ή ΣΤΟΠ ΟΛΑ για όλα.',useMe:n=>`Είσαι ο/η ${n}; Πάτα για να μπουν τα στοιχεία σου`,notMe:n=>`Δεν είσαι ο/η ${n}; Γράψε τα στοιχεία σου`,
   addMine:'Κράτα το στο δικό μου Ημερολόγιο (εφαρμογή)',calV:'Ημερολόγιο',listV:'Λίστα',legFree:'Ελεύθερο',legBusy:'Πιασμένο',yours:'Το ραντεβού σου',yoursS:'Εσύ',tapGreen:'Πάτα ένα πράσινο κουτάκι για να διαλέξεις ώρα.',
   addCal:'Βάλ\' το στο ημερολόγιο του κινητού μου',pending:'Περιμένει επιβεβαίωση από την επιχείρηση.',ownT:'Θέλεις κι εσύ τέτοιο ημερολόγιο;',ownP:'Για τη δουλειά σου ή για εσένα — δωρεάν, στα ελληνικά, τα δεδομένα μένουν στο κινητό σου.',ownB:'Κατέβασε το Ημερολόγιο',
   at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
@@ -82,12 +84,12 @@ const T={
   you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',promo:'I also want to receive offers and news (I can stop anytime).',
   sendWith:'Send the booking via',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
   priv:b=>`Your details go only to “${b}”, through your own messaging app. This page does not store them or send them anywhere else.`,
-  asOf:d=>'Free times as of '+d,expired:'This link has expired. Please ask for a new one.',bad:'This link is not valid. Please ask for a new one.',
+  asOf:d=>'Free times as of '+d,expired:'This link has expired. Please ask for a new one.',off:'Online booking from here is not active right now. Please contact us for an appointment.',call:'Call',bad:'This link is not valid. Please ask for a new one.',
   needName:'Please type your name.',needPhone:'Please type a phone number so they can reach you.',needSlot:'Choose a day and time first.',
   sentT:'Booking sent!',sentP:b=>`“${b}” will reply once they confirm it. If your messaging app didn’t open, try another button.`,again:'Back',
-  msg:(o,when,n,ph,no,link,pr)=>`Hello! I would like to book ${when}.\nName: ${n}\nPhone: ${ph}${no?'\nNote: '+no:''}${pr?'\nI accept offers too.':''}\n\nTo add it to the calendar tap:\n${link}`,
+  msg:(o,when,n,ph,no,link,pr,ca,ad)=>`Hello! I would like to book ${when}.\nName: ${n}\nPhone: ${ph}${ad?'\nAddress: '+ad:''}${no?'\nNote: '+no:''}\nAppointment messages: ${ca?'YES':'NO'} · Offers: ${pr?'YES':'NO'}\n\nTo add it to the calendar tap:\n${link}`,
   vbHint:b=>`Viber: pick the chat with “${b}”. If the message didn’t appear, long-press the text box → “Paste” → Send.`,cut:'The link was cut short by the messaging app. Ask them to send it again by SMS or “Share”.',
-  hi:f=>`Hi ${f}! Pick a time and send`,hiTop:f=>`Hi ${f} 👋 Pick a day and time`,useMe:n=>`Are you ${n}? Tap to fill in your details`,notMe:n=>`Not ${n}? Enter your details`,
+  hi:f=>`Hi ${f}! Pick a time and send`,hiTop:f=>`Hi ${f} 👋 Pick a day and time`,permNote:b=>`These are the opening hours. “${b}” will confirm your time or suggest another.`,addrS:'+ Address (optional — e.g. if they visit your home)',addrP:'Street, number, area',consT:'What would you like to receive?',consA:b=>`Messages about my appointment (confirmation, reminder, change) from “${b}”`,consNote:'Change anytime: reply STOP for offers or STOP ALL for everything.',useMe:n=>`Are you ${n}? Tap to fill in your details`,notMe:n=>`Not ${n}? Enter your details`,
   addMine:'Keep it in my own Calendar app',calV:'Calendar',listV:'List',legFree:'Free',legBusy:'Taken',yours:'Your appointment',yoursS:'You',tapGreen:'Tap a green box to pick a time.',
   addCal:'Add it to my phone calendar',pending:'Waiting for confirmation from the business.',ownT:'Want a calendar like this?',ownP:'For your work or for yourself — free, your data stays on your phone.',ownB:'Get the Calendar app',
   at:'at',subj:'Appointment booking',wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],wdL:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],today:'Today',tomorrow:'Tomorrow'}};
@@ -103,7 +105,10 @@ const tstr=m=>pad(Math.floor(m/60))+':'+pad(m%60);
 function b64uDec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 function b64uEnc(u){let b='';for(let i=0;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 async function unpack(s){const k=s[0],body=s.slice(1);let bytes=b64uDec(body);
-  if(k==='c'){const o=JSON.parse(new TextDecoder().decode(bytes));const out=[];const base=new Date(o.b+'T12:00');
+  if(k==='c'){const o=JSON.parse(new TextDecoder().decode(bytes));const out=[];
+    if(o.pm&&Array.isArray(o.w)){if(!o.x||o.x<isoDate(new Date())){o.s=[];o.off=1;o.v=1;return o;}const dec=h=>{const L=[];for(let j=0;j<h.length;j++){const v=parseInt(h[j],16);for(let b=0;b<4;b++)if(v&(8>>b))L.push(o.t0+(j*4+b)*15);}return L;};const W=o.w.map(h=>h?dec(h):[]);
+      const t0=new Date();for(let i=0;i<(o.dd||14);i++){const dt=new Date(t0.getFullYear(),t0.getMonth(),t0.getDate()+i,12);const L=W[dt.getDay()]||[];if(L.length)out.push([isoDate(dt),L]);}o.s=out;o.v=1;return o;}
+    const base=new Date(o.b+'T12:00');
     (o.d||[]).forEach((h,i)=>{if(!h)return;const L=[];for(let j=0;j<h.length;j++){const v=parseInt(h[j],16);for(let b=0;b<4;b++)if(v&(8>>b))L.push(o.t0+(j*4+b)*15);}const dt=new Date(base.getTime()+i*864e5);if(L.length)out.push([isoDate(dt),L]);});
     o.s=out;o.v=1;return o;}
   if(k==='z'){const ds=new DecompressionStream('deflate-raw');bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer());}
@@ -124,7 +129,7 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
   if(!D){app.innerHTML=`<div class="card done"><div class="big">🔗</div><p>${esc(window.__err||t('bad'))}</p>${window.__why?`<p class="tiny muted">(${esc(window.__why)})</p>`:''}</div>`;return;}
   const S=liveSlots();
   const head=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(PC&&!other?t('hiTop')(PC.n.split(' ')[0]):t('title'))}</p></div><button class="lang" id="lg" aria-label="Language">${L==='el'?'🇬🇧':'🇬🇷'}</button></div>`;
-  if(!S.length){app.innerHTML=head+`<div class="card done"><div class="big">⏳</div><p>${esc(t('expired'))}</p></div>`;bindLang();return;}
+  if(!S.length){app.innerHTML=head+`<div class="card done"><div class="big">⏳</div><p>${esc(t(D.off?'off':'expired'))}</p>${D.off&&D.ph?`<a class="send" style="display:inline-block;margin-top:10px;background:var(--brand)" href="tel:${esc(intl(D.ph))}">📞 ${esc(t('call'))} ${esc(D.ph)}</a>`:''}</div>`;bindLang();return;}
   if(!day||!S.some(x=>x[0]===day))day=S[0][0];const cur=(S.find(x=>x[0]===day)||[,[]])[1];if(slot&&!cur.includes(slot))slot=null;
   const g=new Date(D.g);const ch=String(D.ch||'svwe');
   const saved=(()=>{try{return JSON.parse(localStorage.getItem('kr-me')||'{}');}catch(_){return{};}})();
@@ -133,14 +138,18 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
   ${mode==='cal'?weekHTML(S):`<div><h2>${esc(t('pick'))}</h2><div class="days">${S.map(([d,l])=>{const x=dayLabel(d);return`<button class="day ${d===day?'on':''}" data-d="${d}"><small>${esc(x.top)}</small><b>${esc(x.num)}</b><i>${esc(t('free')(l.length))}</i></button>`;}).join('')}</div>
    <h2 style="margin-top:14px">${esc(t('time'))}</h2><div class="times">${cur.map(m=>`<button class="time ${m===slot?'on':''}" data-m="${m}">${tstr(m)}</button>`).join('')||`<p class="muted small">${esc(t('none'))}</p>`}</div>
 </div>`}
-   <p class="tiny muted" style="margin:10px 0 0">${esc(t('asOf')(g.toLocaleString(L==='el'?'el-GR':'en-GB',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})))}</p></div>
+   <p class="tiny muted" style="margin:10px 0 0">${D.pm?esc(t('permNote')(D.n||'')):esc(t('asOf')(g.toLocaleString(L==='el'?'el-GR':'en-GB',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})))}</p></div>
   <div class="card"><h2>${esc(PC&&!other?t('hi')(PC.n.split(' ')[0]):t('you'))}</h2>
    ${slot?`<div class="sum">📅 ${esc(dayLabel(day).long)} · ${tstr(slot)}</div>`:''}
    <div class="${PC&&!other?'hidden':''}"><label class="f" for="nm">${esc(t('name'))}</label><input class="in" id="nm" autocomplete="name" maxlength="80" value="${esc(PC&&!other?PC.n:'')}">
    <label class="f" for="ph">${esc(t('phone'))}</label><input class="in" id="ph" type="tel" inputmode="tel" autocomplete="tel" maxlength="25" value="${esc(PC&&!other?PC.ph:'')}"></div>${!(PC&&!other)&&saved.n?`<button type="button" class="linkb" id="useme">${esc(t('useMe')(saved.n))}</button>`:''}
    ${PC&&!other?`<button type="button" class="linkb" id="notme">${esc(t('notMe')(PC.n))}</button>`:''}
    <label class="f" for="no">${esc(t('note'))}</label><textarea class="in" id="no" rows="2" maxlength="200"></textarea>
-   <label class="chk"><input type="checkbox" id="pr"><span>${esc(t('promo'))}</span></label>
+   <details class="adr"><summary class="small">${esc(t('addrS'))}</summary><input class="in" id="ad" autocomplete="street-address" maxlength="120" placeholder="${esc(t('addrP'))}" style="margin-top:8px"></details>
+   <div class="cons"><b class="small">${esc(t('consT'))}</b>
+    <label class="chk"><input type="checkbox" id="ca" checked><span>${esc(t('consA')(D.n||''))}</span></label>
+    <label class="chk"><input type="checkbox" id="pr"><span>${esc(t('promo'))}</span></label>
+    <p class="tiny muted" style="margin:6px 0 0">${esc(t('consNote'))}</p></div>
    <div class="err" id="er"></div>
    <h2 style="margin-top:12px">${esc(t('sendWith'))}</h2>
    <div class="sends">${D.ph&&ch.includes('v')?`<a class="send viber" data-via="v">${esc(t('viber'))}</a>`:''}${D.ph&&ch.includes('s')?`<a class="send sms" data-via="s">${esc(t('sms'))}</a>`:''}${D.ph&&ch.includes('w')?`<a class="send wa" data-via="w">${esc(t('wa'))}</a>`:''}${D.em&&ch.includes('e')?`<a class="send mail" data-via="e">${esc(t('mail'))}</a>`:''}</div>
@@ -150,8 +159,10 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{day=b.dataset.d;slot=null;draw();});
   app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;draw();});
   app.querySelectorAll('[data-wk]').forEach(b=>b.onclick=()=>{wk+=+b.dataset.wk;draw();});
-  app.querySelectorAll('[data-wd]').forEach(b=>b.onclick=()=>{const keep=['nm','ph','no'].map(k=>$('#'+k).value),pr=$('#pr').checked;day=b.dataset.wd;slot=+b.dataset.wm;draw();['nm','ph','no'].forEach((k,i)=>$('#'+k).value=keep[i]);$('#pr').checked=pr;$('.sum').scrollIntoView({behavior:'smooth',block:'center'});});
-  app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{slot=+b.dataset.m;const n=$('#nm').value,p=$('#ph').value,no=$('#no').value,pr=$('#pr').checked;draw();$('#nm').value=n;$('#ph').value=p;$('#no').value=no;$('#pr').checked=pr;$('.sum').scrollIntoView({behavior:'smooth',block:'center'});});
+  const keepF=()=>Object.fromEntries([...app.querySelectorAll('input[id],textarea[id]')].map(e=>[e.id,e.type==='checkbox'?e.checked:e.value]));
+  const backF=o=>{for(const[k,v]of Object.entries(o)){const e=document.getElementById(k);if(!e)continue;if(e.type==='checkbox')e.checked=v;else e.value=v;}};
+  app.querySelectorAll('[data-wd]').forEach(b=>b.onclick=()=>{const k=keepF();day=b.dataset.wd;slot=+b.dataset.wm;draw();backF(k);$('.sum').scrollIntoView({behavior:'smooth',block:'center'});});
+  app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{const k=keepF();slot=+b.dataset.m;draw();backF(k);$('.sum').scrollIntoView({behavior:'smooth',block:'center'});});
   app.querySelectorAll('[data-via]').forEach(a=>a.onclick=e=>{e.preventDefault();send(a.dataset.via);});}
 /* εβδομάδα σαν το ημερολόγιο: πράσινο = ελεύθερο, γκρι = πιασμένο (χωρίς ονόματα), χρώμα = δικό σου ραντεβού */
 function mondayOf(d){const x=new Date(d+'T12:00');const k=(x.getDay()+6)%7;x.setDate(x.getDate()-k);return isoDate(x);}
@@ -176,14 +187,14 @@ function bindLang(){const b=$('#lg');if(b)b.onclick=()=>{L=L==='el'?'en':'el';dr
 
 function send(via){const er=$('#er');er.textContent='';
   if(!slot)return er.textContent=t('needSlot');
-  const n=clip($('#nm').value,80),ph=clip($('#ph').value,25),no=clip($('#no').value,200),pr=$('#pr').checked;
+  const n=clip($('#nm').value,80),ph=clip($('#ph').value,25),no=clip($('#no').value,200),pr=$('#pr').checked,ca=$('#ca').checked,ad=clip(($('#ad')||{}).value,120);
   if(n.length<2)return er.textContent=t('needName');
   if(ph.replace(/\D/g,'').length<8)return er.textContent=t('needPhone');
   if(!(PC&&!other))try{localStorage.setItem('kr-me',JSON.stringify({n,p:ph}));}catch(_){}
-  const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,g:D.g,id:Math.random().toString(36).slice(2,10)};if(PC&&!other&&PC.i)req.sid=PC.i;
+  const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,ca:ca?1:0,ad,ts:Date.now(),g:D.g,id:Math.random().toString(36).slice(2,10)};if(PC&&!other&&PC.i)req.sid=PC.i;
   const link=new URL(D.a||'./',location.href).href.split('#')[0].split('?')[0].replace(/kratisi\.html$/,'')+'?book=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(req)));
   const when=dayLabel(day).long+' '+t('at')+' '+tstr(slot);
-  const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,no,link,pr);
+  const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,no,link,pr,ca,ad);
   let href;const num=intl(D.ph);
   if(via==='s')href=`sms:${num}${/iPhone|iPad|Mac/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(txt)}`;
   else if(via==='w')href=`https://wa.me/${num.replace(/^\+/,'')}?text=${encodeURIComponent(txt)}`;
