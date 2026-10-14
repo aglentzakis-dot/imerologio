@@ -1237,5 +1237,6 @@ window.EN_DICT={
 "χωρίς δεδομένα": "no data",
 "Διάλεξε «Viber» από τη λίστα και μετά τον παραλήπτη.": "Choose “Viber” from the list, then the recipient.",
 "Ο σύνδεσμος αντιγράφηκε. Αν στο Viber δεν φαίνεται ολόκληρος, κάνε «Επικόλληση».": "Link copied. If it looks incomplete in Viber, use “Paste”.",
-"Το κείμενο αντιγράφηκε· στο Viber κάνε «Επικόλληση».": "Text copied; in Viber use “Paste”."
+"Το κείμενο αντιγράφηκε· στο Viber κάνε «Επικόλληση».": "Text copied; in Viber use “Paste”.",
+"· ο σύνδεσμος είναι προσωπικός: δεν θα χρειαστεί να γράψει όνομα και τηλέφωνο.": "· this link is personal: they won’t need to type name or phone."
 };

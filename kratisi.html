@@ -43,6 +43,7 @@ input.in:focus,textarea.in:focus{outline:none;border-color:var(--brand)}
 .done{text-align:center;padding:26px 16px}.done .big{font-size:3rem}
 .err{color:var(--bad);font-size:.85rem;margin-top:6px;min-height:1em}
 .hidden{display:none}
+.linkb{border:0;background:none;color:var(--ink3);font:inherit;font-size:.82rem;text-decoration:underline;padding:6px 0 0;cursor:pointer}
 footer{text-align:center;color:var(--ink3);font-size:.75rem;margin-top:18px}
 </style>
 </head>
@@ -61,6 +62,7 @@ const T={
   sentT:'Η κράτηση στάλθηκε!',sentP:b=>`Μόλις την επιβεβαιώσει ο/η «${b}», θα σου απαντήσει. Αν δεν άνοιξε η εφαρμογή μηνυμάτων, δοκίμασε άλλο κουμπί.`,again:'Πίσω',
   msg:(o,when,n,ph,no,link,pr)=>`Καλησπέρα! Θα ήθελα ${o.toLowerCase()} ${when}.\nΌνομα: ${n}\nΤηλ: ${ph}${no?'\nΣημείωση: '+no:''}${pr?'\nΔέχομαι και προσφορές.':''}\n\nΓια καταχώρηση στο ημερολόγιο πατήστε:\n${link}`,
   vbHint:b=>`Viber: διάλεξε τη συνομιλία με «${b}». Αν το μήνυμα δεν μπήκε μόνο του, πάτα παρατεταμένα στο κουτί γραφής → «Επικόλληση» → Αποστολή.`,cut:'Ο σύνδεσμος κόπηκε στη μέση από την εφαρμογή μηνυμάτων. Ζήτησε να σου τον στείλουν ξανά με SMS ή με «Κοινοποίηση».',
+  hi:f=>`Γεια σου ${f}! Διάλεξε ώρα και πάτα αποστολή`,hiTop:f=>`Γεια σου ${f} 👋 Διάλεξε μέρα και ώρα`,notMe:n=>`Δεν είσαι ο/η ${n}; Γράψε τα στοιχεία σου`,
   at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
  en:{title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
   you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',promo:'I also want to receive offers and news (I can stop anytime).',
@@ -71,6 +73,7 @@ const T={
   sentT:'Booking sent!',sentP:b=>`“${b}” will reply once they confirm it. If your messaging app didn’t open, try another button.`,again:'Back',
   msg:(o,when,n,ph,no,link,pr)=>`Hello! I would like to book ${when}.\nName: ${n}\nPhone: ${ph}${no?'\nNote: '+no:''}${pr?'\nI accept offers too.':''}\n\nTo add it to the calendar tap:\n${link}`,
   vbHint:b=>`Viber: pick the chat with “${b}”. If the message didn’t appear, long-press the text box → “Paste” → Send.`,cut:'The link was cut short by the messaging app. Ask them to send it again by SMS or “Share”.',
+  hi:f=>`Hi ${f}! Pick a time and send`,hiTop:f=>`Hi ${f} 👋 Pick a day and time`,notMe:n=>`Not ${n}? Enter your details`,
   at:'at',subj:'Appointment booking',wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],wdL:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],today:'Today',tomorrow:'Tomorrow'}};
 let L=(()=>{try{const s=localStorage.getItem('glen-lang');if(s==='el'||s==='en')return s;}catch(_){}return String(navigator.language||'el').toLowerCase().startsWith('el')?'el':'en';})();
 const t=k=>T[L][k];
@@ -93,7 +96,7 @@ const intl=ph=>{let d=String(ph||'').replace(/[^\d+]/g,'');if(d.startsWith('00')
 const clip=(s,n)=>String(s||'').replace(/\s+/g,' ').trim().slice(0,n);
 
 /* ---------- κατάσταση ---------- */
-let D=null,day=null,slot=null;
+let D=null,day=null,slot=null,PC=null,other=false;
 function applyColor(c){if(!/^#[0-9a-f]{6}$/i.test(c||''))return;const r=document.documentElement.style;r.setProperty('--brand',c);
   const n=parseInt(c.slice(1),16),R=n>>16,G=n>>8&255,B=n&255;r.setProperty('--brand-soft',`rgba(${R},${G},${B},.16)`);document.querySelector('meta[name=theme-color]').content=c;}
 function dayLabel(d){const td=isoDate(new Date()),tm=isoDate(new Date(Date.now()+864e5));const dt=new Date(d+'T12:00');
@@ -104,7 +107,7 @@ function liveSlots(){const now=new Date(),td=isoDate(now),nm=now.getHours()*60+n
 function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');document.documentElement.lang=L;
   if(!D){app.innerHTML=`<div class="card done"><div class="big">🔗</div><p>${esc(window.__err||t('bad'))}</p>${window.__why?`<p class="tiny muted">(${esc(window.__why)})</p>`:''}</div>`;return;}
   const S=liveSlots();
-  const head=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(t('title'))}</p></div><button class="lang" id="lg" aria-label="Language">${L==='el'?'🇬🇧':'🇬🇷'}</button></div>`;
+  const head=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(PC&&!other?t('hiTop')(PC.n.split(' ')[0]):t('title'))}</p></div><button class="lang" id="lg" aria-label="Language">${L==='el'?'🇬🇧':'🇬🇷'}</button></div>`;
   if(!S.length){app.innerHTML=head+`<div class="card done"><div class="big">⏳</div><p>${esc(t('expired'))}</p></div>`;bindLang();return;}
   if(!day||!S.some(x=>x[0]===day))day=S[0][0];const cur=(S.find(x=>x[0]===day)||[,[]])[1];if(slot&&!cur.includes(slot))slot=null;
   const g=new Date(D.g);const ch=String(D.ch||'svwe');
@@ -113,10 +116,11 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
   <div class="card"><h2>${esc(t('pick'))}</h2><div class="days">${S.map(([d,l])=>{const x=dayLabel(d);return`<button class="day ${d===day?'on':''}" data-d="${d}"><small>${esc(x.top)}</small><b>${esc(x.num)}</b><i>${esc(t('free')(l.length))}</i></button>`;}).join('')}</div>
    <h2 style="margin-top:14px">${esc(t('time'))}</h2><div class="times">${cur.map(m=>`<button class="time ${m===slot?'on':''}" data-m="${m}">${tstr(m)}</button>`).join('')||`<p class="muted small">${esc(t('none'))}</p>`}</div>
    <p class="tiny muted" style="margin:10px 0 0">${esc(t('asOf')(g.toLocaleString(L==='el'?'el-GR':'en-GB',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})))}</p></div>
-  <div class="card"><h2>${esc(t('you'))}</h2>
+  <div class="card"><h2>${esc(PC&&!other?t('hi')(PC.n.split(' ')[0]):t('you'))}</h2>
    ${slot?`<div class="sum">📅 ${esc(dayLabel(day).long)} · ${tstr(slot)}</div>`:''}
-   <label class="f" for="nm">${esc(t('name'))}</label><input class="in" id="nm" autocomplete="name" maxlength="80" value="${esc(saved.n||'')}">
-   <label class="f" for="ph">${esc(t('phone'))}</label><input class="in" id="ph" type="tel" inputmode="tel" autocomplete="tel" maxlength="25" value="${esc(saved.p||'')}">
+   <div class="${PC&&!other?'hidden':''}"><label class="f" for="nm">${esc(t('name'))}</label><input class="in" id="nm" autocomplete="name" maxlength="80" value="${esc(PC&&!other?PC.n:(saved.n||''))}">
+   <label class="f" for="ph">${esc(t('phone'))}</label><input class="in" id="ph" type="tel" inputmode="tel" autocomplete="tel" maxlength="25" value="${esc(PC&&!other?PC.ph:(saved.p||''))}"></div>
+   ${PC&&!other?`<button type="button" class="linkb" id="notme">${esc(t('notMe')(PC.n))}</button>`:''}
    <label class="f" for="no">${esc(t('note'))}</label><textarea class="in" id="no" rows="2" maxlength="200"></textarea>
    <label class="chk"><input type="checkbox" id="pr"><span>${esc(t('promo'))}</span></label>
    <div class="err" id="er"></div>
@@ -124,7 +128,7 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
    <div class="sends">${D.ph&&ch.includes('v')?`<a class="send viber" data-via="v">${esc(t('viber'))}</a>`:''}${D.ph&&ch.includes('s')?`<a class="send sms" data-via="s">${esc(t('sms'))}</a>`:''}${D.ph&&ch.includes('w')?`<a class="send wa" data-via="w">${esc(t('wa'))}</a>`:''}${D.em&&ch.includes('e')?`<a class="send mail" data-via="e">${esc(t('mail'))}</a>`:''}</div>
    <p class="tiny muted" style="margin:12px 0 0">🔒 ${esc(t('priv')(D.n||''))}</p></div>
   <footer>Ημερολόγιο · GlenApps</footer>`;
-  bindLang();
+  bindLang();const nm2=$('#notme');if(nm2)nm2.onclick=()=>{other=true;draw();};
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{day=b.dataset.d;slot=null;draw();});
   app.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{slot=+b.dataset.m;const n=$('#nm').value,p=$('#ph').value,no=$('#no').value,pr=$('#pr').checked;draw();$('#nm').value=n;$('#ph').value=p;$('#no').value=no;$('#pr').checked=pr;$('.sum').scrollIntoView({behavior:'smooth',block:'center'});});
   app.querySelectorAll('[data-via]').forEach(a=>a.onclick=e=>{e.preventDefault();send(a.dataset.via);});}
@@ -135,8 +139,8 @@ function send(via){const er=$('#er');er.textContent='';
   const n=clip($('#nm').value,80),ph=clip($('#ph').value,25),no=clip($('#no').value,200),pr=$('#pr').checked;
   if(n.length<2)return er.textContent=t('needName');
   if(ph.replace(/\D/g,'').length<8)return er.textContent=t('needPhone');
-  try{localStorage.setItem('kr-me',JSON.stringify({n,p:ph}));}catch(_){}
-  const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,g:D.g,id:Math.random().toString(36).slice(2,10)};
+  if(!(PC&&!other))try{localStorage.setItem('kr-me',JSON.stringify({n,p:ph}));}catch(_){}
+  const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,g:D.g,id:Math.random().toString(36).slice(2,10)};if(PC&&!other&&PC.i)req.sid=PC.i;
   const link=new URL(D.a||'./',location.href).href.split('#')[0].split('?')[0].replace(/kratisi\.html$/,'')+'?book=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(req)));
   const when=dayLabel(day).long+' '+t('at')+' '+tstr(slot);
   const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,no,link,pr);
@@ -156,6 +160,7 @@ function showSent(when,vb){$('#app').innerHTML=`<div class="card done"><div clas
     D=await unpack(k);if(!D||D.v!==1||!Array.isArray(D.s))throw 0;
     D.n=clip(D.n,60);D.o=clip(D.o,30);D.ph=clip(D.ph,25);D.em=clip(D.em,80);
     if(D.l==='en'||D.l==='el'){try{if(!localStorage.getItem('glen-lang'))L=String(navigator.language||'').toLowerCase().startsWith('el')?'el':(D.l||L);}catch(_){}}
+    if(D.pc&&D.pc.n){PC={i:clip(D.pc.i,60),n:clip(D.pc.n,80),ph:clip(D.pc.ph,25)};}
     applyColor(D.c);}catch(e){D=null;window.__err=/Unterminated|Unexpected end|Bad control|JSON/i.test(String(e&&e.message))?(T[L]||T.el).cut:(T[L]||T.el).bad;window.__why=String(e&&e.message||e).slice(0,80);}
   draw();})();
 </script>

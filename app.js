@@ -568,23 +568,23 @@ function bookSlots(days){const out=[];const t=todayISO();const du=IM_DEF.dur();c
   return out;}
 /* οι ελεύθερες ώρες γράφονται ως «χάρτης» ανά 15λεπτο (δεκαεξαδικό ανά μέρα): μικρός σύνδεσμος, χωρίς συμπίεση,
    ώστε να ανοίγει σε κάθε κινητό και σε κάθε εσωτερικό φυλλομετρητή (Viber, Gmail…) */
-function slotPack(S2,days){const t=todayISO();const all=S2.flatMap(x=>x[1]);if(!all.length)return{b:t,t0:0,n:0,d:[]};
+function slotPack(S2,days){const t=todayISO();const all=S2.flatMap(x=>x[1]);if(!all.length)return{b:t,t0:0,d:[]};
   const t0=Math.floor(Math.min(...all)/15)*15,n=Math.floor((Math.max(...all)-t0)/15)+1;const M=new Map(S2);const d=[];
   for(let i=0;i<days;i++){const L=M.get(addDays(t,i));if(!L){d.push('');continue;}const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);d.push(h.replace(/0+$/,''));}
-  while(d.length&&!d[d.length-1])d.pop();return{b:t,t0,n,d};}
-async function bookLink(){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
-  const D=Object.assign({v:2,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},slotPack(S2,c.days));
+  while(d.length&&!d[d.length-1])d.pop();return{b:t,t0,d};}
+async function bookLink(p){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
+  const D=Object.assign({v:2,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},p?{pc:{i:p.id,n:stuName(p),ph:p.phone||((p.contacts||[])[0]||{}).phone||''}}:{},slotPack(S2,c.days));
   const k='c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));
   return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k='+k,slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
 async function bookShareDialog(p){const B=biz();
   if(!B.phone&&!B.email){if(await confirmDlg('Για να σου στέλνουν κρατήσεις, χρειάζεται το τηλέφωνο της επιχείρησης (για Viber / SMS) ή email. Να πας να το γράψεις;',{ok:'Πάμε'}))go('settings/info');return;}
-  const L0=await bookLink();const nm=p?(p.name||'').split(' ')[0]:'';
+  const L0=await bookLink(p);const nm=p?(p.name||'').split(' ')[0]:'';
   const txt=window.LANG==='en'?(nm?'Hello '+nm+'! ':'Hello! ')+'Pick a time that suits you here:\n'+L0.url:(nm?'Καλησπέρα '+nm+'! ':'Καλησπέρα! ')+'Διάλεξε μόνος σου ώρα για '+LX('one').toLowerCase()+' εδώ:\n'+L0.url;
   const ph=p&&(p.phone||((p.contacts||[])[0]||{}).phone);
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📲 Σύνδεσμος κρατήσεων</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <p class="small" style="margin-top:0">Ο ${esc(LX('who')).toLowerCase()} ανοίγει τον σύνδεσμο, διαλέγει μέρα και ώρα από τις <b>ελεύθερες</b> σου και σου στέλνει την κράτηση με Viber, SMS, WhatsApp ή email. Εσύ πατάς τον σύνδεσμο στο μήνυμα και μπαίνει στο ημερολόγιο.</p>
    <div class="note small">📅 Μέσα: <b>${L0.slots}</b> ελεύθερες ώρες σε <b>${L0.days}</b> μέρες (επόμενες ${bkCfg().days}).<br>⏱️ Οι ώρες είναι όπως είναι <b>τώρα</b>· για φρέσκες ώρες στείλε νέο σύνδεσμο.</div>
-   ${p?`<p class="small" style="margin:10px 0 4px">Προς: <b>${esc(stuName(p))}</b></p>`:''}
+   ${p?`<p class="small" style="margin:10px 0 4px">Προς: <b>${esc(stuName(p))}</b> · ο σύνδεσμος είναι προσωπικός: δεν θα χρειαστεί να γράψει όνομα και τηλέφωνο.</p>`:''}
    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
     ${ph?`<a class="btn" href="${smsHref(ph,txt)}">${ic('l-message-square',15)} SMS</a><a class="btn" target="_blank" rel="noopener" href="${waHref(ph,txt)}">WhatsApp</a>`:''}
     <button type="button" class="btn" id="bk-vb">Viber</button>
@@ -606,11 +606,11 @@ async function bookShareDialog(p){const B=biz();
 /* το πάτημα του συνδέσμου από το μήνυμα του πελάτη */
 function bookDecode(r){try{if(!r||r[0]!=='j')return null;const o=JSON.parse(new TextDecoder().decode(b64uDec(r.slice(1))));
   if(!o||o.v!==1||!/^\d{4}-\d{2}-\d{2}$/.test(o.d)||!/^\d{2}:\d{2}$/.test(o.s))return null;
-  const c=(x,n)=>String(x||'').replace(/\s+/g,' ').trim().slice(0,n);return{d:o.d,s:o.s,u:Math.min(Math.max(+o.u||IM_DEF.dur(),10),480),n:c(o.n,80),ph:c(o.ph,25),no:c(o.no,200),pr:!!o.pr,id:c(o.id,20)};}catch(e){return null;}}
+  const c=(x,n)=>String(x||'').replace(/\s+/g,' ').trim().slice(0,n);return{sid:c(o.sid,60),d:o.d,s:o.s,u:Math.min(Math.max(+o.u||IM_DEF.dur(),10),480),n:c(o.n,80),ph:c(o.ph,25),no:c(o.no,200),pr:!!o.pr,id:c(o.id,20)};}catch(e){return null;}}
 function bookImport(code){const q=bookDecode(code);if(!q)return toast('Ο σύνδεσμος κράτησης δεν είναι σωστός.','bad');
   const seen=(S.data.bookSeen=S.data.bookSeen||{});const key=q.id+'|'+q.d+'|'+q.s;
   const e=tstr(tmin(q.s)+q.u);const PV=providers();const freeP=PV.find(p=>!conflicts(q.d,q.s,e,'',p.id).length&&inWork(tmin(q.s),q.u));
-  const existing=S.data.students.find(p=>q.ph&&phKey(p.phone||((p.contacts||[])[0]||{}).phone)===phKey(q.ph));
+  const existing=(q.sid&&getStudent(q.sid))||S.data.students.find(p=>q.ph&&phKey(p.phone||((p.contacts||[])[0]||{}).phone)===phKey(q.ph));
   const past=q.d<todayISO();const closed=isClosed(q.d)||!workDay(q.d);
   const alt=()=>{const out=[];let d=q.d<todayISO()?todayISO():q.d;for(let k=0;k<30&&out.length<3;k++,d=addDays(d,1)){const set=new Set();PV.forEach(p=>slotsFor(d,p.id,q.u).forEach(x=>set.add(x)));[...set].sort().forEach(x=>{if(out.length<3&&!(d===q.d&&x===q.s))out.push([d,x]);});}return out;};
   const when=WDAYS[wdOf(q.d)]+' '+fmtShort(q.d)+' · '+q.s+'–'+e;
