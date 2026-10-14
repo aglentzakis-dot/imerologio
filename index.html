@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.43">
+<meta name="app-version" content="1.44">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -435,6 +435,7 @@ button.chip[data-av]{padding:7px 12px;font-size:.85rem}button.chip.on{background
 .setrow.prorow small{color:#b8660b;font-weight:600}
 #efm-l .efm-small{display:none}
 .pkmsg{padding:12px 14px;border-radius:14px;margin:8px 0;font-size:.92rem;line-height:1.4}.pkmsg.bad{background:color-mix(in srgb,var(--bad) 12%,var(--paper));border:1.5px solid color-mix(in srgb,var(--bad) 45%,var(--line));color:var(--ink)}.pkmsg.ok{background:color-mix(in srgb,var(--ok) 14%,var(--paper));border:1.5px solid color-mix(in srgb,var(--ok) 50%,var(--line))}
+.pvrow2{display:flex;align-items:center;gap:10px;width:100%;margin:0 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--brand) 6%,var(--paper));font:inherit;color:var(--ink);text-align:left;text-decoration:none;cursor:pointer}.pvrow2 span{flex:1;font-size:.92rem}.pvrow2 small{color:var(--brand);font-weight:700;font-size:.8rem}
 /* Pro */
 .probig{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 8px}.probig b{font-size:2rem;line-height:1;color:var(--brand)}.probig span{color:var(--ink2);font-size:.88rem}
 .proul{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:7px}.proul li{font-size:.92rem;line-height:1.35}
@@ -465,9 +466,9 @@ button.chip[data-av]{padding:7px 12px;font-size:.85rem}button.chip.on{background
 .tl-col{position:relative}
 .tl-col.closed{background:repeating-linear-gradient(135deg,rgba(214,64,64,.20) 0 8px,rgba(214,64,64,.05) 8px 16px)!important}
 .tl-col.off{background:repeating-linear-gradient(135deg,rgba(214,64,64,.13) 0 7px,rgba(214,64,64,.03) 7px 14px)}
-.tl-col.closed::before,.tl-col.off::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='110'%3E%3Cpath d='M14 49l12 12M26 49L14 61' stroke='%23C83A3A' stroke-opacity='.45' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center top/40px 110px repeat-y}
+
 .tl-offh{background:repeating-linear-gradient(135deg,rgba(214,64,64,.14) 0 6px,rgba(214,64,64,.04) 6px 12px)!important}
-.tl-offh::after{content:"✕";position:absolute;inset:0;display:grid;place-items:center;color:rgba(200,50,50,.38);font-size:clamp(12px,2.2vw,22px);font-weight:700;overflow:hidden}
+
 .tl-dh.closed{background:rgba(214,64,64,.16)!important;border-color:rgba(214,64,64,.45)!important}
 .pvask{display:block}
 @media (prefers-reduced-motion:reduce){.wcbg i{animation:none!important}}

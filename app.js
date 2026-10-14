@@ -1094,9 +1094,25 @@ window.IM_BLKTAP=key=>{const[id,date]=key.split('|');const b=blocks().find(x=>x.
 /* ---------- ποσό ανά ραντεβού ---------- */
 const occPrice=o=>{const x=((o.a.ex||{})[o.date])||{};return x.pr!=null?+x.pr:o.a.price!=null?+o.a.price:null;};
 window.IM_LASTPRICE=sid=>{const L=appts().filter(a=>a.sid===sid&&a.price!=null).sort((x,y)=>(y.created||'').localeCompare(x.created||''));return L.length?L[0].price:null;};
-window.IM_PRICEROW=(a,date,o)=>{const x=((a.ex||{})[date])||{};const v=x.pr!=null?x.pr:a.price!=null?a.price:'';
+/* ποιος αναλαμβάνει αυτό το ραντεβού (μέσα στο φύλλο του ραντεβού) */
+const occBy=(a,date)=>(((a.ex||{})[date])||{}).by||provOf(a);
+function pvRowHTML(a,date){const PV=providers();const p=provById(occBy(a,date));
+  if(PV.length<2)return`<a class="pvrow2" href="#/settings/staff" data-close><span>👤 Ποιος: <b>${esc(p.id==='me'?(S.data.settings.myName||'Εγώ'):p.name)}</b></span><small>+ Πρόσθεσε προσωπικό</small></a>`;
+  return`<button type="button" class="pvrow2" id="ap-pv"><i class="pvb" style="background:${p.color}">${provIni(p)}</i><span>Ποιος το αναλαμβάνει: <b>${esc(p.id==='me'?(S.data.settings.myName||'Εγώ')+' (εγώ)':p.name)}</b></span>${ic('down',16)}</button>`;}
+async function pvPickFor(a,date,el){const PV=providers();const cur=occBy(a,date);const ex0=((a.ex||{})[date])||{};const s=ex0.s||a.s,e=ex0.e||a.e;
+  const r=await richPick({title:'Ποιος το αναλαμβάνει',sel:[cur],hint:`${WDAYS[wdOf(date)]} ${fmtShort(date)} · ${s}–${e}`,
+    items:PV.map(p=>{const X=occ(date,date,{by:p.id}).filter(x=>x.a.id!==a.id&&tmin(x.s)<tmin(e)&&tmin(s)<tmin(x.e));const B=blockOcc(date,date,{by:p.id}).filter(x=>!x.blk.hold&&tmin(x.s)<tmin(e)&&tmin(s)<tmin(x.e));
+      return{id:p.id,label:p.id==='me'?(S.data.settings.myName||'Εγώ')+' (εγώ)':p.name,color:p.color,ini:provIni(p),sub:esc(roleName(p.role,p.custom)),badge:X.length?`<span class="chip bad">έχει ραντεβού ${X.map(x=>x.s).join(', ')}</span>`:B.length?`<span class="chip bad">${esc(blkTitle(B[0].blk))}</span>`:'<span class="chip ok">ελεύθερος</span>'};})});
+  if(!r||!r[0]||r[0]===cur)return;const nb=r[0]==='me'?undefined:r[0];
+  if(a.kind==='once'){a.by=nb;if(a.ex&&a.ex[date]){delete a.ex[date].by;if(!Object.keys(a.ex[date]).length)delete a.ex[date];}}
+  else{a.ex=a.ex||{};const c=Object.assign({},a.ex[date]||{});if((nb||'me')===provOf(a))delete c.by;else c.by=r[0];if(Object.keys(c).length)a.ex[date]=c;else delete a.ex[date];}
+  save();const p=provById(r[0]);const md=el.closest('.ov')||el.parentElement;try{(topModal()||{}).close&&topModal().close(true);}catch(_){}
+  render();setTimeout(()=>{apptSheet(a.id+'|'+date);toast('Το αναλαμβάνει '+(p.id==='me'?'εσύ':p.short)+(a.kind!=='once'?' (μόνο '+fmtShort(date)+')':'')+'.','ok');},60);}
+function bindPv(a,date,el){const b=$('#ap-pv',el);if(b)b.onclick=()=>pvPickFor(a,date,el);}
+window.IM_PRICEROW=(a,date,o)=>pvRowHTML(a,date)+priceRowHTML(a,date);
+const priceRowHTML=(a,date)=>{const x=((a.ex||{})[date])||{};const v=x.pr!=null?x.pr:a.price!=null?a.price:'';
   return`<label class="prrow"><span>💶 Ποσό${a.kind!=='once'?' αυτή τη φορά':''}</span><input class="in" id="ap-pr" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(v)}" placeholder="—"><b>€</b></label>`;};
-window.IM_PRICEBIND=(el,a,date)=>{const pe=$('#ap-pr',el);if(!pe)return;pe.onchange=()=>{const v=pe.value.trim();const n=v===''?null:+v;if(v!==''&&(isNaN(n)||n<0))return;
+window.IM_PRICEBIND=(el,a,date)=>{bindPv(a,date,el);const pe=$('#ap-pr',el);if(!pe)return;pe.onchange=()=>{const v=pe.value.trim();const n=v===''?null:+v;if(v!==''&&(isNaN(n)||n<0))return;
   a.ex=a.ex||{};const cur=Object.assign({},a.ex[date]||{});
   if(a.kind==='once'){if(n==null)delete a.price;else a.price=n;delete cur.pr;}else{if(n==null||n===a.price)delete cur.pr;else cur.pr=n;}
   if(Object.keys(cur).length)a.ex[date]=cur;else delete a.ex[date];save();toast('Το ποσό αποθηκεύτηκε.','ok');};};

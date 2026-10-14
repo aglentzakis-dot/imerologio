@@ -63,6 +63,8 @@ footer{text-align:center;color:var(--ink3);font-size:.75rem;margin-top:18px}
 .pvc{border:1.5px solid var(--line,#ddd);background:#fff;border-radius:999px;padding:8px 12px;font:inherit;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:inherit}
 .pvc i{width:10px;height:10px;border-radius:50%;display:inline-block}.pvc.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
 .steps{text-align:left;margin:10px 0 4px;padding-left:22px;line-height:1.45}.steps li{margin:4px 0}
+.wc.busy,.wc.closed{position:relative}
+.wc.busy::after,.wc.closed::after{content:"✕";position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:700;color:rgba(190,60,60,.45);pointer-events:none}
 </style>
 </head>
 <body>
