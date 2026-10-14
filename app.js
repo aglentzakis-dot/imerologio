@@ -1091,6 +1091,10 @@ window.IM_BLKTAP=key=>{const[id,date]=key.split('|');const b=blocks().find(x=>x.
     if(k.h==='edit')return blockDialog({b});
     save();render();});return true;};
 
+/* ---------- προσωπικό στο ημερολόγιο: ένα κουμπί «Όλοι ▾» που ανοίγει λίστα ---------- */
+document.addEventListener('click',async e=>{if(!e.target.closest('#agPvDd'))return;const PV=providers();let cur='_all';try{cur=localStorage.getItem('imer-agstaff')||'_all';}catch(_){}
+  const r=await richPick({title:'Ποιου το πρόγραμμα',sel:[cur],items:[{id:'_all',label:'Όλοι',sub:PV.length+' άτομα',ini:'👥',color:'#8A8F98'}].concat(PV.map(p=>({id:p.id,label:p.id==='me'?(S.data.settings.myName||'Εγώ')+' (εγώ)':p.name,color:p.color,ini:provIni(p),sub:esc(roleName(p.role,p.custom))})))});
+  if(!r||!r[0])return;try{localStorage.setItem('imer-agstaff',r[0]==='_all'?'':r[0]);}catch(_){}render();});
 /* ---------- ποσό ανά ραντεβού ---------- */
 const occPrice=o=>{const x=((o.a.ex||{})[o.date])||{};return x.pr!=null?+x.pr:o.a.price!=null?+o.a.price:null;};
 window.IM_LASTPRICE=sid=>{const L=appts().filter(a=>a.sid===sid&&a.price!=null).sort((x,y)=>(y.created||'').localeCompare(x.created||''));return L.length?L[0].price:null;};
@@ -1181,7 +1185,7 @@ function viewStats(){const fb=$('#fab');if(fb)fb.remove();const pro=isPro()||S.d
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='statistika-'+R.from+'-'+R.to+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);};}
 
 /* ---------- έναρξη ---------- */
-S.data=loadData();applyIdentity();
+S.data=loadData();{const L=S.data&&S.data.settings&&S.data.settings.lex;if(L&&/^Ιδιοκτήτ/.test(L.who||'')){['who','whoAcc','whoGen','whoPl','whoPlL'].forEach(k=>delete L[k]);try{save();}catch(_){}}}applyIdentity();
 if(!location.hash)history.replaceState(null,'','#/today');
 render();
 setTimeout(autoBackup,5000);
