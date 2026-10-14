@@ -619,7 +619,7 @@ function dirtyWatch(root){if(!root)return;$$('form',root).forEach(f=>{const btn=
    Ο σύνδεσμος κουβαλά τις ελεύθερες ώρες (συμπιεσμένες). Ο πελάτης διαλέγει ώρα στη σελίδα kratisi.html
    και στέλνει μήνυμα (Viber / SMS / WhatsApp / email) με σύνδεσμο «#/book?r=…». Το πάτημά του
    ανοίγει το Ημερολόγιο και η κράτηση μπαίνει με ένα «Καταχώρηση». Τίποτα δεν περνά από δικό μας διακομιστή. */
-function bkCfg(){return Object.assign({days:14,ch:'vswe'},S.data.settings.book||{});}
+function bkCfg(){return Object.assign({days:14,ch:'vswe',pvPick:true},S.data.settings.book||{});}
 function b64uEnc(u){let b='';for(let i=0;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function b64uDec(x){x=x.replace(/-/g,'+').replace(/_/g,'/');while(x.length%4)x+='=';const b=atob(x);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 async function packZ(obj){const bytes=new TextEncoder().encode(JSON.stringify(obj));
@@ -637,14 +637,14 @@ function slotPack(S2,days){const t=todayISO();const all=S2.flatMap(x=>x[1]);if(!
 /* ελεύθερες ώρες ανά άτομο (για να διαλέγει ο πελάτης με ποιον θα εξυπηρετηθεί) */
 const pvPub=p=>p.id==='me'?(((S.data.settings.myName||'').trim().split(/\s+/)[0])||'Υπεύθυνος/η'):p.short;
 const hexOf=(L,t0)=>{if(!L.length)return'';const n=Math.floor((Math.max(...L)-t0)/15)+1;const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{if(m>=t0)bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);return h.replace(/0+$/,'');};
-function pvPack(P,days){const PV=providers();if(PV.length<2)return{};const du=IM_DEF.dur(),t=todayISO();
+function pvPack(P,days){const PV=providers();if(PV.length<2||!bkCfg().pvPick)return{};const du=IM_DEF.dur(),t=todayISO();
   return{pv:PV.map(p=>{const d=[];for(let i=0;i<days;i++)d.push(hexOf(slotsFor(addDays(t,i),p.id,du,null,true).map(tmin),P.t0));while(d.length&&!d[d.length-1])d.pop();return{i:p.id,n:pvPub(p),c:p.color,d};})};}
 function weekTemplate(){const c=agCfg(),du=IM_DEF.dur(),t=todayISO();const W=[[],[],[],[],[],[],[]];
   for(let i=0;i<7;i++){const d=addDays(t,i);const wd=wdOf(d);if(!agCfg().days.includes(wd))continue;const PV=providers();const held=m=>PV.every(p=>blocks().some(b=>b.hold&&b.kind==='weekly'&&(b.days||[]).includes(wd)&&(b.by||'me')===p.id&&tmin(b.s)<m+du&&m<tmin(b.e)));
     for(let m=tmin(c.from);m+du<=tmin(c.to);m+=30)if(inWork(m,du)&&!held(m))W[wd].push(m);}return W;}
 async function bookLinkPerm(){const B=biz(),c=bkCfg();const W=weekTemplate();const all=W.flat();const t0=all.length?Math.floor(Math.min(...all)/15)*15:0;
   const w=W.map(L=>{if(!L.length)return'';const n=Math.floor((Math.max(...all)-t0)/15)+1;const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);return h.replace(/0+$/,'');});
-  const D={v:2,pm:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,dd:c.days,t0,w,x:proState().until||''};if(providers().length>1)D.pv=providers().map(p=>({i:p.id,n:pvPub(p),c:p.color}));
+  const D={v:2,pm:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,dd:c.days,t0,w,x:proState().until||''};if(providers().length>1&&bkCfg().pvPick)D.pv=providers().map(p=>({i:p.id,n:pvPub(p),c:p.color}));
   return new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k=c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));}
 async function qrDialog(){await loadScript('qr.js');const now=(await bookLink()).url,perm=await bookLinkPerm();const B=biz();const name=(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'';
   let tab='now';const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">🔳 Κωδικός QR για κρατήσεις</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
@@ -728,6 +728,7 @@ async function bookShareDialog(p){const B=biz();
     ${navigator.share?`<button type="button" class="btn" id="bk-sh">${ic('send',15)} Κοινοποίηση…</button>`:''}
     <button type="button" class="btn" id="bk-cp">${ic('copy',15)} Αντιγραφή</button>${p?'':`<button type="button" class="btn" id="bk-qr">🔳 Κωδικός QR${isPro()?'':' ⭐'}</button>`}
     <a class="btn ghost" href="${esc(L0.url)}" target="_blank" rel="noopener">👀 Δες τη σελίδα</a></div>
+   ${providers().length>1?`<label class="switch" style="margin-top:12px"><span><b>👥 Ο ${esc(LX('who')).toLowerCase()} μπορεί να διαλέξει άτομο</b><small>${bkCfg().pvPick?'Ναι — κρυμμένο πίσω από «Θέλεις συγκεκριμένο άτομο;». Αλλιώς πηγαίνει στον πιο ελεύθερο.':'Όχι — βλέπει μόνο ελεύθερες ώρες· το ραντεβού πηγαίνει στον πιο ελεύθερο.'}</small></span><input type="checkbox" id="bk-pv" ${bkCfg().pvPick?'checked':''}></label>`:''}
    <details style="margin-top:12px"><summary class="small"><b>Ρυθμίσεις κρατήσεων</b></summary>
     <div class="field" style="margin-top:8px"><label class="f">Πόσες μέρες μπροστά</label><div class="seg" id="bk-days">${[7,14,21,30].map(n=>`<button type="button" data-bd="${n}" class="${bkCfg().days===n?'on':''}">${n}</button>`).join('')}</div></div>
     <div class="field"><label class="f">Πώς μπορούν να σου στείλουν</label><div class="chips">${[['v','Viber'],['s','SMS'],['w','WhatsApp'],['e','Email']].map(([k,l])=>`<button type="button" class="chipt ${bkCfg().ch.includes(k)?'on':''}" data-bch="${k}">${l}</button>`).join('')}</div>
@@ -744,6 +745,7 @@ async function bookShareDialog(p){const B=biz();
   $('#bk-cp',md.el).onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('Αντιγράφηκε — επικόλλησέ το όπου θέλεις.','ok')).catch(()=>toast('Δεν έγινε αντιγραφή — πάτα «Κοινοποίηση».','bad'));};
   if(p)$$('a.btn',md.el).forEach(a=>{if(/^(sms|viber|https:\/\/wa)/.test(a.getAttribute('href')))a.addEventListener('click',()=>logMsg(p,'Σύνδεσμος κρατήσεων',a.textContent.trim()));});
   $$('[data-bd]',md.el).forEach(b=>b.onclick=()=>{S.data.settings.book=Object.assign(bkCfg(),{days:+b.dataset.bd});save();md.close();bookShareDialog(p);});
+  {const pvs=$('#bk-pv',md.el);if(pvs)pvs.onchange=()=>{S.data.settings.book=Object.assign(bkCfg(),{pvPick:pvs.checked});save();toast(pvs.checked?'Ο πελάτης μπορεί να διαλέξει άτομο.':'Ο πελάτης δεν διαλέγει άτομο.','ok');md.close();bookShareDialog(p);};}
   $$('[data-bch]',md.el).forEach(b=>b.onclick=()=>{let ch=bkCfg().ch;ch=ch.includes(b.dataset.bch)?ch.replace(b.dataset.bch,''):ch+b.dataset.bch;if(!ch)return toast('Άφησε τουλάχιστον έναν τρόπο.','bad');S.data.settings.book=Object.assign(bkCfg(),{ch});save();md.close();bookShareDialog(p);});}
 /* το πάτημα του συνδέσμου από το μήνυμα του πελάτη */
 function bookDecode(r){try{if(!r||r[0]!=='j')return null;const o=JSON.parse(new TextDecoder().decode(b64uDec(r.slice(1))));
@@ -752,7 +754,8 @@ function bookDecode(r){try{if(!r||r[0]!=='j')return null;const o=JSON.parse(new 
 function bookImport(code){const q=bookDecode(code);if(!q)return toast('Ο σύνδεσμος κράτησης δεν είναι σωστός.','bad');
   const seen=(S.data.bookSeen=S.data.bookSeen||{});const key=q.id+'|'+q.d+'|'+q.s;
   const e=tstr(tmin(q.s)+q.u);const PV=providers();const isFreeP=p=>!conflicts(q.d,q.s,e,'',p.id).length&&!holdAt(q.d,q.s,e,p.id)&&inWork(tmin(q.s),q.u);
-  const want=q.pv&&PV.find(p=>p.id===q.pv);const freeP=want&&isFreeP(want)?want:PV.find(isFreeP);const swap=!!(want&&freeP&&freeP.id!==want.id);
+  const want=q.pv&&PV.find(p=>p.id===q.pv);const load=p=>occ(q.d,q.d,{by:p.id}).reduce((m,o)=>m+tmin(o.e)-tmin(o.s),0);
+  const freeP=want&&isFreeP(want)?want:PV.filter(isFreeP).sort((a,b)=>load(a)-load(b))[0];const swap=!!(want&&freeP&&freeP.id!==want.id);
   const existing=(q.sid&&getStudent(q.sid))||(q.ph&&byPhone(q.ph));
   const past=q.d<todayISO();const closed=isClosed(q.d)||!workDay(q.d);
   const alt=()=>{const out=[];let d=q.d<todayISO()?todayISO():q.d;for(let k=0;k<30&&out.length<3;k++,d=addDays(d,1)){const set=new Set();PV.forEach(p=>slotsFor(d,p.id,q.u,null,true).forEach(x=>set.add(x)));[...set].sort().forEach(x=>{if(out.length<3&&!(d===q.d&&x===q.s))out.push([d,x]);});}return out;};
