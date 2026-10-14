@@ -1225,5 +1225,11 @@ window.EN_DICT={
 "Επιβεβαίωση κράτησης": "Booking confirmation",
 "Πρώτες ελεύθερες:": "First free:",
 "Δεν βρέθηκαν ελεύθερες ώρες τις επόμενες 30 μέρες.": "No free times found in the next 30 days.",
-"🌐 Γλώσσα · Language": "🌐 Language · Γλώσσα"
+"🌐 Γλώσσα · Language": "🌐 Language · Γλώσσα",
+"📲 Σύνδεσμος κράτησης": "📲 Booking link",
+"Πολλοί μαζί; Από τις επαφές ή από αρχείο Excel / vCard →": "Many at once? From contacts or an Excel / vCard file →",
+"Στείλε του να κλείσει μόνος του": "Let them book on their own",
+"Σύνδεσμος με τις ελεύθερες ώρες σου, με Viber / SMS / WhatsApp": "A link with your free times, via Viber / SMS / WhatsApp",
+"📲 Σύνδεσμος": "📲 Link",
+"Σύνδεσμος κράτησης": "Booking link"
 };

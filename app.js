@@ -456,10 +456,10 @@ function offerDialog(preIds){const all=myStudents().filter(p=>!p.demo||S.data.se
 
 /* ---------- πρόσωπα: λίστα ---------- */
 function viewPeople(r){const all=myStudents();const q=(r.q.q||'').toLowerCase();
-  M().innerHTML=`${pageHead(esc(LX('whoPl')),`${all.length}`,`<button class="btn" id="p-imp">${ic('download',16)} Εισαγωγή</button><a class="btn pri" href="#/person/new">${ic('plus',17)} Νέος</a>`)}
+  M().innerHTML=`${pageHead(esc(LX('whoPl')),`${all.length}`,`<button class="btn" id="p-bk" title="Σύνδεσμος κράτησης">📲 Σύνδεσμος</button><a class="btn pri" href="#/person/new">${ic('plus',17)} Νέος</a>`)}
   ${all.length?`<div class="search field">${ic('search',17)}<input class="in" id="pq" type="search" placeholder="Όνομα ή τηλέφωνο" value="${esc(q)}" aria-label="Αναζήτηση"></div><div class="list" id="pl"></div>`
    :emptyHTML('users',`Δεν υπάρχουν ακόμη ${esc(LX('whoPlL'))}`,`Πρόσθεσε τον πρώτο — ή γράψε απευθείας το όνομα όταν κλείνεις ραντεβού.`,`<a class="btn pri" href="#/person/new">${ic('plus',16)} Νέος</a> <button class="btn" id="p-imp2">${ic('download',16)} Εισαγωγή πολλών μαζί</button>`)}`;
-  [$('#p-imp'),$('#p-imp2')].forEach(b=>{if(b)b.onclick=importMenu;});
+  [$('#p-imp2')].forEach(b=>{if(b)b.onclick=importMenu;});{const bk=$('#p-bk');if(bk)bk.onclick=()=>bookShareDialog();}
   if(!all.length)return;
   const t=todayISO();const VS={};const grp=L=>{const G={};L.forEach(o=>(G[o.a.sid]=G[o.a.sid]||[]).push(o));return G;};const PAST=grp(occ(addDays(t,-730),addDays(t,-1),{withCancel:true,by:''})),FUT=grp(occ(t,addDays(t,365),{by:''}));all.forEach(p=>VS[p.id]=visitStats(p,{past:PAST[p.id]||[],fut:FUT[p.id]||[]}));let flt=r.q.f||'all';
   const nLate=all.filter(p=>VS[p.id].late).length,nPromo=all.filter(p=>consOf(p,'promo')===true).length;
@@ -483,8 +483,8 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   const pr=PERS_COLORS;
   const rb=!isNew&&remBackInfo();
   M().innerHTML=`${pageHead(isNew?'Νέος '+esc(LX('who')).toLowerCase():esc(stuName(p)),isNew?'':esc(LX('who')),rb?`<button class="btn" id="p-remback">${ic('bell',15)} Πίσω στις υπενθυμίσεις</button>`:`<a class="btn" href="#/people">Πίσω</a>`)}
-  <div id="p-stopb"></div><div class="grid g2" style="align-items:start"><form class="card" id="pf"><h3>Στοιχεία</h3>
-   ${IM_CONTACTS_OK()?`<button type="button" class="btn conpick field" id="p-con">${ic('users',16)} Από τις επαφές του κινητού</button>`:''}
+  <div id="p-stopb"></div>${isNew?'':`<button type="button" class="bookbar" id="p-book"><span class="bb-i">📲</span><span class="grow"><b>Στείλε του να κλείσει μόνος του</b><small>Σύνδεσμος με τις ελεύθερες ώρες σου, με Viber / SMS / WhatsApp</small></span>${ic('right',18)}</button>`}<div class="grid g2" style="align-items:start"><form class="card" id="pf"><h3>Στοιχεία</h3>
+   ${IM_CONTACTS_OK()?`<button type="button" class="btn conpick field" id="p-con">${ic('users',16)} Από τις επαφές του κινητού</button>`:''}${isNew?`<button type="button" class="linkbtn small" id="p-many">Πολλοί μαζί; Από τις επαφές ή από αρχείο Excel / vCard →</button>`:''}
    <div class="field"><label class="f" for="p-n">Ονοματεπώνυμο</label><input class="in" id="p-n" name="name" required autocomplete="off" value="${esc(p.name||'')}"></div>
    <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="p-ph">Τηλέφωνο</label><div class="phrow"><input class="in" id="p-ph" name="phone" type="tel" inputmode="tel" value="${esc(p.phone||'')}">${p.phone?`<a class="callbtn" data-cg="${p.id}" href="tel:${telLink(p.phone)}" aria-label="Κλήση">${ic('l-phone',20)}</a><a class="callbtn sms" data-cg="${p.id}" href="sms:${telLink(p.phone)}" aria-label="Μήνυμα">${ic('l-message-square',20)}</a>`:''}</div></div>
    <div class="field"><label class="f" for="p-em">Email</label><input class="in" id="p-em" name="email" type="email" inputmode="email" autocapitalize="none" value="${esc(p.email||'')}"></div></div>
@@ -494,7 +494,7 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
    <div class="field"><label class="f">Χρώμα στο ημερολόγιο</label><div class="scols">${pr.map(c=>`<button type="button" data-pc="${c}" style="background:${c}" class="${p.color===c?'on':''}" aria-label="Χρώμα"></button>`).join('')}<button type="button" data-pc="" class="none ${p.color?'':'on'}" aria-label="Χωρίς χρώμα">${ic('x',12)}</button></div></div>
    <div class="savebar"><button class="btn pri">${ic('check',16)} Αποθήκευση</button>${isNew?'':`<button type="button" class="btn danger" id="p-del">${ic('trash',16)} Διαγραφή</button>`}</div></form>
   ${isNew?'':`<div class="card"><div class="card-h"><h3>Ραντεβού</h3><button class="btn sm pri" id="p-new">${ic('plus',15)} Νέο ραντεβού</button></div>
-   ${p.phone?`<div class="row" style="gap:6px;margin-bottom:12px"><a class="btn sm" data-cg="${p.id}" href="tel:${telLink(p.phone)}">Κλήση</a><button type="button" class="btn sm" id="p-book">📲 Να διαλέξει ώρα</button>${chBtnsHTML({contacts:[{name:p.name,phone:p.phone,email:p.email}]},'Καλησπέρα!','Μήνυμα',`data-cg="${p.id}"`)}</div>`:''}
+   ${p.phone?`<div class="row" style="gap:6px;margin-bottom:12px"><a class="btn sm" data-cg="${p.id}" href="tel:${telLink(p.phone)}">Κλήση</a>${chBtnsHTML({contacts:[{name:p.name,phone:p.phone,email:p.email}]},'Καλησπέρα!','Μήνυμα',`data-cg="${p.id}"`)}</div>`:''}
    ${fut.length?`<div class="aglist">${fut.slice(0,6).map(o=>`<div class="small muted" style="margin:8px 0 2px">${WDAYS[wdOf(o.date)]} ${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div>${fut.length>6?`<p class="small muted" style="margin:8px 0 0">και ${fut.length-6} ακόμα μέσα στους επόμενους 6 μήνες.</p>`:''}`:'<p class="small muted">Κανένα επόμενο ραντεβού.</p>'}
    ${past.length?`<details style="margin-top:12px"><summary class="small"><b>Προηγούμενα</b> (${past.length})</summary><div class="aglist" style="margin-top:6px">${past.map(o=>`<div class="small muted" style="margin:8px 0 2px">${fmtDate(o.date)}</div>${apptCard(o)}`).join('')}</div></details>`:''}</div>`}</div>
   ${isNew?`<div class="card conscard"><h3>🛡️ Συγκαταθέσεις για μηνύματα</h3><p class="small muted" style="margin:0">Μπαίνουν μόλις αποθηκεύσεις ${esc(LX('whoAcc'))}.</p></div>`:`<div class="card conscard" id="p-cons"></div>`}`;
@@ -505,7 +505,7 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   try{const d=JSON.parse(localStorage.getItem(DK)||'null');if(d&&d.rid===r.id&&Date.now()-d.t<6*36e5){['name','phone','email','addr','notes'].forEach(k=>{if(d.o[k]!=null&&F[k])F[k].value=d.o[k];});if(d.col!=null){col=d.col;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x.dataset.pc===col));}
     const cp=localStorage.getItem('imer-conpick');if(cp){localStorage.removeItem('imer-conpick');toast('Το κινητό έκλεισε τη λίστα επαφών όσο ήσουν σε άλλη εφαρμογή. Ό,τι είχες γράψει κρατήθηκε — πάτα ξανά «Από τις επαφές».','bad');}else if(d.o.name||d.o.phone)toast('Συνεχίζεις από εκεί που είχες μείνει.','ok');}}catch(e){}
   F.addEventListener('input',saveDraft);
-  const pc=$('#p-con');if(pc)pc.onclick=async()=>{saveDraft();try{localStorage.setItem('imer-conpick','1');}catch(e){}const L=await IM_PICKCONTACTS(false);try{localStorage.removeItem('imer-conpick');}catch(e){}const c=L[0];if(!c)return;F.name.value=c.name;if(c.phone)F.phone.value=c.phone;if(c.email)F.email.value=c.email;toast('Μπήκαν τα στοιχεία από τις επαφές.','ok');saveDraft();};
+  const pm=$('#p-many');if(pm)pm.onclick=importMenu;const pc=$('#p-con');if(pc)pc.onclick=async()=>{saveDraft();try{localStorage.setItem('imer-conpick','1');}catch(e){}const L=await IM_PICKCONTACTS(false);try{localStorage.removeItem('imer-conpick');}catch(e){}const c=L[0];if(!c)return;F.name.value=c.name;if(c.phone)F.phone.value=c.phone;if(c.email)F.email.value=c.email;toast('Μπήκαν τα στοιχεία από τις επαφές.','ok');saveDraft();};
   F.onclick=e=>{const b=e.target.closest('[data-pc]');if(!b)return;col=b.dataset.pc;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x===b));saveDraft();};
   F.onsubmit=e=>{e.preventDefault();const o=fd(F);if(!o.name.trim())return toast('Γράψε όνομα.','bad');
     Object.assign(p0,{name:o.name.trim(),avatar:initial(o.name),phone:o.phone.trim(),email:o.email.trim().toLowerCase(),notes:o.notes.trim(),color:col||undefined,updated:new Date().toISOString()});
