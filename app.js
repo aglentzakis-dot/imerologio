@@ -23,7 +23,29 @@ function getStudent(id){return S.data.students.find(x=>x.id===id)||null;}
 const COLL=new Intl.Collator('el');function myStudents(){return S.data.students.slice().sort((a,b)=>COLL.compare(a.name||'',b.name||''));}
 const stuName=s=>s?(s.name||'—'):'—';
 const initial=n=>((n||'?').trim()[0]||'?').toUpperCase();
-function IM_NEWPERSON(name,c){c=c||{};const p={id:uid(),name:name.trim(),avatar:initial(name),phone:c.phone||'',email:c.email||'',contacts:(c.phone||c.email)?[{name:name.trim(),phone:c.phone||'',email:c.email||''}]:[],created:new Date().toISOString()};S.data.students.push(p);save();return p.id;}
+function IM_NEWPERSON(name,c){c=c||{};const p={id:uid(),name:name.trim(),avatar:initial(name),phone:c.phone||'',email:c.email||'',contacts:(c.phone||c.email)?[{name:name.trim(),phone:c.phone||'',email:c.email||''}]:[],created:new Date().toISOString()};
+  if(c.addr)p.loc={addr:c.addr,home:true};if(c.notes)p.notes=c.notes;if(c.cons)setCons(p,'appt',c.cons==='yes','στο νέο ραντεβού');
+  S.data.students.push(p);save();if(p.loc&&window.geocodePerson)geocodePerson(p,false);return p.id;}
+/* γρήγορη καρτέλα νέου πελάτη μέσα από το «Νέο ραντεβού»: όνομα, τηλέφωνο και, αν θέλεις, τα υπόλοιπα — αποθηκεύεται κανονικά στους πελάτες */
+const phKey=x=>String(x||'').replace(/\D/g,'').slice(-10);
+function IM_NEWPERSON_DIALOG(nm){return new Promise(res=>{let done=false;
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${ic('plus',18)} Νέος ${esc(LX('who')).toLowerCase()}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <p class="small muted" style="margin-top:0">Μπαίνει κατευθείαν στους ${esc(LX('whoPlL'))} και επιλέγεται για το ραντεβού.</p>
+   <form id="np"><div class="field"><label class="f" for="np-n">Ονοματεπώνυμο</label><input class="in" id="np-n" name="name" required autocomplete="off" value="${esc(nm||'')}"></div>
+    <div class="field"><label class="f" for="np-p">Τηλέφωνο</label><input class="in" id="np-p" name="phone" type="tel" inputmode="tel" autocomplete="off" placeholder="π.χ. 69…"><div class="tiny muted" style="margin-top:4px">Για να του στέλνεις επιβεβαίωση και υπενθύμιση.</div><div id="np-dup"></div></div>
+    <details class="field npmore"><summary class="small"><b>Περισσότερα στοιχεία</b> <span class="muted">— προαιρετικά</span></summary>
+     <div class="field" style="margin-top:10px"><label class="f" for="np-e">Email</label><input class="in" id="np-e" name="email" type="email" inputmode="email" autocomplete="off"></div>
+     <div class="field"><label class="f" for="np-a">Διεύθυνση <span class="tiny muted">· για τον χάρτη</span></label><input class="in" id="np-a" name="addr" autocomplete="off"></div>
+     <div class="field"><label class="f" for="np-o">Σημειώσεις</label><textarea class="in" id="np-o" name="notes" style="min-height:56px"></textarea></div>
+     <label class="switch"><span><b>Δέχεται μηνύματα για τα ραντεβού</b><small>Επιβεβαίωση, υπενθύμιση, αλλαγή</small></span><input type="checkbox" name="cons" checked></label></details>
+    <div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">${ic('check',16)} Αποθήκευση και επιλογή</button></div></form>`,{onClose:()=>{if(!done)res(null);}});
+  const f=$('#np',md.el);const n=$('#np-n',md.el);setTimeout(()=>(nm?$('#np-p',md.el):n).focus(),80);
+  const dupOf=()=>{const k=phKey(f.phone.value);return k.length>=8?S.data.students.find(p=>phKey(p.phone||((p.contacts||[])[0]||{}).phone)===k):null;};
+  f.phone.oninput=()=>{const d=dupOf();$('#np-dup',md.el).innerHTML=d?`<div class="note small" style="margin-top:6px">Αυτό το τηλέφωνο το έχει ήδη ο/η <b>${esc(stuName(d))}</b>. <button type="button" class="btn sm" id="np-use">Διάλεξε αυτόν</button></div>`:'';const u=$('#np-use',md.el);if(u)u.onclick=()=>{done=true;md.close();res({id:d.id,name:stuName(d)});};};
+  f.onsubmit=e=>{e.preventDefault();const v=fd(f);const name=(v.name||'').trim();if(!name)return toast('Γράψε όνομα.','bad');
+    const same=S.data.students.find(p=>(p.name||'').trim().toLocaleLowerCase('el')===name.toLocaleLowerCase('el')&&(!v.phone||phKey(p.phone)===phKey(v.phone)));
+    if(same&&!confirm('Υπάρχει ήδη «'+stuName(same)+'». Να φτιαχτεί δεύτερος με το ίδιο όνομα;')){done=true;md.close();return res({id:same.id,name:stuName(same)});}
+    done=true;md.close();toast('Αποθηκεύτηκε στους '+LX('whoPlL')+'.','ok');res({name,phone:(v.phone||'').trim(),email:(v.email||'').trim(),addr:(v.addr||'').trim(),notes:(v.notes||'').trim(),cons:v.cons?'yes':'no'});};});}
 
 /* ---------- επαφές του κινητού (Chrome σε Android) ---------- */
 const IM_CONTACTS_OK=()=>!!(navigator.contacts&&window.ContactsManager);
