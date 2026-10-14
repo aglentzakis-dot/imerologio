@@ -700,9 +700,19 @@ function proKeyHTML(){const L=S.data.settings.lic||{};return`<div class="field">
   <div class="field"><label class="f" for="pk-k">Κλειδί</label><textarea class="in" id="pk-k" rows="3" placeholder="IM2… ή GA2…" autocapitalize="characters" spellcheck="false" style="font-family:ui-monospace,monospace;font-size:13px"></textarea></div><div id="pk-err"></div>
   <div class="row" style="gap:8px;flex-wrap:wrap"><button type="button" class="btn pri" id="pk-ok">${ic('check',16)} Ενεργοποίηση</button><button type="button" class="btn" id="pk-ask">✉️ Ζήτα κλειδί (${PRO_FIRST} €)</button></div>`;}
 function proKeyBind(el,done){const ok=$('#pk-ok',el),ask=$('#pk-ask',el);
-  if(ok)ok.onclick=async()=>{const em=$('#pk-em',el).value,k=$('#pk-k',el).value;if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(licMail(em)))return $('#pk-err',el).innerHTML='<div class="note small warnnote">Γράψε το email με το οποίο πήρες το κλειδί.</div>';
-    ok.disabled=true;const r=await licApply(em,k);ok.disabled=false;if(r.err)return $('#pk-err',el).innerHTML=`<div class="note small warnnote">${esc(r.err)}</div>`;
-    toast('⭐ Το Pro ενεργοποιήθηκε έως '+fmtDate(r.until)+'.','ok');done&&done();};
+  const errBox=(html,bad=true)=>{const b=$('#pk-err',el);b.innerHTML=`<div class="pkmsg ${bad?'bad':'ok'}">${html}</div>`;b.scrollIntoView({behavior:'smooth',block:'center'});};
+  const kf=$('#pk-k',el);
+  // ασφάλεια: αν κάποιος επικολλήσει το ΜΥΣΤΙΚΟ αρχείο υπογραφής (prv.json) αντί για κλειδί, το σβήνουμε αμέσως
+  const isPrv=v=>/"d"\s*:|"kty"\s*:|"crv"\s*:/.test(v);
+  if(kf)kf.addEventListener('input',()=>{if(isPrv(kf.value)){kf.value='';errBox('🛑 <b>Αυτό δεν είναι κλειδί πελάτη — είναι το ΜΥΣΤΙΚΟ αρχείο υπογραφής (prv.json).</b><br>Το έσβησα αμέσως και δεν αποθηκεύτηκε πουθενά. Το prv.json μπαίνει <b>μόνο</b> στη σελίδα «Κλειδιά GlenApps». Εκεί φτιάχνεις κλειδί «Ημερολόγιο» (ξεκινά με IM2…) και αυτό το κλειδί το βάζεις εδώ.');}});
+  if(ok)ok.onclick=async()=>{const em=$('#pk-em',el).value,k=kf.value;
+    if(isPrv(k)){kf.value='';return errBox('🛑 Αυτό είναι το μυστικό αρχείο υπογραφής, όχι κλειδί. Το έσβησα.');}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(licMail(em)))return errBox('✋ Γράψε το email με το οποίο πήρες το κλειδί.');
+    if(!k.trim())return errBox('✋ Επικόλλησε το κλειδί (ξεκινά με IM2… ή GA2…).');
+    const lab=ok.innerHTML;ok.disabled=true;ok.innerHTML='⏳ Έλεγχος…';const r=await licApply(em,k);ok.disabled=false;ok.innerHTML=lab;
+    if(r.err)return errBox('✗ <b>Δεν ενεργοποιήθηκε.</b> '+esc(r.err));
+    kf.value='';ok.disabled=true;ok.innerHTML='✓ Ενεργοποιήθηκε';errBox(`⭐ <b>Το Pro ενεργοποιήθηκε!</b> Ισχύει έως <b>${fmtDate(r.until)}</b>${r.full?' (GlenApps Full)':''}.`,false);
+    const m=modal(`<div style="text-align:center"><div style="font-size:54px;line-height:1">⭐</div><h3 style="margin:8px 0 4px">Το Pro ενεργοποιήθηκε!</h3><p class="small" style="margin:0 0 6px">Ισχύει έως <b>${fmtDate(r.until)}</b>${r.full?' · με το κλειδί GlenApps Full':''}.</p><p class="small muted" style="margin:0 0 14px">Τώρα έχεις σύνδεσμο κρατήσεων χωρίς όριο, κωδικό QR και στατιστικά.</p><button class="btn pri" data-close style="width:100%">Εντάξει</button></div>`,{guard:false,onClose:()=>{done&&done();}});};
   if(ask)ask.onclick=()=>{const em=licMail(($('#pk-em',el)||{}).value);const B=biz();
     location.href=`mailto:${PAY_EMAIL}?subject=${encodeURIComponent('[IM-PRO] Ημερολόγιο Pro')}&body=${encodeURIComponent(['Γεια σας,','','Θα ήθελα κλειδί για το Ημερολόγιο Pro για έναν χρόνο ('+(S.data.settings.lic&&S.data.settings.lic.ok?PRO_PRICE+' € με ΦΠΑ, ανανέωση':PRO_FIRST+' € με ΦΠΑ, πρώτος χρόνος')+').','',(isPrivate()?'Όνομα':'Επιχείρηση')+': '+((isPrivate()?S.data.settings.myName:B.name)||'—'),'Email για το κλειδί: '+(em||'—'),'','Παρακαλώ στείλτε μου πώς να πληρώσω.'].join('\n'))}`;};}
 function proSheet(why){const st=proState();const W={bk:'Η δωρεάν αποστολή συνδέσμου κρατήσεων χρησιμοποιήθηκε.',qr:'Ο κωδικός QR για κρατήσεις είναι μέρος του Pro.',st:'Τα στατιστικά είναι μέρος του Pro.'}[why]||'';
