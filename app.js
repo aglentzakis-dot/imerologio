@@ -540,6 +540,10 @@ function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_
   if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}<div class="setlist">${L.map(([k,,i,t,d])=>`<a class="setrow" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div><p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
   M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
 
+/* Viber «forward» κόβει τα μεγάλα κείμενα (π.χ. συνδέσμους): για μεγάλα κείμενα πάμε από το μενού κοινοποίησης */
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="viber://forward"]');if(!a)return;let txt='';try{txt=decodeURIComponent(a.getAttribute('href').split('text=')[1]||'');}catch(_){}
+  if(txt.length<170)return;e.preventDefault();try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(_){}
+  if(navigator.share){toast('Διάλεξε «Viber» από τη λίστα και μετά τον παραλήπτη.','ok');navigator.share({text:txt}).catch(()=>{});}else{toast('Το κείμενο αντιγράφηκε· στο Viber κάνε «Επικόλληση».','ok');location.href='viber://forward?text='+encodeURIComponent(txt.slice(0,160));}},true);
 /* ---------- κουμπί «Αποθήκευση»: σβήνει όταν δεν υπάρχει αλλαγή, γράφει «✓ Αποθηκεύτηκε» ---------- */
 function dirtyWatch(root){if(!root)return;$$('form',root).forEach(f=>{const btn=f.querySelector('button.btn.pri:not([type=button])');if(!btn||f._dw)return;f._dw=true;
   const fresh=/\/new\b/.test(location.hash);const label=btn.innerHTML;
@@ -569,7 +573,7 @@ function slotPack(S2,days){const t=todayISO();const all=S2.flatMap(x=>x[1]);if(!
   for(let i=0;i<days;i++){const L=M.get(addDays(t,i));if(!L){d.push('');continue;}const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);d.push(h.replace(/0+$/,''));}
   while(d.length&&!d[d.length-1])d.pop();return{b:t,t0,n,d};}
 async function bookLink(){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
-  const D=Object.assign({v:2,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,a:new URL('./',location.href).href.split('?')[0].split('#')[0]},slotPack(S2,c.days));
+  const D=Object.assign({v:2,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},slotPack(S2,c.days));
   const k='c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));
   return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k='+k,slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
 async function bookShareDialog(p){const B=biz();
@@ -583,7 +587,7 @@ async function bookShareDialog(p){const B=biz();
    ${p?`<p class="small" style="margin:10px 0 4px">Προς: <b>${esc(stuName(p))}</b></p>`:''}
    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
     ${ph?`<a class="btn" href="${smsHref(ph,txt)}">${ic('l-message-square',15)} SMS</a><a class="btn" target="_blank" rel="noopener" href="${waHref(ph,txt)}">WhatsApp</a>`:''}
-    <a class="btn" href="${viberHref(txt)}">Viber</a>
+    <button type="button" class="btn" id="bk-vb">Viber</button>
     ${navigator.share?`<button type="button" class="btn" id="bk-sh">${ic('send',15)} Κοινοποίηση…</button>`:''}
     <button type="button" class="btn" id="bk-cp">${ic('copy',15)} Αντιγραφή</button>
     <a class="btn ghost" href="${esc(L0.url)}" target="_blank" rel="noopener">👀 Δες τη σελίδα</a></div>
@@ -591,6 +595,9 @@ async function bookShareDialog(p){const B=biz();
     <div class="field" style="margin-top:8px"><label class="f">Πόσες μέρες μπροστά</label><div class="seg" id="bk-days">${[7,14,21,30].map(n=>`<button type="button" data-bd="${n}" class="${bkCfg().days===n?'on':''}">${n}</button>`).join('')}</div></div>
     <div class="field"><label class="f">Πώς μπορούν να σου στείλουν</label><div class="chips">${[['v','Viber'],['s','SMS'],['w','WhatsApp'],['e','Email']].map(([k,l])=>`<button type="button" class="chipt ${bkCfg().ch.includes(k)?'on':''}" data-bch="${k}">${l}</button>`).join('')}</div>
      <div class="tiny muted" style="margin-top:4px">Viber / SMS / WhatsApp στο ${esc(B.phone||'— (λείπει τηλέφωνο)')} · Email στο ${esc(B.email||'— (λείπει email)')}</div></div></details>`,{guard:false});
+  $('#bk-vb',md.el).onclick=async()=>{try{await navigator.clipboard.writeText(txt);}catch(_){}if(p)logMsg(p,'Σύνδεσμος κρατήσεων','Viber');
+    if(navigator.share){toast('Διάλεξε «Viber» από τη λίστα και μετά τον παραλήπτη.','ok');navigator.share({text:txt}).catch(()=>{});}
+    else{toast('Ο σύνδεσμος αντιγράφηκε. Αν στο Viber δεν φαίνεται ολόκληρος, κάνε «Επικόλληση».','ok');location.href=viberHref(txt);}};
   const sh=$('#bk-sh',md.el);if(sh)sh.onclick=()=>navigator.share({title:'Κράτηση ραντεβού',text:txt}).catch(()=>{});
   $('#bk-cp',md.el).onclick=()=>{navigator.clipboard&&navigator.clipboard.writeText(txt).then(()=>toast('Αντιγράφηκε — επικόλλησέ το όπου θέλεις.','ok'));};
   if(p)$$('a.btn',md.el).forEach(a=>{if(/^(sms|viber|https:\/\/wa)/.test(a.getAttribute('href')))a.addEventListener('click',()=>logMsg(p,'Σύνδεσμος κρατήσεων',a.textContent.trim()));});

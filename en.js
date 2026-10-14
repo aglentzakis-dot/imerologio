@@ -1234,5 +1234,8 @@ window.EN_DICT={
 "Σύνδεσμος κράτησης": "Booking link",
 "Αποθηκεύτηκε": "Saved",
 "{} Αποθηκεύτηκε": "{} Saved",
-"χωρίς δεδομένα": "no data"
+"χωρίς δεδομένα": "no data",
+"Διάλεξε «Viber» από τη λίστα και μετά τον παραλήπτη.": "Choose “Viber” from the list, then the recipient.",
+"Ο σύνδεσμος αντιγράφηκε. Αν στο Viber δεν φαίνεται ολόκληρος, κάνε «Επικόλληση».": "Link copied. If it looks incomplete in Viber, use “Paste”.",
+"Το κείμενο αντιγράφηκε· στο Viber κάνε «Επικόλληση».": "Text copied; in Viber use “Paste”."
 };

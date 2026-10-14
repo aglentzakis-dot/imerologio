@@ -60,6 +60,7 @@ const T={
   needName:'Γράψε το όνομά σου.',needPhone:'Γράψε ένα τηλέφωνο για να σε ειδοποιήσουν.',needSlot:'Διάλεξε πρώτα μέρα και ώρα.',
   sentT:'Η κράτηση στάλθηκε!',sentP:b=>`Μόλις την επιβεβαιώσει ο/η «${b}», θα σου απαντήσει. Αν δεν άνοιξε η εφαρμογή μηνυμάτων, δοκίμασε άλλο κουμπί.`,again:'Πίσω',
   msg:(o,when,n,ph,no,link,pr)=>`Καλησπέρα! Θα ήθελα ${o.toLowerCase()} ${when}.\nΌνομα: ${n}\nΤηλ: ${ph}${no?'\nΣημείωση: '+no:''}${pr?'\nΔέχομαι και προσφορές.':''}\n\nΓια καταχώρηση στο ημερολόγιο πατήστε:\n${link}`,
+  vbHint:b=>`Viber: διάλεξε τη συνομιλία με «${b}». Αν το μήνυμα δεν μπήκε μόνο του, πάτα παρατεταμένα στο κουτί γραφής → «Επικόλληση» → Αποστολή.`,cut:'Ο σύνδεσμος κόπηκε στη μέση από την εφαρμογή μηνυμάτων. Ζήτησε να σου τον στείλουν ξανά με SMS ή με «Κοινοποίηση».',
   at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
  en:{title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
   you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',promo:'I also want to receive offers and news (I can stop anytime).',
@@ -69,6 +70,7 @@ const T={
   needName:'Please type your name.',needPhone:'Please type a phone number so they can reach you.',needSlot:'Choose a day and time first.',
   sentT:'Booking sent!',sentP:b=>`“${b}” will reply once they confirm it. If your messaging app didn’t open, try another button.`,again:'Back',
   msg:(o,when,n,ph,no,link,pr)=>`Hello! I would like to book ${when}.\nName: ${n}\nPhone: ${ph}${no?'\nNote: '+no:''}${pr?'\nI accept offers too.':''}\n\nTo add it to the calendar tap:\n${link}`,
+  vbHint:b=>`Viber: pick the chat with “${b}”. If the message didn’t appear, long-press the text box → “Paste” → Send.`,cut:'The link was cut short by the messaging app. Ask them to send it again by SMS or “Share”.',
   at:'at',subj:'Appointment booking',wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],wdL:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],today:'Today',tomorrow:'Tomorrow'}};
 let L=(()=>{try{const s=localStorage.getItem('glen-lang');if(s==='el'||s==='en')return s;}catch(_){}return String(navigator.language||'el').toLowerCase().startsWith('el')?'el':'en';})();
 const t=k=>T[L][k];
@@ -135,24 +137,26 @@ function send(via){const er=$('#er');er.textContent='';
   if(ph.replace(/\D/g,'').length<8)return er.textContent=t('needPhone');
   try{localStorage.setItem('kr-me',JSON.stringify({n,p:ph}));}catch(_){}
   const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,g:D.g,id:Math.random().toString(36).slice(2,10)};
-  const link=new URL(D.a||'./',location.href).href.split('#')[0].split('?')[0]+'?book=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(req)));
+  const link=new URL(D.a||'./',location.href).href.split('#')[0].split('?')[0].replace(/kratisi\.html$/,'')+'?book=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(req)));
   const when=dayLabel(day).long+' '+t('at')+' '+tstr(slot);
   const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,no,link,pr);
   let href;const num=intl(D.ph);
   if(via==='s')href=`sms:${num}${/iPhone|iPad|Mac/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(txt)}`;
   else if(via==='w')href=`https://wa.me/${num.replace(/^\+/,'')}?text=${encodeURIComponent(txt)}`;
-  else if(via==='v')href=`viber://chat?number=${encodeURIComponent(num)}&draft=${encodeURIComponent(txt)}`;
+  else if(via==='v'){try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(_){}
+    if(navigator.share){navigator.share({text:txt}).catch(()=>{});showSent(when,true);return;}
+    href=`viber://chat?number=${encodeURIComponent(num)}`;}
   else href=`mailto:${encodeURIComponent(D.em)}?subject=${encodeURIComponent(t('subj')+' — '+when)}&body=${encodeURIComponent(txt)}`;
   if(via==='w')window.open(href,'_blank','noopener');else location.href=href;
-  if(via==='v'&&navigator.clipboard)navigator.clipboard.writeText(txt).catch(()=>{});
-  setTimeout(()=>{$('#app').innerHTML=`<div class="card done"><div class="big">✅</div><h2>${esc(t('sentT'))}</h2><p class="small">📅 ${esc(when)}</p><p class="muted small">${esc(t('sentP')(D.n||''))}</p><button class="time" id="bk">${esc(t('again'))}</button></div>`;$('#bk').onclick=draw;},700);}
+  setTimeout(()=>showSent(when,via==='v'),700);}
+function showSent(when,vb){$('#app').innerHTML=`<div class="card done"><div class="big">✅</div><h2>${esc(t('sentT'))}</h2><p class="small">📅 ${esc(when)}</p>${vb?`<p class="note small">${esc(t('vbHint')(D.n||''))}</p>`:''}<p class="muted small">${esc(t('sentP')(D.n||''))}</p><button class="time" id="bk">${esc(t('again'))}</button></div>`;$('#bk').onclick=draw;}
 
 /* ---------- εκκίνηση ---------- */
 (async()=>{try{const k=new URLSearchParams(location.search).get('k')||new URLSearchParams(location.hash.slice(1)).get('k');if(!k)throw new Error('χωρίς δεδομένα');
     D=await unpack(k);if(!D||D.v!==1||!Array.isArray(D.s))throw 0;
     D.n=clip(D.n,60);D.o=clip(D.o,30);D.ph=clip(D.ph,25);D.em=clip(D.em,80);
     if(D.l==='en'||D.l==='el'){try{if(!localStorage.getItem('glen-lang'))L=String(navigator.language||'').toLowerCase().startsWith('el')?'el':(D.l||L);}catch(_){}}
-    applyColor(D.c);}catch(e){D=null;window.__err=(T[L]||T.el).bad;window.__why=String(e&&e.message||e).slice(0,80);}
+    applyColor(D.c);}catch(e){D=null;window.__err=/Unterminated|Unexpected end|Bad control|JSON/i.test(String(e&&e.message))?(T[L]||T.el).cut:(T[L]||T.el).bad;window.__why=String(e&&e.message||e).slice(0,80);}
   draw();})();
 </script>
 </body>
