@@ -1238,5 +1238,21 @@ window.EN_DICT={
 "Διάλεξε «Viber» από τη λίστα και μετά τον παραλήπτη.": "Choose “Viber” from the list, then the recipient.",
 "Ο σύνδεσμος αντιγράφηκε. Αν στο Viber δεν φαίνεται ολόκληρος, κάνε «Επικόλληση».": "Link copied. If it looks incomplete in Viber, use “Paste”.",
 "Το κείμενο αντιγράφηκε· στο Viber κάνε «Επικόλληση».": "Text copied; in Viber use “Paste”.",
-"· ο σύνδεσμος είναι προσωπικός: δεν θα χρειαστεί να γράψει όνομα και τηλέφωνο.": "· this link is personal: they won’t need to type name or phone."
+"· ο σύνδεσμος είναι προσωπικός: δεν θα χρειαστεί να γράψει όνομα και τηλέφωνο.": "· this link is personal: they won’t need to type name or phone.",
+"Επαφές": "Contacts",
+"Επαφή": "Contact",
+"επαφή": "contact",
+"επαφής": "contact",
+"επαφές": "contacts",
+"Προσωπικό ημερολόγιο (για εμένα)": "Personal calendar (for me)",
+"✅ Μπήκε στο ημερολόγιό σου": "✅ Added to your calendar",
+"· περιμένει επιβεβαίωση": "· awaiting confirmation",
+"Περιμένει επιβεβαίωση": "Awaiting confirmation",
+"Βάλε το Ημερολόγιο στην αρχική οθόνη του κινητού σου: θα βλέπεις όλο τον μήνα με": "Put the Calendar on your home screen: you’ll see the whole month with",
+"στίγματα": "dots",
+"στις μέρες που έχεις ραντεβού.": "on the days you have appointments.",
+"{} Εγκατάσταση στο κινητό": "{} Install on phone",
+"Από τις τρεις τελείες του φυλλομετρητή: «Προσθήκη στην αρχική οθόνη» → «Εγκατάσταση».": "From the browser’s three-dot menu: “Add to Home screen” → “Install”.",
+"Γιατρός": "Doctor",
+"Υπηρεσία": "Service"
 };

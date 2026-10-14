@@ -109,6 +109,7 @@ addEventListener('keydown',e=>{if(e.key!=='Escape')return;const t=topModal();if(
 /* ---------- πλοήγηση ---------- */
 function parseRoute(){const h=location.hash.replace(/^#\/?/,'');const[p,q]=h.split('?');const parts=p.split('/').filter(Boolean);return{name:parts[0]||'today',id:parts[1]||null,q:Object.fromEntries(new URLSearchParams(q||''))};}
 function render(){document.body&&document.body.classList.toggle('hidenames',!!(S.data&&S.data.settings.hideNames));
+  {const qm=new URLSearchParams(location.search).get('mine');if(qm){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';if(mineImport(qm)){applyIdentity&&applyIdentity();return render();}}}
   applyTheme();if(!S.data.settings.prof){shellHTML('today');M().innerHTML='';return firstRun();}
   window.AGPOS=null;if(/^#\/agenda/.test(S.curHash||'')&&/^#\/agenda/.test(location.hash)&&typeof agPosSave==='function')agPosSave();
   S.curHash=location.hash;
@@ -117,7 +118,7 @@ function render(){document.body&&document.body.classList.toggle('hidenames',!!(S
   shellHTML(sec);
   const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewMap,settings:viewSettingsPage}[r.name]||viewToday;
   if(!window.AGPOS)window.scrollTo(0,0);
-  setTimeout(()=>dirtyWatch(M()),60);
+  setTimeout(()=>dirtyWatch(M()),60);setTimeout(mineMsgShow,500);
   try{V(r);}catch(e){console.error(e);M().innerHTML=`<div class="card"><h2>Κάτι πήγε στραβά</h2><p class="muted">${esc(e.message)}</p><a class="btn" href="#/agenda">Ραντεβού</a></div>`;}
 }
 function shellHTML(sec){
@@ -163,6 +164,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
   const closed=isClosed(t)?(holidayOf(t)||'Κλειστά σήμερα'):'';
   M().innerHTML=`
   <nav class="vjump" aria-label="Προβολή ημερολογίου"><a href="#/agenda?view=day&d=${t}">${ic('calendar',16)}<span>Ημέρα</span></a><a href="#/agenda?view=week&w=${mondayOf(t)}">${ic('l-calendar-clock',16)}<span>Εβδομάδα</span></a><a href="#/agenda?view=month">${ic('grid',16)}<span>Μήνας</span></a><a href="#/agenda?view=list">${ic('menu',16)}<span>Λίστα</span></a></nav>
+  ${isPrivate()?monthDotsHTML():''}
   ${certAlertsHTML()}
   <section class="hero"><div class="hero-in"><div class="hero-hi">${greet()}${first?', '+esc(first):''}</div>
    <div class="hero-date">${WDAYS[wdOf(t)]} ${+t.slice(8)} ${MONTHS_G[+t.slice(5,7)-1]}</div>
@@ -178,7 +180,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
    <div class="tmrw"><span><b>${T.length}</b> ${T.length===1?'ραντεβού':'ραντεβού'}${T.length?' — πρώτο στις '+T[0].s:''}</span>${T.length?`<button class="btn sm" id="tRem">${ic('bell',15)} Στείλε υπενθυμίσεις</button>`:''}</div></section>
   ${installCardHTML()}`;
   const n=$('#tNew');if(n)n.onclick=()=>apptDialog({date:t});
-  $('#tEye').onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();render();};const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);const tb=$('#tBook');if(tb)tb.onclick=()=>bookShareDialog();
+  $('#tEye').onclick=()=>{S.data.settings.hideNames=!S.data.settings.hideNames;save();render();};const r=$('#tRem');if(r)r.onclick=()=>remindDialog(tm);const tb=$('#tBook');if(tb)tb.onclick=()=>bookShareDialog();if(isPrivate())monthDotsBind();
   bindInstall();}
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
@@ -544,6 +546,36 @@ function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="viber://forward"]');if(!a)return;let txt='';try{txt=decodeURIComponent(a.getAttribute('href').split('text=')[1]||'');}catch(_){}
   if(txt.length<170)return;e.preventDefault();try{navigator.clipboard&&navigator.clipboard.writeText(txt);}catch(_){}
   if(navigator.share){toast('Διάλεξε «Viber» από τη λίστα και μετά τον παραλήπτη.','ok');navigator.share({text:txt}).catch(()=>{});}else{toast('Το κείμενο αντιγράφηκε· στο Viber κάνε «Επικόλληση».','ok');location.href='viber://forward?text='+encodeURIComponent(txt.slice(0,160));}},true);
+/* ---------- ο πελάτης κρατά το ραντεβού στο ΔΙΚΟ του Ημερολόγιο (ως ιδιώτης) ---------- */
+function mineImport(code){const q=bookDecode(code);if(!q)return false;const biz0=String(q.n||'').trim()||'Ραντεβού';
+  if(!S.data.settings.prof){S.data.settings.prof='prosopiko';S.data.settings.lex={};biz().kind='private';S.data.settings.demo=false;}
+  const seen=(S.data.mineSeen=S.data.mineSeen||{});const key=q.id+'|'+q.d+'|'+q.s;
+  if(!seen[key]){let p=S.data.students.find(x=>q.ph&&phKey(x.phone||((x.contacts||[])[0]||{}).phone)===phKey(q.ph))||S.data.students.find(x=>(x.name||'')===biz0);
+    if(!p){const id=IM_NEWPERSON(biz0,{phone:q.ph||''});p=getStudent(id);}
+    const e=tstr(tmin(q.s)+q.u);appts().push({id:uid(),sid:p.id,kind:'once',date:q.d,d:wdOf(q.d),s:q.s,e,note:(q.no?q.no+' · ':'')+'Περιμένει επιβεβαίωση',ex:{},created:new Date().toISOString(),src:'mine'});
+    seen[key]=new Date().toISOString();save();}
+  try{sessionStorage.setItem('im-mine-msg',JSON.stringify({d:q.d,s:q.s,b:biz0}));}catch(_){}
+  return true;}
+function mineMsgShow(){let m=null;try{m=JSON.parse(sessionStorage.getItem('im-mine-msg')||'null');sessionStorage.removeItem('im-mine-msg');}catch(_){}if(!m)return;const q={d:m.d,s:m.s},biz0=m.b;
+  {const when=WDAYS[wdOf(q.d)]+' '+fmtShort(q.d)+' · '+q.s;
+    const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">✅ Μπήκε στο ημερολόγιό σου</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+     <div class="note"><b>📅 ${esc(when)}</b><div class="small">${esc(biz0)} · περιμένει επιβεβαίωση</div></div>
+     <p class="small" style="margin:12px 0 6px">Βάλε το Ημερολόγιο στην αρχική οθόνη του κινητού σου: θα βλέπεις όλο τον μήνα με <b>στίγματα</b> στις μέρες που έχεις ραντεβού.</p>
+     ${INST?`<button class="btn pri" id="mi-inst" style="width:100%">${ic('download',16)} Εγκατάσταση στο κινητό</button>`:isStandalone()?'':`<div class="note small">Από τις τρεις τελείες του φυλλομετρητή: «Προσθήκη στην αρχική οθόνη» → «Εγκατάσταση».</div>`}
+     <button class="btn" data-close style="width:100%;margin-top:8px">Εντάξει</button>`,{guard:false});
+    const b=$('#mi-inst',md.el);if(b)b.onclick=async()=>{const e=INST;if(!e)return;e.prompt();const r=await e.userChoice.catch(()=>null);INST=null;md.close();if(r&&r.outcome==='accepted')toast('Η εφαρμογή μπαίνει στην αρχική οθόνη.','ok');};}}
+/* ---------- μεγάλος μήνας με στίγματα (αρχική οθόνη για ιδιώτες) ---------- */
+let MDOT=null;
+function monthDotsHTML(){const t=todayISO();const ym=MDOT||t.slice(0,7);const first=ym+'-01';const start=mondayOf(first);
+  const endM=addDays(ym.slice(0,4)+'-'+String(+ym.slice(5,7)%12+1).padStart(2,'0')+'-01',0);const last=+ym.slice(5,7)===12?(+ym.slice(0,4)+1)+'-01-01':endM;
+  const L=occ(start,addDays(start,41),{by:''}).filter(o=>o.st!=='cancel');const by={};L.forEach(o=>(by[o.date]=by[o.date]||[]).push(o));
+  let cells='';for(let i=0;i<42;i++){const d=addDays(start,i);if(i>=35&&d>=last)break;const out=d.slice(0,7)!==ym;const X=by[d]||[];
+    cells+=`<a class="mdc ${out?'out':''} ${d===t?'today':''} ${isClosed(d)?'closed':''}" href="#/agenda?view=day&d=${d}"><b>${+d.slice(8)}</b><span class="mdd">${X.slice(0,4).map(o=>`<i style="background:${(stOf(o.a.sid)||{}).color||'var(--brand)'}"></i>`).join('')}${X.length>4?'<em>+</em>':''}</span></a>`;}
+  const nx=L.filter(o=>o.date>t||(o.date===t&&tmin(o.e)>nowMin())).slice(0,3);
+  return`<section class="card mdots"><div class="spread" style="margin-bottom:8px"><button class="iconbtn" data-mdm="-1" aria-label="Προηγούμενος μήνας">${ic('left',18)}</button><b class="mdt">${MONTHS[+ym.slice(5,7)-1]} ${ym.slice(0,4)}</b><button class="iconbtn" data-mdm="1" aria-label="Επόμενος μήνας">${ic('right',18)}</button></div>
+   <div class="mdg">${(window.LANG==='en'?['M','T','W','T','F','S','S']:['Δ','Τ','Τ','Π','Π','Σ','Κ']).map(x=>`<span class="mdw">${x}</span>`).join('')}${cells}</div>
+   ${nx.length?`<div class="mdn">${nx.map(o=>`<button type="button" data-ap="${o.key}" class="mdnr"><i style="background:${(stOf(o.a.sid)||{}).color||'var(--brand)'}"></i><b>${WDAYS_S[wdOf(o.date)]} ${fmtShort(o.date)} · ${o.s}</b><span>${esc(stuName(stOf(o.a.sid)))}</span></button>`).join('')}</div>`:''}</section>`;}
+function monthDotsBind(){$$('[data-mdm]').forEach(b=>b.onclick=()=>{const ym=MDOT||todayISO().slice(0,7);let y=+ym.slice(0,4),m=+ym.slice(5,7)+(+b.dataset.mdm);if(m<1){m=12;y--;}if(m>12){m=1;y++;}MDOT=y+'-'+String(m).padStart(2,'0');render();});}
 /* ---------- κουμπί «Αποθήκευση»: σβήνει όταν δεν υπάρχει αλλαγή, γράφει «✓ Αποθηκεύτηκε» ---------- */
 function dirtyWatch(root){if(!root)return;$$('form',root).forEach(f=>{const btn=f.querySelector('button.btn.pri:not([type=button])');if(!btn||f._dw)return;f._dw=true;
   const fresh=/\/new\b/.test(location.hash);const label=btn.innerHTML;
@@ -875,7 +907,7 @@ function installAsk(){if(!INST||isStandalone()||topModal()||!S.data.settings.pro
 /* ---------- αναβάθμιση ---------- */
 let swReg=null;
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').then(r=>{swReg=r;r.update();}).catch(()=>{});
-  let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload();});}
+  let reloaded=false,hadCtl=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadCtl){hadCtl=true;return;}if(reloaded)return;reloaded=true;location.reload();});}
 async function checkUpdate(){try{const r=await fetch('version.json?v='+Date.now(),{cache:'no-store'});const v=(await r.json()).version;
   if(v&&v!==APP_VERSION){toast('Βρέθηκε νέα έκδοση '+v+'. Αναβάθμιση…','ok');if(swReg)await swReg.update();try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('imerologio-')).map(k=>caches.delete(k)));}catch(e){}setTimeout(()=>location.reload(),900);}else toast('Έχεις την τελευταία έκδοση ('+APP_VERSION+').');}
   catch(e){toast('Χρειάζεται σύνδεση στο διαδίκτυο για τον έλεγχο.','bad');}}

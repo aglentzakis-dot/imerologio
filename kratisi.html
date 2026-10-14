@@ -74,8 +74,8 @@ const T={
   sentT:'Η κράτηση στάλθηκε!',sentP:b=>`Μόλις την επιβεβαιώσει ο/η «${b}», θα σου απαντήσει. Αν δεν άνοιξε η εφαρμογή μηνυμάτων, δοκίμασε άλλο κουμπί.`,again:'Πίσω',
   msg:(o,when,n,ph,no,link,pr)=>`Καλησπέρα! Θα ήθελα ${o.toLowerCase()} ${when}.\nΌνομα: ${n}\nΤηλ: ${ph}${no?'\nΣημείωση: '+no:''}${pr?'\nΔέχομαι και προσφορές.':''}\n\nΓια καταχώρηση στο ημερολόγιο πατήστε:\n${link}`,
   vbHint:b=>`Viber: διάλεξε τη συνομιλία με «${b}». Αν το μήνυμα δεν μπήκε μόνο του, πάτα παρατεταμένα στο κουτί γραφής → «Επικόλληση» → Αποστολή.`,cut:'Ο σύνδεσμος κόπηκε στη μέση από την εφαρμογή μηνυμάτων. Ζήτησε να σου τον στείλουν ξανά με SMS ή με «Κοινοποίηση».',
-  hi:f=>`Γεια σου ${f}! Διάλεξε ώρα και πάτα αποστολή`,hiTop:f=>`Γεια σου ${f} 👋 Διάλεξε μέρα και ώρα`,notMe:n=>`Δεν είσαι ο/η ${n}; Γράψε τα στοιχεία σου`,
-  calV:'Ημερολόγιο',listV:'Λίστα',legFree:'Ελεύθερο',legBusy:'Πιασμένο',yours:'Το ραντεβού σου',yoursS:'Εσύ',tapGreen:'Πάτα ένα πράσινο κουτάκι για να διαλέξεις ώρα.',
+  hi:f=>`Γεια σου ${f}! Διάλεξε ώρα και πάτα αποστολή`,hiTop:f=>`Γεια σου ${f} 👋 Διάλεξε μέρα και ώρα`,useMe:n=>`Είσαι ο/η ${n}; Πάτα για να μπουν τα στοιχεία σου`,notMe:n=>`Δεν είσαι ο/η ${n}; Γράψε τα στοιχεία σου`,
+  addMine:'Κράτα το στο δικό μου Ημερολόγιο (εφαρμογή)',calV:'Ημερολόγιο',listV:'Λίστα',legFree:'Ελεύθερο',legBusy:'Πιασμένο',yours:'Το ραντεβού σου',yoursS:'Εσύ',tapGreen:'Πάτα ένα πράσινο κουτάκι για να διαλέξεις ώρα.',
   addCal:'Βάλ\' το στο ημερολόγιο του κινητού μου',pending:'Περιμένει επιβεβαίωση από την επιχείρηση.',ownT:'Θέλεις κι εσύ τέτοιο ημερολόγιο;',ownP:'Για τη δουλειά σου ή για εσένα — δωρεάν, στα ελληνικά, τα δεδομένα μένουν στο κινητό σου.',ownB:'Κατέβασε το Ημερολόγιο',
   at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
  en:{title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
@@ -87,8 +87,8 @@ const T={
   sentT:'Booking sent!',sentP:b=>`“${b}” will reply once they confirm it. If your messaging app didn’t open, try another button.`,again:'Back',
   msg:(o,when,n,ph,no,link,pr)=>`Hello! I would like to book ${when}.\nName: ${n}\nPhone: ${ph}${no?'\nNote: '+no:''}${pr?'\nI accept offers too.':''}\n\nTo add it to the calendar tap:\n${link}`,
   vbHint:b=>`Viber: pick the chat with “${b}”. If the message didn’t appear, long-press the text box → “Paste” → Send.`,cut:'The link was cut short by the messaging app. Ask them to send it again by SMS or “Share”.',
-  hi:f=>`Hi ${f}! Pick a time and send`,hiTop:f=>`Hi ${f} 👋 Pick a day and time`,notMe:n=>`Not ${n}? Enter your details`,
-  calV:'Calendar',listV:'List',legFree:'Free',legBusy:'Taken',yours:'Your appointment',yoursS:'You',tapGreen:'Tap a green box to pick a time.',
+  hi:f=>`Hi ${f}! Pick a time and send`,hiTop:f=>`Hi ${f} 👋 Pick a day and time`,useMe:n=>`Are you ${n}? Tap to fill in your details`,notMe:n=>`Not ${n}? Enter your details`,
+  addMine:'Keep it in my own Calendar app',calV:'Calendar',listV:'List',legFree:'Free',legBusy:'Taken',yours:'Your appointment',yoursS:'You',tapGreen:'Tap a green box to pick a time.',
   addCal:'Add it to my phone calendar',pending:'Waiting for confirmation from the business.',ownT:'Want a calendar like this?',ownP:'For your work or for yourself — free, your data stays on your phone.',ownB:'Get the Calendar app',
   at:'at',subj:'Appointment booking',wd:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],wdL:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],today:'Today',tomorrow:'Tomorrow'}};
 let L=(()=>{try{const s=localStorage.getItem('glen-lang');if(s==='el'||s==='en')return s;}catch(_){}return String(navigator.language||'el').toLowerCase().startsWith('el')?'el':'en';})();
@@ -136,8 +136,8 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
    <p class="tiny muted" style="margin:10px 0 0">${esc(t('asOf')(g.toLocaleString(L==='el'?'el-GR':'en-GB',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})))}</p></div>
   <div class="card"><h2>${esc(PC&&!other?t('hi')(PC.n.split(' ')[0]):t('you'))}</h2>
    ${slot?`<div class="sum">📅 ${esc(dayLabel(day).long)} · ${tstr(slot)}</div>`:''}
-   <div class="${PC&&!other?'hidden':''}"><label class="f" for="nm">${esc(t('name'))}</label><input class="in" id="nm" autocomplete="name" maxlength="80" value="${esc(PC&&!other?PC.n:(saved.n||''))}">
-   <label class="f" for="ph">${esc(t('phone'))}</label><input class="in" id="ph" type="tel" inputmode="tel" autocomplete="tel" maxlength="25" value="${esc(PC&&!other?PC.ph:(saved.p||''))}"></div>
+   <div class="${PC&&!other?'hidden':''}"><label class="f" for="nm">${esc(t('name'))}</label><input class="in" id="nm" autocomplete="name" maxlength="80" value="${esc(PC&&!other?PC.n:'')}">
+   <label class="f" for="ph">${esc(t('phone'))}</label><input class="in" id="ph" type="tel" inputmode="tel" autocomplete="tel" maxlength="25" value="${esc(PC&&!other?PC.ph:'')}"></div>${!(PC&&!other)&&saved.n?`<button type="button" class="linkb" id="useme">${esc(t('useMe')(saved.n))}</button>`:''}
    ${PC&&!other?`<button type="button" class="linkb" id="notme">${esc(t('notMe')(PC.n))}</button>`:''}
    <label class="f" for="no">${esc(t('note'))}</label><textarea class="in" id="no" rows="2" maxlength="200"></textarea>
    <label class="chk"><input type="checkbox" id="pr"><span>${esc(t('promo'))}</span></label>
@@ -146,7 +146,7 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
    <div class="sends">${D.ph&&ch.includes('v')?`<a class="send viber" data-via="v">${esc(t('viber'))}</a>`:''}${D.ph&&ch.includes('s')?`<a class="send sms" data-via="s">${esc(t('sms'))}</a>`:''}${D.ph&&ch.includes('w')?`<a class="send wa" data-via="w">${esc(t('wa'))}</a>`:''}${D.em&&ch.includes('e')?`<a class="send mail" data-via="e">${esc(t('mail'))}</a>`:''}</div>
    <p class="tiny muted" style="margin:12px 0 0">🔒 ${esc(t('priv')(D.n||''))}</p></div>
   <footer>Ημερολόγιο · GlenApps</footer>`;
-  bindLang();const nm2=$('#notme');if(nm2)nm2.onclick=()=>{other=true;draw();};
+  bindLang();const nm2=$('#notme');if(nm2)nm2.onclick=()=>{other=true;draw();};const um=$('#useme');if(um)um.onclick=()=>{$('#nm').value=saved.n||'';$('#ph').value=saved.p||'';um.remove();};
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{day=b.dataset.d;slot=null;draw();});
   app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;draw();});
   app.querySelectorAll('[data-wk]').forEach(b=>b.onclick=()=>{wk+=+b.dataset.wk;draw();});
@@ -198,9 +198,12 @@ function icsFile(){const p=n=>String(n).padStart(2,'0');const st=new Date(day+'T
   const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//GlenApps Imerologio//EL','BEGIN:VEVENT','UID:'+Date.now()+'@imerologio','DTSTAMP:'+f(new Date()),'DTSTART:'+f(st),'DTEND:'+f(en),'SUMMARY:'+e((D.o||'Ραντεβού')+' — '+(D.n||'')),'DESCRIPTION:'+e(t('pending')),'BEGIN:VALARM','TRIGGER:-PT2H','ACTION:DISPLAY','DESCRIPTION:'+e(D.o||'Ραντεβού'),'END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download='rantevou.ics';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);}
 function showSent(when,vb){$('#app').innerHTML=`<div class="card done"><div class="big">✅</div><h2>${esc(t('sentT'))}</h2><p class="small">📅 ${esc(when)}</p>${vb?`<p class="note small">${esc(t('vbHint')(D.n||''))}</p>`:''}<p class="muted small">${esc(t('sentP')(D.n||''))}</p>
-   <button class="send sms" id="ics" style="display:block;width:100%;margin:12px 0 8px">📲 ${esc(t('addCal'))}</button><button class="time" id="bk">${esc(t('again'))}</button></div>
+   <a class="send viber" id="mine" style="display:block;width:100%;margin:12px 0 8px">📅 ${esc(t('addMine'))}</a>
+   <button class="send sms" id="ics" style="display:block;width:100%;margin:0 0 8px">📲 ${esc(t('addCal'))}</button><button class="time" id="bk">${esc(t('again'))}</button></div>
    <div class="card promo"><b>${esc(t('ownT'))}</b><p class="small muted" style="margin:4px 0 8px">${esc(t('ownP'))}</p><a class="time" href="${esc(new URL('./',location.href).href)}" target="_blank" rel="noopener">⬇️ ${esc(t('ownB'))}</a></div>`;
-  $('#bk').onclick=draw;$('#ics').onclick=icsFile;}
+  $('#bk').onclick=draw;$('#ics').onclick=icsFile;
+  const mq={v:1,d:day,s:tstr(slot),u:D.u,n:D.n||'',ph:D.ph||'',no:'',id:'m'+Math.random().toString(36).slice(2,9)};
+  $('#mine').href=new URL('./',location.href).href.split('?')[0]+'?mine=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(mq)));}
 
 /* ---------- εκκίνηση ---------- */
 (async()=>{try{const k=new URLSearchParams(location.search).get('k')||new URLSearchParams(location.hash.slice(1)).get('k');if(!k)throw new Error('χωρίς δεδομένα');
