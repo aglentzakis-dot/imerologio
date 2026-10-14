@@ -1231,5 +1231,8 @@ window.EN_DICT={
 "Στείλε του να κλείσει μόνος του": "Let them book on their own",
 "Σύνδεσμος με τις ελεύθερες ώρες σου, με Viber / SMS / WhatsApp": "A link with your free times, via Viber / SMS / WhatsApp",
 "📲 Σύνδεσμος": "📲 Link",
-"Σύνδεσμος κράτησης": "Booking link"
+"Σύνδεσμος κράτησης": "Booking link",
+"Αποθηκεύτηκε": "Saved",
+"{} Αποθηκεύτηκε": "{} Saved",
+"χωρίς δεδομένα": "no data"
 };

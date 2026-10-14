@@ -112,10 +112,12 @@ function render(){document.body&&document.body.classList.toggle('hidenames',!!(S
   applyTheme();if(!S.data.settings.prof){shellHTML('today');M().innerHTML='';return firstRun();}
   window.AGPOS=null;if(/^#\/agenda/.test(S.curHash||'')&&/^#\/agenda/.test(location.hash)&&typeof agPosSave==='function')agPosSave();
   S.curHash=location.hash;
+  {const qb=new URLSearchParams(location.search).get('book');if(qb){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';setTimeout(()=>bookImport(qb),200);}}
   const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(()=>bookImport(c),150);return render();}const sec=r.name==='person'?'people':r.name;
   shellHTML(sec);
   const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewMap,settings:viewSettingsPage}[r.name]||viewToday;
   if(!window.AGPOS)window.scrollTo(0,0);
+  setTimeout(()=>dirtyWatch(M()),60);
   try{V(r);}catch(e){console.error(e);M().innerHTML=`<div class="card"><h2>Κάτι πήγε στραβά</h2><p class="muted">${esc(e.message)}</p><a class="btn" href="#/agenda">Ραντεβού</a></div>`;}
 }
 function shellHTML(sec){
@@ -538,6 +540,15 @@ function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_
   if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}<div class="setlist">${L.map(([k,,i,t,d])=>`<a class="setrow" href="#/settings/${k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div><p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
   M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
 
+/* ---------- κουμπί «Αποθήκευση»: σβήνει όταν δεν υπάρχει αλλαγή, γράφει «✓ Αποθηκεύτηκε» ---------- */
+function dirtyWatch(root){if(!root)return;$$('form',root).forEach(f=>{const btn=f.querySelector('button.btn.pri:not([type=button])');if(!btn||f._dw)return;f._dw=true;
+  const fresh=/\/new\b/.test(location.hash);const label=btn.innerHTML;
+  const val=()=>JSON.stringify([...f.elements].filter(e=>e.name||e.id).map(e=>e.type==='checkbox'||e.type==='radio'?e.checked:e.value));
+  let base=val();
+  const upd=()=>{const dirty=fresh?[...f.elements].some(e=>/^(text|tel|email|textarea|search|url|number|date|time)$/.test(e.type)&&e.value.trim()):val()!==base;
+    btn.disabled=!dirty;btn.classList.toggle('saved',!dirty&&!fresh);btn.innerHTML=dirty||fresh?label:`${ic('check',16)} Αποθηκεύτηκε`;};
+  f.addEventListener('input',upd);f.addEventListener('change',upd);f.addEventListener('submit',()=>setTimeout(()=>{if(document.body.contains(f)){base=val();upd();}},80));
+  upd();});}
 /* ---------- κρατήσεις από πελάτες (τρόπος Α: σύνδεσμος, χωρίς διακομιστή) ----------
    Ο σύνδεσμος κουβαλά τις ελεύθερες ώρες (συμπιεσμένες). Ο πελάτης διαλέγει ώρα στη σελίδα kratisi.html
    και στέλνει μήνυμα (Viber / SMS / WhatsApp / email) με σύνδεσμο «#/book?r=…». Το πάτημά του
@@ -551,9 +562,16 @@ async function packZ(obj){const bytes=new TextEncoder().encode(JSON.stringify(ob
 function bookSlots(days){const out=[];const t=todayISO();const du=IM_DEF.dur();const PV=providers();
   for(let i=0;i<days;i++){const d=addDays(t,i);const set=new Set();PV.forEach(p=>slotsFor(d,p.id,du).forEach(x=>set.add(tmin(x))));if(set.size)out.push([d,[...set].sort((a,b)=>a-b)]);}
   return out;}
+/* οι ελεύθερες ώρες γράφονται ως «χάρτης» ανά 15λεπτο (δεκαεξαδικό ανά μέρα): μικρός σύνδεσμος, χωρίς συμπίεση,
+   ώστε να ανοίγει σε κάθε κινητό και σε κάθε εσωτερικό φυλλομετρητή (Viber, Gmail…) */
+function slotPack(S2,days){const t=todayISO();const all=S2.flatMap(x=>x[1]);if(!all.length)return{b:t,t0:0,n:0,d:[]};
+  const t0=Math.floor(Math.min(...all)/15)*15,n=Math.floor((Math.max(...all)-t0)/15)+1;const M=new Map(S2);const d=[];
+  for(let i=0;i<days;i++){const L=M.get(addDays(t,i));if(!L){d.push('');continue;}const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);d.push(h.replace(/0+$/,''));}
+  while(d.length&&!d[d.length-1])d.pop();return{b:t,t0,n,d};}
 async function bookLink(){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
-  const D={v:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,a:new URL('./',location.href).href,s:S2};
-  return{url:new URL('kratisi.html',location.href).href.split('#')[0]+'#k='+(await packZ(D)),slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
+  const D=Object.assign({v:2,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,a:new URL('./',location.href).href.split('?')[0].split('#')[0]},slotPack(S2,c.days));
+  const k='c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));
+  return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k='+k,slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
 async function bookShareDialog(p){const B=biz();
   if(!B.phone&&!B.email){if(await confirmDlg('Για να σου στέλνουν κρατήσεις, χρειάζεται το τηλέφωνο της επιχείρησης (για Viber / SMS) ή email. Να πας να το γράψεις;',{ok:'Πάμε'}))go('settings/info');return;}
   const L0=await bookLink();const nm=p?(p.name||'').split(' ')[0]:'';

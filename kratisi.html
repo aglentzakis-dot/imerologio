@@ -82,6 +82,9 @@ const tstr=m=>pad(Math.floor(m/60))+':'+pad(m%60);
 function b64uDec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 function b64uEnc(u){let b='';for(let i=0;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 async function unpack(s){const k=s[0],body=s.slice(1);let bytes=b64uDec(body);
+  if(k==='c'){const o=JSON.parse(new TextDecoder().decode(bytes));const out=[];const base=new Date(o.b+'T12:00');
+    (o.d||[]).forEach((h,i)=>{if(!h)return;const L=[];for(let j=0;j<h.length;j++){const v=parseInt(h[j],16);for(let b=0;b<4;b++)if(v&(8>>b))L.push(o.t0+(j*4+b)*15);}const dt=new Date(base.getTime()+i*864e5);if(L.length)out.push([isoDate(dt),L]);});
+    o.s=out;o.v=1;return o;}
   if(k==='z'){const ds=new DecompressionStream('deflate-raw');bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer());}
   return JSON.parse(new TextDecoder().decode(bytes));}
 const intl=ph=>{let d=String(ph||'').replace(/[^\d+]/g,'');if(d.startsWith('00'))d='+'+d.slice(2);if(!d.startsWith('+')){d=d.replace(/\D/g,'');if(/^(69|2)\d{8}$/.test(d))d='+30'+d;else d='+'+d;}return d;};
@@ -97,7 +100,7 @@ function liveSlots(){const now=new Date(),td=isoDate(now),nm=now.getHours()*60+n
   for(const[d,list]of D.s){if(d<td)continue;const L2=list.filter(m=>d>td||m>=nm);if(L2.length)out.push([d,L2]);}return out;}
 
 function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');document.documentElement.lang=L;
-  if(!D){app.innerHTML=`<div class="card done"><div class="big">🔗</div><p>${esc(window.__err||t('bad'))}</p></div>`;return;}
+  if(!D){app.innerHTML=`<div class="card done"><div class="big">🔗</div><p>${esc(window.__err||t('bad'))}</p>${window.__why?`<p class="tiny muted">(${esc(window.__why)})</p>`:''}</div>`;return;}
   const S=liveSlots();
   const head=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(t('title'))}</p></div><button class="lang" id="lg" aria-label="Language">${L==='el'?'🇬🇧':'🇬🇷'}</button></div>`;
   if(!S.length){app.innerHTML=head+`<div class="card done"><div class="big">⏳</div><p>${esc(t('expired'))}</p></div>`;bindLang();return;}
@@ -132,7 +135,7 @@ function send(via){const er=$('#er');er.textContent='';
   if(ph.replace(/\D/g,'').length<8)return er.textContent=t('needPhone');
   try{localStorage.setItem('kr-me',JSON.stringify({n,p:ph}));}catch(_){}
   const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,g:D.g,id:Math.random().toString(36).slice(2,10)};
-  const link=new URL(D.a||'./',location.href).href.split('#')[0]+'#/book?r=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(req)));
+  const link=new URL(D.a||'./',location.href).href.split('#')[0].split('?')[0]+'?book=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(req)));
   const when=dayLabel(day).long+' '+t('at')+' '+tstr(slot);
   const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,no,link,pr);
   let href;const num=intl(D.ph);
@@ -145,11 +148,11 @@ function send(via){const er=$('#er');er.textContent='';
   setTimeout(()=>{$('#app').innerHTML=`<div class="card done"><div class="big">✅</div><h2>${esc(t('sentT'))}</h2><p class="small">📅 ${esc(when)}</p><p class="muted small">${esc(t('sentP')(D.n||''))}</p><button class="time" id="bk">${esc(t('again'))}</button></div>`;$('#bk').onclick=draw;},700);}
 
 /* ---------- εκκίνηση ---------- */
-(async()=>{try{const q=new URLSearchParams(location.hash.slice(1));const k=q.get('k');if(!k)throw 0;
+(async()=>{try{const k=new URLSearchParams(location.search).get('k')||new URLSearchParams(location.hash.slice(1)).get('k');if(!k)throw new Error('χωρίς δεδομένα');
     D=await unpack(k);if(!D||D.v!==1||!Array.isArray(D.s))throw 0;
     D.n=clip(D.n,60);D.o=clip(D.o,30);D.ph=clip(D.ph,25);D.em=clip(D.em,80);
     if(D.l==='en'||D.l==='el'){try{if(!localStorage.getItem('glen-lang'))L=String(navigator.language||'').toLowerCase().startsWith('el')?'el':(D.l||L);}catch(_){}}
-    applyColor(D.c);}catch(e){D=null;window.__err=(T[L]||T.el).bad;}
+    applyColor(D.c);}catch(e){D=null;window.__err=(T[L]||T.el).bad;window.__why=String(e&&e.message||e).slice(0,80);}
   draw();})();
 </script>
 </body>
