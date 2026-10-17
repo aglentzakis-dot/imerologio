@@ -23,8 +23,8 @@ function getStudent(id){return S.data.students.find(x=>x.id===id)||null;}
 const COLL=new Intl.Collator('el');function myStudents(){return S.data.students.slice().sort((a,b)=>COLL.compare(a.name||'',b.name||''));}
 const stuName=s=>s?(s.name||'—'):'—';
 const initial=n=>((n||'?').trim()[0]||'?').toUpperCase();
-function IM_NEWPERSON(name,c){c=c||{};const p={id:uid(),name:name.trim(),avatar:initial(name),phone:c.phone||'',email:c.email||'',contacts:(c.phone||c.email)?[{name:name.trim(),phone:c.phone||'',email:c.email||''}]:[],created:new Date().toISOString()};
-  if(c.addr)p.loc={addr:c.addr,home:true};if(c.notes)p.notes=c.notes;if(c.cons)setCons(p,'appt',c.cons==='yes',c.consHow||'στο νέο ραντεβού');
+function IM_NEWPERSON(name,c){c=c||{};if(c.id&&getStudent(c.id))return c.id;if(c.phone){const ex=byPhone(c.phone);if(ex)return ex.id;}const p={id:uid(),name:name.trim(),avatar:initial(name),phone:c.phone||'',email:c.email||'',contacts:(c.phone||c.email)?[{name:name.trim(),phone:c.phone||'',email:c.email||''}]:[],created:new Date().toISOString()};
+  if(c.phone2||(c.phones&&c.phones[1]))p.phone2=c.phone2||c.phones[1];if(c.addr)p.loc={addr:c.addr,home:true};if(c.notes)p.notes=c.notes;if(c.cons)setCons(p,'appt',c.cons==='yes',c.consHow||'στο νέο ραντεβού');
   S.data.students.push(p);save();if(p.loc&&window.geocodePerson)geocodePerson(p,false);return p.id;}
 /* γρήγορη καρτέλα νέου πελάτη μέσα από το «Νέο ραντεβού»: όνομα, τηλέφωνο και, αν θέλεις, τα υπόλοιπα — αποθηκεύεται κανονικά στους πελάτες */
 const phKey=x=>String(x||'').replace(/\D/g,'').slice(-10);
@@ -34,6 +34,7 @@ const byPhone=(ph,skip)=>{const k=phKey(ph);return k.length>=8?S.data.students.f
 function IM_NEWPERSON_DIALOG(nm){return new Promise(res=>{let done=false;
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${ic('plus',18)} Νέος ${esc(LX('who')).toLowerCase()}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <p class="small muted" style="margin-top:0">Μπαίνει κατευθείαν στους ${esc(LX('whoPlL'))} και επιλέγεται για το ραντεβού.</p>
+   <div class="npsrc"><button type="button" class="btn sm" id="np-con">📇 Από τις επαφές</button><button type="button" class="btn sm" id="np-xls">📊 Από Excel ή αρχείο</button></div>
    <form id="np"><div class="field"><label class="f" for="np-n">Ονοματεπώνυμο</label><input class="in" id="np-n" name="name" required autocomplete="off" value="${esc(nm||'')}"></div>
     <div class="field"><label class="f" for="np-p">Τηλέφωνο</label><input class="in" id="np-p" name="phone" type="tel" inputmode="tel" autocomplete="off" placeholder="π.χ. 69…"><div class="tiny muted" style="margin-top:4px">Για να του στέλνεις επιβεβαίωση και υπενθύμιση.</div><div id="np-dup"></div></div>
     <details class="field npmore"><summary class="small"><b>Περισσότερα στοιχεία</b> <span class="muted">— προαιρετικά</span></summary>
@@ -44,6 +45,9 @@ function IM_NEWPERSON_DIALOG(nm){return new Promise(res=>{let done=false;
     <div class="row" style="justify-content:flex-end;margin-top:6px"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">${ic('check',16)} Αποθήκευση και επιλογή</button></div></form>`,{onClose:()=>{if(!done)res(null);}});
   const f=$('#np',md.el);const n=$('#np-n',md.el);setTimeout(()=>(nm?$('#np-p',md.el):n).focus(),80);
   const dupOf=()=>byPhone(f.phone.value);
+  const fillFrom=L=>{if(!L||!L.length)return;if(L.length>1){done=true;md.close();return res({list:L});}const c=L[0];f.name.value=c.name||f.name.value;if(c.phone){f.phone.value=c.phone;f.phone.oninput();}if(c.email)f.email.value=c.email;if(c.addr)f.addr.value=c.addr;if(c.notes)f.notes.value=c.notes;if(c.email||c.addr||c.notes)$('.npmore',md.el).open=true;toast('Συμπληρώθηκαν τα στοιχεία — έλεγξε και πάτα «Αποθήκευση».','ok');};
+  $('#np-con',md.el).onclick=async()=>fillFrom(await IM_PICKCONTACTS(true));
+  $('#np-xls',md.el).onclick=async()=>fillFrom(await IM_FILEPICK(true,false));
   f.phone.oninput=()=>{const d=dupOf();$('#np-dup',md.el).innerHTML=d?`<div class="note small" style="margin-top:6px">Αυτό το τηλέφωνο το έχει ήδη ο/η <b>${esc(stuName(d))}</b>. <button type="button" class="btn sm" id="np-use">Διάλεξε αυτόν</button></div>`:'';const u=$('#np-use',md.el);if(u)u.onclick=()=>{done=true;md.close();res({id:d.id,name:stuName(d)});};};
   f.onsubmit=e=>{e.preventDefault();const v=fd(f);const name=(v.name||'').trim();if(!name)return toast('Γράψε όνομα.','bad');
     const same=S.data.students.find(p=>(p.name||'').trim().toLocaleLowerCase('el')===name.toLocaleLowerCase('el')&&(!v.phone||phKey(p.phone)===phKey(v.phone)));
@@ -52,7 +56,23 @@ function IM_NEWPERSON_DIALOG(nm){return new Promise(res=>{let done=false;
 
 /* ---------- επαφές του κινητού (Chrome σε Android) ---------- */
 const IM_CONTACTS_OK=()=>!!(navigator.contacts&&window.ContactsManager);
-async function IM_PICKCONTACTS(multi){try{const L=await navigator.contacts.select(['name','tel','email'],{multiple:!!multi});
+const IM_IOS=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+/* όταν το κινητό δεν δίνει τις επαφές (iPhone, Samsung Internet, Firefox…): αρχείο επαφών (.vcf) ή Excel — γυρίζει τη λίστα που διάλεξε */
+function IM_FILEPICK(multi,why,saveMode){return new Promise(res=>{let done=false,picking=false;const fin=v=>{if(done)return;done=true;res(v||[]);};
+  const ios=IM_IOS();
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${why?'📇 Επαφές':'📊 Από αρχείο'}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   ${why?`<p class="small" style="margin-top:0">${ios?'Το iPhone δεν αφήνει τις εφαρμογές του διαδικτύου να ανοίγουν απευθείας τις επαφές.':'Αυτός ο περιηγητής δεν ανοίγει απευθείας τις επαφές (ανοίγουν από το <b>Chrome σε Android</b>).'} Φέρ' τες με έναν από αυτούς τους τρόπους:</p>`:''}
+   <div class="list">
+    <button class="rw" data-fp="vcf"><span class="ricon">👤</span><span class="grow"><b>Αρχείο επαφής (.vcf)</b><small>${ios?'Επαφές → άνοιξε την επαφή → «Κοινοποίηση επαφής» → «Αποθήκευση στα Αρχεία». Μετά διάλεξέ το εδώ.':'Επαφές → ⋮ → «Κοινή χρήση» ή «Εξαγωγή» → αποθήκευση. Μετά διάλεξέ το εδώ.'}</small></span>${ic('right',16)}</button>
+    <button class="rw" data-fp="xls"><span class="ricon">📊</span><span class="grow"><b>Λίστα Excel ή CSV</b><small>Το έτοιμο πρότυπο ή δική σου λίστα με Όνομα, Τηλέφωνο…</small></span>${ic('right',16)}</button>
+   </div>
+   <button class="btn sm ghost" id="fp-tpl" style="margin-top:10px">${ic('download',15)} Κατέβασε το πρότυπο Excel</button>`,{guard:false,onClose:()=>{if(!picking)fin([]);}});
+  md.el.addEventListener('click',e=>{const b=e.target.closest('[data-fp]');if(!b)return;IM_FILEIN(b.dataset.fp,async f=>{picking=true;md.close();if(saveMode){fin([]);importFile(f);return;}fin(await importFile(f,{multi}));});});
+  $('#fp-tpl',md.el).onclick=()=>xlsTemplate();});}
+/* ανοίγει τον επιλογέα αρχείων (πρέπει να γίνει μέσα στο πάτημα) */
+function IM_FILEIN(k,cb){const fi=document.createElement('input');fi.type='file';fi.accept=k==='vcf'?'.vcf,text/vcard,text/x-vcard':'.xlsx,.xls,.csv,.txt,.ods';fi.style.display='none';document.body.appendChild(fi);
+  fi.onchange=()=>{const f=fi.files[0];fi.remove();if(f)cb(f);};fi.click();}
+async function IM_PICKCONTACTS(multi){if(!IM_CONTACTS_OK())return IM_FILEPICK(multi,true);try{const L=await navigator.contacts.select(['name','tel','email'],{multiple:!!multi});
   return(L||[]).map(x=>({name:((x.name||[])[0]||(x.tel||[])[0]||'').trim(),phone:((x.tel||[])[0]||'').replace(/\s+/g,' ').trim(),phones:(x.tel||[]).map(t=>String(t).replace(/\s+/g,' ').trim()).filter(Boolean),email:((x.email||[])[0]||'').trim()})).filter(x=>x.name);}
   catch(e){if(e&&e.name!=='AbortError')toast('Δεν ήταν δυνατή η πρόσβαση στις επαφές.','bad');return[];}}
 
@@ -296,21 +316,33 @@ async function viewMap(){setTimeout(()=>{const g=$('#geo-on');if(g)g.onchange=()
 const normPh=p=>{let d=String(p||'').replace(/\D/g,'');if(d.startsWith('0030'))d=d.slice(4);else if(d.startsWith('30')&&d.length===12)d=d.slice(2);return d;};
 const normNm=n=>normT(n).replace(/\s+/g,' ').trim();
 function importMenu(){const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Εισαγωγή πολλών μαζί</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
-  <p class="small muted" style="margin-top:0">Βολεύει όταν έρχεσαι από άλλη εφαρμογή ή έχεις ήδη λίστα με τους ${esc(LX('whoPlL'))} σου. Πριν μπουν, βλέπεις τη λίστα και ξετσεκάρεις όσους δεν θέλεις. Όσοι υπάρχουν ήδη παραλείπονται.</p>
+  <p class="small muted" style="margin-top:0">Βολεύει όταν έρχεσαι από άλλη εφαρμογή ή έχεις ήδη λίστα με τους ${esc(LX('whoPlL'))} σου. Πριν μπουν, βλέπεις τη λίστα και ξετσεκάρεις όσους δεν θέλεις. Όσοι υπάρχουν ήδη δεν διπλασιάζονται — ενημερώνονται μόνο αν άλλαξε κάτι.</p>
   <div class="list">
-   ${IM_CONTACTS_OK()?`<button class="rw" data-im="con"><span class="ricon">📇</span><span class="grow"><b>Από τις επαφές του κινητού</b><small>Διάλεξε όσους θέλεις, όλους μαζί</small></span>${ic('right',16)}</button>`:''}
-   <button class="rw" data-im="xls"><span class="ricon">📊</span><span class="grow"><b>Από αρχείο Excel ή CSV</b><small>Στήλες όπως Όνομα, Τηλέφωνο, Email, Διεύθυνση</small></span>${ic('right',16)}</button>
+   <button class="rw" data-im="con"><span class="ricon">📇</span><span class="grow"><b>Από τις επαφές του κινητού</b><small>${IM_CONTACTS_OK()?'Διάλεξε όσους θέλεις, όλους μαζί':'Σε αυτό το κινητό: μέσω αρχείου επαφών — δες πώς'}</small></span>${ic('right',16)}</button>
    <button class="rw" data-im="vcf"><span class="ricon">👥</span><span class="grow"><b>Από αρχείο επαφών (.vcf)</b><small>Η «Εξαγωγή επαφών» του κινητού ή του Google</small></span>${ic('right',16)}</button>
   </div>
-  <button class="btn sm ghost" id="im-tpl" style="margin-top:12px">${ic('file',15)} Κατέβασε έτοιμο πρότυπο Excel</button>
-  <input type="file" id="im-f" hidden>`,{guard:false});
-  const fi=$('#im-f',md.el);
+  <div class="xlsteps"><b>📊 Με Excel, σε 3 βήματα</b>
+   <div class="xs"><span class="n">1</span><span class="grow">Κατέβασε το αρχείο${S.data.students.length?` — έχει ήδη μέσα τους ${S.data.students.length} ${esc(LX('whoPlL'))} σου`:''}<br><button class="btn sm" id="im-tpl" style="margin-top:6px">${ic('download',15)} Κατέβασε το Excel</button></span></div>
+   <div class="xs"><span class="n">2</span><span class="grow">Πρόσθεσε ή διόρθωσε γραμμές στο Excel (ή στο Google Sheets) και αποθήκευσέ το.</span></div>
+   <div class="xs"><span class="n">3</span><span class="grow">Ανέβασέ το: πριν αλλάξει οτιδήποτε, βλέπεις ποιοι μπαίνουν και ποιοι ενημερώνονται.<br><button class="btn sm pri" data-im="xls" style="margin-top:6px">${ic('upload',15)} Ανέβασε το Excel</button></span></div></div>`,{guard:false});
   md.el.addEventListener('click',async e=>{const b=e.target.closest('[data-im]');if(!b)return;const k=b.dataset.im;
+    if(k==='con'&&!IM_CONTACTS_OK()){md.close();IM_FILEPICK(true,true,true);return;}
     if(k==='con'){try{localStorage.setItem('imer-conpick','bulk');}catch(x){}const L=await IM_PICKCONTACTS(true);try{localStorage.removeItem('imer-conpick');}catch(x){}if(!L.length)return;md.close();importPreview(L.map(c=>({name:c.name,phone:c.phone,email:c.email})),'τις επαφές');return;}
-    fi.accept=k==='vcf'?'.vcf,text/vcard,text/x-vcard':'.xlsx,.xls,.csv,.txt,.ods';fi.dataset.k=k;fi.click();});
-  fi.onchange=async()=>{const f=fi.files[0];fi.value='';if(!f)return;try{const rows=await readImportFile(f);if(!rows)return;md.close();
-    if(rows.kind==='people')importPreview(rows.list,f.name);else importMap(rows.table,f.name);}catch(err){toast('Δεν διαβάστηκε το αρχείο: '+(err.message||''),'bad');}};
-  $('#im-tpl',md.el).onclick=()=>{const csv='﻿Ονοματεπώνυμο;Τηλέφωνο;Email;Διεύθυνση;Σημειώσεις\r\nΜαρία Παπαδοπούλου;6900000001;maria@example.com;Αλεξάνδρας 10, Αθήνα;\r\n';downloadText('protypo-pelates.csv',csv,'text/csv');toast('Άνοιξέ το με Excel, γέμισέ το και φέρ\' το εδώ.','ok');};}
+    IM_FILEIN(k,f=>{md.close();importFile(f);});});
+  $('#im-tpl',md.el).onclick=()=>xlsTemplate();}
+/* διαβάζει αρχείο: χωρίς pick → εισαγωγή/ενημέρωση· με pick → γυρίζει όσους διάλεξες (για το ραντεβού) */
+async function importFile(f,pick){try{const rows=await readImportFile(f);if(!rows)return[];
+  return await new Promise(res=>{const pk=pick?Object.assign({},pick,{res}):null;if(rows.kind==='people')importPreview(rows.list,f.name,pk);else importMap(rows.table,f.name,pk);if(!pk)res([]);});}
+  catch(err){toast('Δεν διαβάστηκε το αρχείο: '+(err.message||''),'bad');return[];}}
+const XLS_HEAD=['Ονοματεπώνυμο','Τηλέφωνο','Τηλέφωνο 2','Email','Διεύθυνση','Σημειώσεις','Κωδικός (μην τον αλλάζεις)'];
+/* πρότυπο Excel: οι στήλες μας + όλοι οι πελάτες που υπάρχουν ήδη, ώστε να διορθώνεις και να το ξαναφέρνεις */
+async function xlsTemplate(){try{await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');}catch(e){return toast(e.message,'bad');}
+  const X=window.XLSX;const L=S.data.students.filter(p=>!p.demo&&!p.archived).sort((a,b)=>stuName(a).localeCompare(stuName(b),'el'));
+  const rows=[XLS_HEAD].concat(L.map(p=>[stuName(p),p.phone||'',p.phone2||'',p.email||'',(p.loc&&p.loc.addr)||'',p.notes||'',p.id]));
+  const ws=X.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:28},{wch:15},{wch:15},{wch:26},{wch:32},{wch:30},{wch:14}];ws['!autofilter']={ref:'A1:G'+Math.max(rows.length,2)};
+  const help=X.utils.aoa_to_sheet([['Πώς το γεμίζεις'],[''],['• Μία γραμμή για κάθε '+LX('who').toLowerCase()+'. Αρκεί το Ονοματεπώνυμο· τα υπόλοιπα είναι προαιρετικά.'],['• Τηλέφωνο: όπως το γράφεις στο κινητό, π.χ. 6912345678.'],['• Για να διορθώσεις κάποιον που υπάρχει, άλλαξε τα στοιχεία του στη γραμμή του. Μην πειράζεις τη στήλη «Κωδικός».'],['• Για νέους, γράψε σε κενές γραμμές στο τέλος και άφησε τον «Κωδικό» κενό.'],['• Αποθήκευσε ως .xlsx και ανέβασέ το από το Ημερολόγιο: '+LX('whoPl')+' → Νέος → «Πολλοί μαζί».'],[''],['Πριν αλλάξει οτιδήποτε, η εφαρμογή σου δείχνει ποιοι μπαίνουν και ποιοι ενημερώνονται.']]);help['!cols']=[{wch:100}];
+  const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,String(LX('whoPl')).slice(0,30));X.utils.book_append_sheet(wb,help,'Οδηγίες');
+  X.writeFile(wb,'pelates-imerologio.xlsx');toast('Κατέβηκε το «pelates-imerologio.xlsx». Γέμισέ το και ανέβασέ το εδώ.','ok');}
 async function readImportFile(f){const n=f.name.toLowerCase();
   if(n.endsWith('.vcf')){return{kind:'people',list:parseVcf(await f.text())};}
   if(n.endsWith('.csv')||n.endsWith('.txt')){return{kind:'table',table:parseCsv(await f.text())};}
@@ -331,30 +363,54 @@ function parseVcf(t){t=vcfQP(t);const L=[];t.replace(/\r\n[ \t]/g,'').split(/BEG
   const dec=v=>v.replace(/\\,/g,',').replace(/\;/g,';').replace(/\\n/gi,' ');let fn=dec(get(/\nFN[^:\n]*:(.*)/i));if(!fn){const nn=get(/\nN[^:\n]*:(.*)/i).split(';');fn=[nn[1],nn[0]].filter(Boolean).join(' ');}
   const adr=get(/\nADR[^:\n]*:(.*)/i).split(';').map(dec).filter(x=>x.trim()).join(', ');
   if(fn||get(/\nTEL[^:\n]*:(.*)/i))L.push({name:fn||get(/\nTEL[^:\n]*:(.*)/i),phone:get(/\nTEL[^:\n]*:(.*)/i),email:get(/\nEMAIL[^:\n]*:(.*)/i),addr:adr,notes:dec(get(/\nNOTE[^:\n]*:(.*)/i))});});return L;}
-const IMP_FIELDS=[['name','Ονοματεπώνυμο',/(ον[οό]μ|name|πελ[άα]τ|full)/],['last','Επώνυμο (αν είναι χωριστά)',/(επ[ωώ]ν|surname|last)/],['phone','Τηλέφωνο',/(τηλ|κιν|phone|mobile|tel|cell)/],['email','Email',/(mail|ηλεκτρ)/],['addr','Διεύθυνση',/(διευθ|address|οδ[οό]ς|addr)/],['notes','Σημειώσεις',/(σημει|σχ[οό]λ|note|παρατ)/]];
-function importMap(table,src){if(!table.length)return toast('Το αρχείο είναι άδειο.','bad');
+const IMP_P2=/(τηλ\S*\s*2|phone\s*2|mobile\s*2|2ο\s*τηλ|δευτερ)/;
+const IMP_FIELDS=[['name','Ονοματεπώνυμο',/(ον[οό]μ|name|πελ[άα]τ|full)/],['last','Επώνυμο (αν είναι χωριστά)',/(^επ[ωώ]ν|surname|last)/],['phone','Τηλέφωνο',/(τηλ|κιν|phone|mobile|tel|cell)/],['phone2','Τηλέφωνο 2',IMP_P2],['email','Email',/(mail|ηλεκτρ)/],['addr','Διεύθυνση',/(διευθ|address|οδ[οό]ς|addr)/],['notes','Σημειώσεις',/(σημει|σχ[οό]λ|note|παρατ)/],['id','Κωδικός',/(^κωδικ|^id$)/]];
+function importMap(table,src,pk){if(!table.length){toast('Το αρχείο είναι άδειο.','bad');return pk&&pk.res([]);}
   const head=table[0].map(x=>normT(x));const hasHead=head.some(h=>IMP_FIELDS.some(f=>f[2].test(h)));const cols=table[0].map((x,i)=>hasHead?(String(x).trim()||'Στήλη '+(i+1)):'Στήλη '+(i+1)+' (π.χ. «'+String(x).slice(0,18)+'»)');
-  const map={};IMP_FIELDS.forEach(([k,,re])=>{const i=hasHead?head.findIndex(h=>re.test(h)&&!(k==='name'&&/(επ[ωώ]ν|surname|last)/.test(h))):-1;map[k]=i;});
+  const map={};IMP_FIELDS.forEach(([k,,re])=>{const i=hasHead?head.findIndex(h=>re.test(h)&&!(k==='name'&&/(^επ[ωώ]ν|surname|last)/.test(h))&&!(k==='phone'&&IMP_P2.test(h))):-1;map[k]=i;});
   if(map.name<0)map.name=0;if(map.phone<0&&!hasHead)map.phone=table[0].findIndex((x,i)=>i!==map.name&&/\d{6,}/.test(String(x).replace(/\D/g,'')));
   const body=hasHead?table.slice(1):table;
+  const g=(r,k)=>map[k]>=0?String(r[map[k]]==null?'':r[map[k]]).trim():'';
+  const build=()=>body.map(r=>({name:[g(r,'name'),g(r,'last')].filter(Boolean).join(' '),phone:g(r,'phone'),phone2:g(r,'phone2'),email:g(r,'email'),addr:g(r,'addr'),notes:g(r,'notes'),id:g(r,'id')})).filter(x=>x.name||x.phone);
+  /* το δικό μας πρότυπο: οι στήλες είναι γνωστές, πάμε κατευθείαν στον έλεγχο */
+  if(normT(table[0][0])===normT(XLS_HEAD[0])&&map.phone>=0){const L=build();if(!L.length){toast('Το αρχείο δεν έχει γραμμές.','bad');return pk&&pk.res([]);}return importPreview(L,src,pk);}
+  let went=false;
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Ποια στήλη είναι τι;</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <p class="small muted" style="margin-top:0">Από «${esc(src)}»: ${body.length} γραμμές. Τα βρήκα μόνος μου — διόρθωσε αν κάτι δεν ταιριάζει.</p>
    <div class="grid g2" style="gap:8px">${IMP_FIELDS.map(([k,l])=>`<div class="field"><label class="f">${l}</label><select class="in" data-mk="${k}"><option value="-1">— κανένα —</option>${cols.map((c,i)=>opt(i,c,map[k])).join('')}</select></div>`).join('')}</div>
-   <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri" id="mp-go">Συνέχεια ${ic('right',15)}</button></div>`,{guard:false});
-  $('#mp-go',md.el).onclick=()=>{$$('[data-mk]',md.el).forEach(x=>map[x.dataset.mk]=+x.value);const g=(r,k)=>map[k]>=0?String(r[map[k]]==null?'':r[map[k]]).trim():'';
-    const L=body.map(r=>({name:[g(r,'name'),g(r,'last')].filter(Boolean).join(' '),phone:g(r,'phone'),email:g(r,'email'),addr:g(r,'addr'),notes:g(r,'notes')})).filter(x=>x.name||x.phone);
-    if(!L.length)return toast('Δεν βρέθηκαν ονόματα με αυτές τις στήλες.','bad');md.close();importPreview(L,src);};}
-function importPreview(list,src){const exPh=new Set(S.data.students.map(p=>normPh(p.phone)).filter(x=>x.length>=6)),exNm=new Set(S.data.students.map(p=>normNm(p.name)));const seen=new Set();
-  const L=list.map(x=>{const k=normPh(x.phone)||normNm(x.name);const dup=(normPh(x.phone).length>=6&&exPh.has(normPh(x.phone)))||exNm.has(normNm(x.name));const twice=seen.has(k);seen.add(k);return Object.assign({},x,{name:(x.name||x.phone||'').trim(),dup:dup||twice,on:!(dup||twice)});});
-  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">Έλεγχος πριν την εισαγωγή</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
-   <p class="small muted" style="margin-top:0">Από ${esc(src)}: ${L.length} άτομα${L.some(x=>x.dup)?` · ${L.filter(x=>x.dup).length} υπάρχουν ήδη και δεν θα ξαναμπούν`:''}.</p>
-   <label class="check small" style="margin-bottom:8px"><input type="checkbox" id="ip-all" checked> Όλοι</label>
-   <div class="implist">${L.map((x,i)=>`<label class="improw ${x.dup?'dup':''}"><input type="checkbox" data-ii="${i}" ${x.on?'checked':''}><span class="grow"><b>${esc(x.name)}</b><small>${[x.phone,x.email,x.addr].filter(Boolean).map(esc).join(' · ')||'&nbsp;'}${x.dup?' <em>υπάρχει ήδη</em>':''}</small></span></label>`).join('')}</div>
-   <div class="savebar"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri" id="ip-go"></button></div>`,{guard:false});
-  const cnt=()=>{const n=L.filter(x=>x.on).length;$('#ip-go',md.el).innerHTML=`${ic('check',16)} Πρόσθεσε ${n}`;$('#ip-go',md.el).disabled=!n;};cnt();
-  md.el.addEventListener('change',e=>{const c=e.target.closest('[data-ii]');if(c){L[+c.dataset.ii].on=c.checked;cnt();}if(e.target.id==='ip-all'){L.forEach(x=>{if(!x.dup)x.on=e.target.checked;});$$('[data-ii]',md.el).forEach(c=>c.checked=L[+c.dataset.ii].on);cnt();}});
-  $('#ip-go',md.el).onclick=()=>{const add=L.filter(x=>x.on);add.forEach((x,i)=>{const p={id:uid(),name:x.name,avatar:initial(x.name),phone:x.phone||'',email:(x.email||'').toLowerCase(),notes:x.notes||'',color:PERS_COLORS[(S.data.students.length+i)%PERS_COLORS.length],contacts:(x.phone||x.email)?[{name:x.name,phone:x.phone||'',email:x.email||''}]:[],created:new Date().toISOString()};if(x.addr)p.loc={addr:x.addr,home:true};S.data.students.push(p);});
-    save();md.close();const na=add.filter(x=>x.addr).length;toast(`Μπήκαν ${add.length} ${LX('whoPlL')}.${na?` ${na} έχουν διεύθυνση — από τον Χάρτη πάτα «Εντοπισμός από τις διευθύνσεις».`:''}`,'ok');go('people');render();};}
+   <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri" id="mp-go">Συνέχεια ${ic('right',15)}</button></div>`,{guard:false,onClose:()=>{if(!went&&pk)pk.res([]);}});
+  $('#mp-go',md.el).onclick=()=>{$$('[data-mk]',md.el).forEach(x=>map[x.dataset.mk]=+x.value);
+    const L=build();
+    if(!L.length)return toast('Δεν βρέθηκαν ονόματα με αυτές τις στήλες.','bad');went=true;md.close();importPreview(L,src,pk);};}
+const IMP_CMP=[['name','όνομα'],['phone','τηλέφωνο'],['phone2','2ο τηλέφωνο'],['email','email'],['addr','διεύθυνση'],['notes','σημειώσεις']];
+const impVal=(p,k)=>k==='addr'?((p.loc&&p.loc.addr)||''):k==='name'?stuName(p):(p[k]||'');
+/* ποιος υπάρχει ήδη: πρώτα ο κωδικός, μετά το τηλέφωνο, μετά το ίδιο όνομα */
+function impMatch(x){if(x.id){const p=getStudent(x.id);if(p)return p;}const bp=x.phone&&byPhone(x.phone);if(bp)return bp;const n=normNm(x.name);return n?S.data.students.find(p=>normNm(p.name)===n):null;}
+function impApply(p,x){IMP_CMP.forEach(([k])=>{const v=String(x[k]||'').trim();if(!v||v===impVal(p,k))return;if(k==='addr'){p.loc={addr:v,home:true};}else if(k==='email')p.email=v.toLowerCase();else p[k]=v;if(k==='name')p.avatar=initial(v);});
+  const c0=(p.contacts||[])[0];if(c0){c0.name=p.name;c0.phone=p.phone||c0.phone;c0.email=p.email||c0.email;}else if(p.phone||p.email)p.contacts=[{name:p.name,phone:p.phone||'',email:p.email||''}];}
+function importPreview(list,src,pk){const seen=new Set();
+  const L=list.map(x=>{x=Object.assign({},x,{name:(x.name||x.phone||'').trim()});const k=x.id||normPh(x.phone)||normNm(x.name);const twice=seen.has(k);seen.add(k);
+    const p=impMatch(x);const ch=p?IMP_CMP.filter(([f])=>{const v=String(x[f]||'').trim();return v&&v!==impVal(p,f)&&!(f==='phone'&&phKey(v)===phKey(p.phone));}).map(([,l])=>l):[];
+    const st=twice?'twice':!p?'new':ch.length?'upd':'same';return Object.assign(x,{p,ch,st,on:pk?false:(st==='new'||st==='upd')});});
+  /* επιλογή για το ραντεβού: ένα μόνο άτομο → κατευθείαν */
+  if(pk&&L.length===1){const x=L[0];if(x.p)x.id=x.p.id;return pk.res([x]);}
+  let went=false;const nNew=L.filter(x=>x.st==='new').length,nUpd=L.filter(x=>x.st==='upd').length,nSame=L.filter(x=>x.st==='same').length;
+  const tag=x=>x.st==='new'?'<em class="tg new">νέος</em>':x.st==='upd'?`<em class="tg upd">αλλάζει: ${esc(x.ch.join(', '))}</em>`:x.st==='same'?'<em class="tg">υπάρχει ήδη</em>':'<em class="tg">2η φορά στο αρχείο</em>';
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${pk?'Διάλεξε από το αρχείο':'Έλεγχος πριν την εισαγωγή'}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <p class="small muted" style="margin-top:0">Από ${esc(src)}: ${L.length} άτομα${nNew?` · <b>${nNew} νέοι</b>`:''}${nUpd?` · <b>${nUpd} με αλλαγές</b>`:''}${nSame?` · ${nSame} ίδιοι`:''}.</p>
+   ${L.length>6?`<input class="in" type="search" id="ip-q" placeholder="Αναζήτηση…" style="margin-bottom:8px">`:''}
+   ${pk&&!pk.multi?'':`<label class="check small" style="margin-bottom:8px"><input type="checkbox" id="ip-all" ${pk?'':'checked'}> Όλοι</label>`}
+   <div class="implist">${L.map((x,i)=>`<label class="improw ${x.st==='same'||x.st==='twice'?'dup':''}" data-ir="${i}"><input type="${pk&&!pk.multi?'radio':'checkbox'}" name="ii" data-ii="${i}" ${x.on?'checked':''} ${!pk&&(x.st==='same'||x.st==='twice')?'disabled':''}><span class="grow"><b>${esc(x.name)}</b><small>${[x.phone,x.email,x.addr].filter(Boolean).map(esc).join(' · ')||'&nbsp;'} ${tag(x)}</small></span></label>`).join('')}</div>
+   ${pk&&nNew>0?`<label class="check small" style="margin-top:8px"><input type="checkbox" id="ip-rest"> Πέρασε και όλους τους νέους στους ${esc(LX('whoPlL'))} (χωρίς ραντεβού)</label>`:''}
+   <div class="savebar"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri" id="ip-go"></button></div>`,{guard:false,onClose:()=>{if(!went&&pk)pk.res([]);}});
+  const cnt=()=>{const on=L.filter(x=>x.on);const b=$('#ip-go',md.el);if(pk)b.innerHTML=`${ic('check',16)} Διάλεξε ${on.length||''}`;else{const a=on.filter(x=>x.st==='new').length,u=on.filter(x=>x.st==='upd').length;b.innerHTML=`${ic('check',16)} `+[a?`Πρόσθεσε ${a}`:'',u?`ενημέρωσε ${u}`:''].filter(Boolean).join(' · ')||'Τίποτα';}b.disabled=!on.length;};cnt();
+  md.el.addEventListener('change',e=>{const c=e.target.closest('[data-ii]');if(c){if(c.type==='radio')L.forEach(x=>x.on=false);L[+c.dataset.ii].on=c.checked;cnt();}if(e.target.id==='ip-all'){L.forEach(x=>{if(pk||x.st==='new'||x.st==='upd')x.on=e.target.checked;});$$('[data-ii]',md.el).forEach(c=>c.checked=L[+c.dataset.ii].on);cnt();}});
+  const q=$('#ip-q',md.el);if(q)q.oninput=()=>{const v=normT(q.value);$$('[data-ir]',md.el).forEach(r=>{const x=L[+r.dataset.ir];r.style.display=!v||normT(x.name+' '+(x.phone||'')+' '+(x.email||'')).includes(v)?'':'none';});};
+  const addNew=x=>{const p={id:uid(),name:x.name,avatar:initial(x.name),phone:x.phone||'',email:(x.email||'').toLowerCase(),notes:x.notes||'',color:PERS_COLORS[S.data.students.length%PERS_COLORS.length],contacts:(x.phone||x.email)?[{name:x.name,phone:x.phone||'',email:x.email||''}]:[],created:new Date().toISOString()};if(x.phone2)p.phone2=x.phone2;if(x.addr)p.loc={addr:x.addr,home:true};S.data.students.push(p);x.p=p;return p;};
+  $('#ip-go',md.el).onclick=()=>{const on=L.filter(x=>x.on);went=true;
+    if(pk){const rest=$('#ip-rest',md.el);if(rest&&rest.checked){L.filter(x=>x.st==='new'&&!x.on).forEach(addNew);save();}md.close();return pk.res(on.map(x=>Object.assign({},x,{id:x.p?x.p.id:'',p:undefined})));}
+    let a=0,u=0;on.forEach(x=>{if(x.st==='new'){addNew(x);a++;}else if(x.st==='upd'&&x.p){impApply(x.p,x);u++;}});
+    save();md.close();const na=on.filter(x=>x.st==='new'&&x.addr).length;toast([a?`Μπήκαν ${a} ${LX('whoPlL')}.`:'',u?`Ενημερώθηκαν ${u}.`:'',na?`${na} έχουν διεύθυνση — από τον Χάρτη πάτα «Εντοπισμός από τις διευθύνσεις».`:''].filter(Boolean).join(' '),'ok');go('people');render();};}
 
 /* ---------- πάτημα στον μήνα/ημερομηνία του ημερολογίου: επιλογή μήνα ---------- */
 function monthPicker(){const r=parseRoute();let view=r.q.view;try{view=view||localStorage.getItem('imer-agview');}catch(e){}view=['month','week','day','list'].includes(view)?view:'day';
@@ -509,7 +565,7 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   const rb=!isNew&&remBackInfo();
   M().innerHTML=`${pageHead(isNew?'Νέος '+esc(LX('who')).toLowerCase():esc(stuName(p)),isNew?'':esc(LX('who')),rb?`<button class="btn" id="p-remback">${ic('bell',15)} Πίσω στις υπενθυμίσεις</button>`:`<a class="btn" href="#/people">Πίσω</a>`)}
   <div id="p-stopb"></div>${isNew?'':`<button type="button" class="bookbar" id="p-book"><span class="bb-i">📲</span><span class="grow"><b>Στείλε του να κλείσει μόνος του</b><small>Σύνδεσμος με τις ελεύθερες ώρες σου, με Viber / SMS / WhatsApp</small></span>${ic('right',18)}</button>`}<div class="grid g2" style="align-items:start"><form class="card" id="pf"><h3>Στοιχεία</h3>
-   ${IM_CONTACTS_OK()?`<button type="button" class="btn conpick field" id="p-con">${ic('users',16)} Από τις επαφές του κινητού</button>`:''}${isNew?`<button type="button" class="linkbtn small" id="p-many">Πολλοί μαζί; Από τις επαφές ή από αρχείο Excel / vCard →</button>`:''}
+   <button type="button" class="btn conpick field" id="p-con">${ic('users',16)} Από τις επαφές του κινητού</button>${isNew?`<button type="button" class="linkbtn small" id="p-many">Πολλοί μαζί; Από τις επαφές ή από αρχείο Excel / vCard →</button>`:''}
    <div class="field"><label class="f" for="p-n">Ονοματεπώνυμο</label><input class="in" id="p-n" name="name" required autocomplete="off" value="${esc(p.name||'')}"></div>
    <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="p-ph">Τηλέφωνο</label><div class="phrow"><input class="in" id="p-ph" name="phone" type="tel" inputmode="tel" value="${esc(p.phone||'')}">${p.phone?`<a class="callbtn" data-cg="${p.id}" href="tel:${telLink(p.phone)}" aria-label="Κλήση">${ic('l-phone',20)}</a><a class="callbtn sms" data-cg="${p.id}" href="sms:${telLink(p.phone)}" aria-label="Μήνυμα">${ic('l-message-square',20)}</a>`:''}</div></div>
    <div class="field"><label class="f" for="p-em">Email</label><input class="in" id="p-em" name="email" type="email" inputmode="email" autocapitalize="none" value="${esc(p.email||'')}"></div></div>
@@ -533,7 +589,7 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   try{const d=JSON.parse(localStorage.getItem(DK)||'null');if(d&&d.rid===r.id&&Date.now()-d.t<6*36e5){['name','phone','phone2','phone3','email','addr','notes'].forEach(k=>{if(d.o[k]!=null&&F[k])F[k].value=d.o[k];});if(d.col!=null){col=d.col;F.color.value=col;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x.dataset.pc===col));}
     const cp=localStorage.getItem('imer-conpick');if(cp){localStorage.removeItem('imer-conpick');toast('Το κινητό έκλεισε τη λίστα επαφών όσο ήσουν σε άλλη εφαρμογή. Ό,τι είχες γράψει κρατήθηκε — πάτα ξανά «Από τις επαφές».','bad');}else if(d.o.name||d.o.phone)toast('Συνεχίζεις από εκεί που είχες μείνει.','ok');}}catch(e){}
   F.addEventListener('input',saveDraft);
-  const pm=$('#p-many');if(pm)pm.onclick=importMenu;const pc=$('#p-con');if(pc)pc.onclick=async()=>{saveDraft();try{localStorage.setItem('imer-conpick','1');}catch(e){}const L=await IM_PICKCONTACTS(false);try{localStorage.removeItem('imer-conpick');}catch(e){}const c=L[0];if(!c)return;const said=[];
+  const pm=$('#p-many');if(pm)pm.onclick=importMenu;const pc=$('#p-con');if(pc)pc.onclick=async()=>{saveDraft();try{localStorage.setItem('imer-conpick','1');}catch(e){}const L=(await IM_PICKCONTACTS(false))||[];try{localStorage.removeItem('imer-conpick');}catch(e){}const c=L[0];if(!c)return;const said=[];
     if(!F.name.value.trim()){F.name.value=c.name;said.push('το όνομα');}
     const slots=['phone','phone2','phone3'];let full=0;
     (c.phones&&c.phones.length?c.phones:[c.phone]).filter(Boolean).forEach(ph=>{if(slots.some(k=>phKey(F[k].value)===phKey(ph)))return;const k=slots.find(k=>!F[k].value.trim());if(k){F[k].value=ph;said.push(k==='phone'?'το τηλέφωνο':(k==='phone2'?'2ο':'3ο')+' τηλέφωνο ('+ph+')');}else full++;});
