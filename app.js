@@ -16,7 +16,7 @@ function loadData(){let d=null;try{d=JSON.parse(localStorage.getItem(STORE));}ca
   return d;}
 function applyIdentity(){const B=biz();S.user.name=S.data.settings.myName||'Εγώ';S.meta.org=B.name||'';ROLES=profRoles();
   if(!ROLES.some(r=>r[0]===B.meRole))B.meRole=(ROLES.find(r=>r[2])||ROLES[0])[0];}
-function save(){S.data.meta.changes=(S.data.meta.changes||0)+1;try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){toast('Δεν αποθηκεύτηκε — η μνήμη της συσκευής είναι γεμάτη.','bad');}applyIdentity();}
+function save(){S.data.meta.changes=(S.data.meta.changes||0)+1;try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){toast('Δεν αποθηκεύτηκε — η μνήμη της συσκευής είναι γεμάτη.','bad');}applyIdentity();if(window.glenShare)glenShare();}
 
 /* ---------- πρόσωπα (στο κοινό κομμάτι λέγονται «students» για συμβατότητα) ---------- */
 function getStudent(id){return S.data.students.find(x=>x.id===id)||null;}
@@ -190,7 +190,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
   const nst=next&&stOf(next.a.sid);const ph=nst&&(nst.phone||((nst.contacts||[])[0]||{}).phone);
   const closed=isClosed(t)?(holidayOf(t)||'Κλειστά σήμερα'):'';
   M().innerHTML=`
-  <nav class="vjump" aria-label="Προβολή ημερολογίου"><a href="#/agenda?view=day&d=${t}">${ic('calendar',16)}<span>Ημέρα</span></a><a href="#/agenda?view=week&w=${mondayOf(t)}">${ic('l-calendar-clock',16)}<span>Εβδομάδα</span></a><a href="#/agenda?view=month">${ic('grid',16)}<span>Μήνας</span></a><a href="#/agenda?view=list">${ic('menu',16)}<span>Λίστα</span></a></nav>
+  <nav class="vjump" aria-label="Προβολή ημερολογίου"><a href="#/agenda?view=day&d=${t}">${ic('calendar',16)}<span>Ημέρα</span></a><a href="#/agenda?view=week&w=${mondayOf(t)}">${ic('l-calendar-clock',16)}<span>Εβδομάδα</span></a><a href="#/agenda?view=month">${ic('grid',16)}<span>Μήνας</span></a><a href="#/agenda?view=year">${ic('calendar',16)}<span>Έτος</span></a><a href="#/agenda?view=list">${ic('menu',16)}<span>Λίστα</span></a></nav>
   ${isPrivate()?monthDotsHTML():''}
   ${certAlertsHTML()}
   <section class="hero"><div class="hero-in"><div class="hero-hi">${greet()}${first?', '+esc(first):''}</div>
@@ -210,7 +210,10 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
   bindInstall();}
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
-function viewAgendaApp(r){viewAgenda(r);
+function viewAgendaApp(r){M().onclick=null;{let v=r.q.view;if(!v&&!r.q.d&&!r.q.w&&!r.q.m){try{v=localStorage.getItem('imer-agview');}catch(e){}}if(v==='year')return viewYear(r);}YEAR_PICK=null;viewAgenda(r);
+  /* κλειστή μέρα με ραντεβού μίας φοράς: δείξ' τα για να μετακινηθούν */
+  {const v=r.q.view||(()=>{try{return localStorage.getItem('imer-agview');}catch(e){return'';}})();const d=r.q.d||todayISO();const H=(v==='day'||!v)&&isClosed(d)?hiddenOnce(d,d):[];
+   if(H.length){const box=document.createElement('div');box.className='note';box.style.margin='10px 0';box.innerHTML=`⚠️ <b>Η μέρα είναι κλειστή (${esc(offWhy(d))}) αλλά έχει ${H.length} ραντεβού.</b> Μετακίνησέ τα ή ακύρωσέ τα:<div class="aglist" style="margin-top:8px">${H.map(o=>apptCard({a:o.a,date:o.date,s:o.a.s,e:o.a.e,st:'',key:o.a.id+'|'+o.date})).join('')}</div>`;const ref=$('#main .dstrip-h')||$('#main .perhd')||$('#main .agbar');if(ref)ref.after(box);}}
   /* «Όλοι ▾» στην ίδια σειρά με την ημερομηνία· οι πληροφορίες του μήνα κάτω από την ημέρα */
   {const pb=$('#main .pvbar'),dh=$('#main .dstrip-h'),ph=$('#main .perhd');
    if(pb){if(dh){dh.classList.add('withpv');dh.insertBefore(pb,dh.children[1]||null);}else if(ph){ph.classList.add('withpv');ph.appendChild(pb);}}
@@ -1258,3 +1261,52 @@ if(!location.hash)history.replaceState(null,'','#/today');
 render();
 setTimeout(autoBackup,5000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&/^#\/agenda/.test(location.hash)&&!topModal())render();});
+
+/* ---------- 1.51: προβολή «Έτος» — 12 μήνες, πόσα ραντεβού έχει κάθε μέρα, άδειες και κλειστές μέρες ---------- */
+const OFF_REASONS=[['Άδεια','🏖️'],['Κλειστό','🔒'],['Σεμινάριο','🎓'],['Ταξίδι','✈️'],['Προσωπικό','🏠']];
+const offIcon=r=>(OFF_REASONS.find(x=>x[0]===r)||[0,'🔒'])[1];
+/* γιατί είναι κλειστή η μέρα: αργία, δηλωμένη άδεια/κλειστό ή ρεπό */
+function offWhy(d){const C=closedDays();if(C[d]===false)return'';if(C[d])return typeof C[d]==='string'?C[d]:'Κλειστό';const h=holidayOf(d);if(h)return h;return'';}
+let YEAR_PICK=null;
+/* ραντεβού μίας φοράς που έπεσαν σε κλειστή μέρα: το ημερολόγιο δεν τα δείχνει, άρα πρέπει να φωνάξουμε */
+function hiddenOnce(from,to){const SID=new Set(S.data.students.map(x=>x.id));return appts().filter(a=>a.kind==='once'&&a.date>=from&&a.date<=to&&SID.has(a.sid)&&isClosed(a.date)&&!((a.ex||{})[a.date]&&['cancel','moved'].includes(a.ex[a.date].st))).map(a=>({a,date:a.date,s:a.s,sid:a.sid}));}
+function yearCounts(Y){const M={},W={};occ(`${Y}-01-01`,`${Y}-12-31`,{by:''}).forEach(o=>{if(o.st==='cancel')return;M[o.date]=(M[o.date]||0)+1;});hiddenOnce(`${Y}-01-01`,`${Y}-12-31`).forEach(o=>{W[o.date]=(W[o.date]||0)+1;});return{M,W};}
+function viewYear(r){const t=todayISO();const Y=+(r.q.y||(r.q.d||t).slice(0,4));try{localStorage.setItem('imer-agview','year');}catch(e){}
+  const YC=yearCounts(Y),N=YC.M,W=YC.W;const mx=Math.max(3,...Object.values(N));
+  const mini=mo=>{const ym=`${Y}-${pad(mo)}`;const first=ym+'-01',last=isoDate(new Date(Y,mo,0));const start=mondayOf(first);const cells=[];for(let d=start;d<=last;d=addDays(d,1))cells.push(d);
+    let busy=0;cells.forEach(d=>{if(d.slice(0,7)===ym)busy+=N[d]||0;});
+    return`<div class="ymo"><a class="ymh" href="#/agenda?view=month&m=${ym}"><b>${MONTHS[mo-1]}</b>${busy?`<span>${busy}</span>`:''}</a><div class="ywd">${DAY_ORDER.map(d=>`<i>${WDAYS_S[d][0]}</i>`).join('')}</div><div class="ydays">${cells.map(d=>{if(d.slice(0,7)!==ym)return'<span></span>';
+      const n=N[d]||0;const why=offWhy(d);const rest=!why&&!workDay(d);const pk=YEAR_PICK&&YEAR_PICK.a&&(d>=YEAR_PICK.a&&d<=(YEAR_PICK.b||YEAR_PICK.a));
+      const lv=n?Math.min(4,Math.ceil(n/mx*4)):0;
+      return`<button type="button" class="yd ${why?'off':''} ${rest?'rest':''} ${d===t?'today':''} ${pk?'pk':''} ${lv?'h'+lv:''}" data-yd="${d}" title="${esc(fmtDate(d)+(why?' · '+why:'')+(n?' · '+n+' ραντεβού':'')+(W[d]?' · '+W[d]+' ραντεβού σε κλειστή μέρα!':''))}"><small>${+d.slice(8)}</small>${W[d]?`<b class="yw">⚠${W[d]}</b>`:n?`<b>${n}</b>`:why&&!/^(Άδεια|Κλειστό|Σεμινάριο|Ταξίδι|Προσωπικό)$/.test(why)?'':why?`<em>${offIcon(why)}</em>`:''}</button>`;}).join('')}</div></div>`;};
+  /* λίστα δηλωμένων: συνεχόμενες μέρες με τον ίδιο λόγο γίνονται ένα διάστημα */
+  const C=closedDays();const D=Object.keys(C).filter(d=>d.startsWith(Y+'-')&&C[d]).sort();const R=[];D.forEach(d=>{const why=typeof C[d]==='string'?C[d]:'Κλειστό';const L=R[R.length-1];if(L&&L.why===why&&addDays(L.b,1)===d)L.b=d;else R.push({a:d,b:d,why});});
+  const H=holList(Y).filter(h=>holOn(h)&&!biz().holOff);
+  M().innerHTML=`<div class="agbar"><div class="seg">${[['day','Ημέρα'],['week','Εβδομάδα'],['month','Μήνας'],['year','Έτος'],['list','Λίστα']].map(([k,l])=>`<a href="#/agenda?view=${k}${k==='year'?'&y='+Y:'&d='+(Y===+t.slice(0,4)?t:Y+'-01-01')}" class="${k==='year'?'on':''}">${l}</a>`).join('')}</div></div>
+   ${periodHead([`#/agenda?view=year&y=${Y-1}`,'',`#/agenda?view=year&y=${Y+1}`],String(Y),Y===+t.slice(0,4),`#/agenda?view=year&y=${t.slice(0,4)}`)}
+   ${YEAR_PICK?`<div class="ypick"><b>🏖️ ${YEAR_PICK.a?'Τώρα πάτα την τελευταία μέρα':'Πάτα την πρώτη μέρα'}</b><span class="small">${YEAR_PICK.a?'Για μία μόνο μέρα, πάτα την ίδια ξανά.':'της άδειας ή του κλεισίματος. Για να ανοίξεις ξανά μια κλειστή μέρα, πάτα την δύο φορές.'}</span><button class="btn sm" id="y-cx">Άκυρο</button></div>`:`<div class="row" style="gap:8px;flex-wrap:wrap;margin:4px 0 10px"><button class="btn pri" id="y-off">🏖️ Δήλωσε άδεια ή κλειστό</button></div>`}
+   <div class="ylegend small"><span><i class="yd h2"></i> ραντεβού (ο αριθμός)</span><span><i class="yd off"></i> κλειστό · αργία · άδεια</span><span><i class="yd rest"></i> ρεπό</span></div>
+   <div class="ygrid">${[1,2,3,4,5,6,7,8,9,10,11,12].map(mini).join('')}</div>
+   <div class="card section" style="margin-top:14px"><div class="card-h"><h3>Άδειες και κλειστές μέρες ${Y}</h3></div>
+    ${R.length?`<div class="yoffl">${R.map((x,i)=>`<div class="yoff"><span>${offIcon(x.why)}</span><span class="grow"><b>${esc(x.why)}</b><small>${x.a===x.b?esc(WDAYS_S[wdOf(x.a)]+' '+fmtShort(x.a)):esc(fmtShort(x.a)+' – '+fmtShort(x.b))}${x.a!==x.b?` · ${Math.round((new Date(x.b)-new Date(x.a))/864e5)+1} μέρες`:''}${(n=>n?` · <b class="ywt">⚠️ ${n} ραντεβού μένουν μέσα</b>`:'')(hiddenOnce(x.a,x.b).length)}</small></span><button class="rngx" data-yrm="${i}" aria-label="Αφαίρεση">✕</button></div>`).join('')}</div>`:'<p class="small muted" style="margin:0">Δεν έχεις δηλώσει άδειες. Πάτα «Δήλωσε άδεια ή κλειστό».</p>'}
+    ${H.length?`<details class="small" style="margin-top:10px"><summary><b>Αργίες που κλείνεις (${H.length})</b></summary><p class="muted" style="margin:6px 0 0">${H.map(h=>esc(fmtShort(h.date)+' '+h.name)).join(' · ')}</p></details>`:''}</div>`;
+  M().onclick=e=>{const rm=e.target.closest('[data-yrm]');if(rm){const x=R[+rm.dataset.yrm];if(!confirm(`Να ανοίξουν ξανά οι μέρες ${fmtShort(x.a)}${x.a!==x.b?' – '+fmtShort(x.b):''};`))return;for(let d=x.a;d<=x.b;d=addDays(d,1))delete C[d];save();toast('Οι μέρες άνοιξαν ξανά.','ok');return render();}
+    if(e.target.closest('#y-off')){YEAR_PICK={};return render();}if(e.target.closest('#y-cx')){YEAR_PICK=null;return render();}
+    const b=e.target.closest('[data-yd]');if(!b)return;const d=b.dataset.yd;
+    if(!YEAR_PICK)return go(`agenda?view=day&d=${d}`);
+    if(!YEAR_PICK.a){YEAR_PICK.a=d;return render();}
+    let a=YEAR_PICK.a,z=d;if(z<a)[a,z]=[z,a];YEAR_PICK.b=z;YEAR_PICK.a=a;render();offDialog(a,z);};}
+function offDialog(a,z){const days=[];for(let d=a;d<=z;d=addDays(d,1))days.push(d);const C=closedDays();
+  const allOff=days.every(d=>offWhy(d));
+  const X=occ(a,z,{by:''}).filter(o=>o.st!=='cancel').concat(hiddenOnce(a,z));
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${a===z?esc(WDAYS[wdOf(a)]+' '+fmtDate(a)):esc(fmtShort(a)+' – '+fmtShort(z))+` <span class="muted small">(${days.length} μέρες)</span>`}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   ${allOff?`<p class="small" style="margin-top:0">${a===z?'Αυτή η μέρα είναι ήδη κλειστή':'Αυτές οι μέρες είναι ήδη κλειστές'} (${esc(offWhy(a))}).</p><button class="btn pri" id="of-open" style="width:100%">🔓 Άνοιξέ ${a===z?'την':'τες'} ξανά</button><p class="small muted">ή άλλαξε τον λόγο:</p>`:`<p class="small muted" style="margin-top:0">Τι είναι; Δεν θα κλείνονται ραντεβού, ούτε από τον σύνδεσμο κρατήσεων.</p>`}
+   <div class="ofr">${OFF_REASONS.map(([n,i])=>`<button class="btn" data-ofr="${esc(n)}">${i} ${esc(n)}</button>`).join('')}</div>
+   ${X.length?`<div class="note small" style="margin-top:12px">⚠️ <b>Έχεις ${X.length} ραντεβού ${a===z?'αυτή τη μέρα':'αυτές τις μέρες'}.</b> Δεν σβήνονται — μετακίνησέ τα ή ακύρωσέ τα:<div style="margin-top:6px">${X.slice(0,8).map(o=>`<a class="chipt" href="#/agenda?view=day&d=${o.date}">${esc(fmtShort(o.date)+' '+o.s+' '+stuName(stOf(o.a.sid)))}</a>`).join(' ')}${X.length>8?' …':''}</div></div>`:''}`,{guard:false,onClose:()=>{YEAR_PICK=null;render();}});
+  md.el.addEventListener('click',e=>{const r=e.target.closest('[data-ofr]');if(r){days.forEach(d=>{C[d]=r.dataset.ofr;});save();toast(`Δηλώθηκε: ${r.dataset.ofr} (${days.length} ${days.length===1?'μέρα':'μέρες'}).`,'ok');md.close();return;}
+    if(e.target.closest('#of-open')){days.forEach(d=>{if(holidayOf(d))C[d]=false;else delete C[d];});save();toast('Άνοιξαν ξανά.','ok');md.close();}});}
+/* κοινή «βιτρίνα» για τις άλλες εφαρμογές GlenApps (π.χ. Δρομολόγιο): ποιες μέρες είσαι κλειστός και πόσα ραντεβού έχεις — μόνο στο ίδιο κινητό */
+let _shT=0;function glenShare(){clearTimeout(_shT);_shT=setTimeout(()=>{try{if(!S.data||!S.data.settings)return;const t=todayISO();const off={},busy={};const to=addDays(t,400);
+  occ(addDays(t,-31),to,{by:''}).concat(hiddenOnce(addDays(t,-31),to)).forEach(o=>{if(o.st==='cancel')return;busy[o.date]=(busy[o.date]||0)+1;});
+  for(let d=addDays(t,-31);d<=to;d=addDays(d,1)){const w=offWhy(d);if(w)off[d]=w;else if(!workDay(d))off[d]='Ρεπό';}
+  const c=agCfg();localStorage.setItem('glenapps-imerologio',JSON.stringify({v:1,at:Date.now(),name:S.data.settings.myName||'',from:c.from,to:c.to,days:c.days,off,busy,url:location.href.split('#')[0]}));}catch(e){}},400);}
