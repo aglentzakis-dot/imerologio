@@ -134,16 +134,26 @@ function parseRoute(){const h=location.hash.replace(/^#\/?/,'');const[p,q]=h.spl
 function render(){document.body&&document.body.classList.toggle('hidenames',!!(S.data&&S.data.settings.hideNames));
   {const qm=new URLSearchParams(location.search).get('mine');if(qm){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';if(mineImport(qm)){applyIdentity&&applyIdentity();return render();}}}
   applyTheme();if(!S.data.settings.prof){shellHTML('today');M().innerHTML='';return firstRun();}
+  const prevH=S.curHash,newH=location.hash,sameH=prevH===newH,y0=scrollY;let back=null;
+  /* «πίσω»: γυρνάμε στη θέση που ήσουν· ίδια σελίδα: μένουμε εκεί που είσαι */
+  if(!sameH){const K=NAVSTK;if(K.length>1&&K[K.length-2]===newH){K.pop();back=SCROLLMEM[newH]||null;}else{if(K[K.length-1]!==newH)K.push(newH);if(K.length>60)K.shift();}}
   window.AGPOS=null;if(/^#\/agenda/.test(S.curHash||'')&&/^#\/agenda/.test(location.hash)&&typeof agPosSave==='function')agPosSave();
   S.curHash=location.hash;
   {const qb=new URLSearchParams(location.search).get('book');if(qb){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';setTimeout(()=>bookImport(qb),200);}}
   const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(()=>bookImport(c),150);return render();}const sec=r.name==='person'?'people':r.name==='stats'?'today':r.name;
   shellHTML(sec);
   const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewKonta,settings:viewSettingsPage,stats:viewStats}[r.name]||viewToday;
-  if(!window.AGPOS)window.scrollTo(0,0);
+  if(!window.AGPOS&&!sameH&&!back)window.scrollTo(0,0);
   setTimeout(()=>dirtyWatch(M()),60);setTimeout(mineMsgShow,500);
   try{V(r);}catch(e){console.error(e);M().innerHTML=`<div class="card"><h2>Κάτι πήγε στραβά</h2><p class="muted">${esc(e.message)}</p><a class="btn" href="#/agenda">Ραντεβού</a></div>`;}
+  if(back)scrollBack(back);else if(sameH&&!window.AGPOS){scrollTo(0,y0);requestAnimationFrame(()=>scrollTo(0,y0));}
 }
+/* μνήμη θέσης ανά σελίδα (και της λωρίδας ωρών του ημερολογίου) */
+const NAVSTK=[location.hash||'#/today'],SCROLLMEM={};let _scT=0,_scLock=0;
+function scrollRec(){if(Date.now()<_scLock)return;const h=S.curHash||location.hash;if(!h)return;const sc=document.getElementById('tlScroll');SCROLLMEM[h]={y:scrollY,tl:sc?sc.scrollTop:null};}
+addEventListener('scroll',()=>{clearTimeout(_scT);_scT=setTimeout(scrollRec,80);},{passive:true});
+document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='tlScroll'){clearTimeout(_scT);_scT=setTimeout(scrollRec,80);}},{passive:true,capture:true});
+function scrollBack(p){_scLock=Date.now()+700;const go=()=>{scrollTo(0,p.y);const sc=document.getElementById('tlScroll');if(sc&&p.tl!=null)sc.scrollTop=p.tl;};go();requestAnimationFrame(go);setTimeout(go,90);setTimeout(()=>{if(Math.abs(scrollY-p.y)>40)go();},350);setTimeout(()=>{_scLock=0;scrollRec();},720);}
 function shellHTML(sec){
   const nav=[['today','home','Σήμερα'],['agenda','l-calendar-clock','Ημερολόγιο'],['people','users',LX('whoPl')||'Πρόσωπα'],['map','l-map','Κοντά μου'],['settings','settings','Ρυθμίσεις']];
   const title={today:'Σήμερα',agenda:'Ημερολόγιο',people:LX('whoPl'),map:'Κοντά μου',settings:'Ρυθμίσεις'}[sec]||'Ημερολόγιο';
@@ -930,8 +940,9 @@ const SETP={
  hours(el){const B=biz(),c=agCfg(),y=+todayISO().slice(0,4),HL=holList(y),t=todayISO();
   el.innerHTML=`<div class="card section"><dl class="kv"><dt>Ώρες</dt><dd>${c.from}–${c.to}</dd><dt>Μέρες</dt><dd>${DAY_ORDER.filter(d=>c.days.includes(d)).map(d=>WDAYS_S[d]).join(', ')||'—'}</dd><dt>Διάστημα</dt><dd>${c.step} λεπτά</dd></dl><button class="btn pri" id="st-hr">${ic('clock',16)} Αλλαγή ωραρίου</button></div>
   <div class="card"><label class="switch"><span><b>Κλειστά στις επίσημες αργίες</b><small>Βγαίνουν αυτόματα κλειστές κάθε χρόνο — και οι κινητές (Καθαρά Δευτέρα, Πάσχα, Αγίου Πνεύματος).</small></span><input type="checkbox" id="hl-on" ${B.holOff?'':'checked'}></label>
-   <div style="margin-top:10px;${B.holOff?'opacity:.5;pointer-events:none':''}">${HL.map(h=>`<label class="holrow ${h.date<t?'past':''}"><span class="hd">${WDAYS_S[wdOf(h.date)]} ${fmtShort(h.date)}</span><span class="grow">${esc(h.name)}</span><input type="checkbox" data-hol="${h.id}" ${holOn(h)?'checked':''}></label>`).join('')}</div></div>`;
-  $('#st-hr',el).onclick=agendaCfgDialog;$('#hl-on',el).onchange=e=>{B.holOff=!e.target.checked;save();render();};$$('[data-hol]',el).forEach(x=>x.onchange=()=>{B.hol=B.hol||{};B.hol[x.dataset.hol]=x.checked;save();});},
+   <div style="margin-top:10px;${B.holOff?'opacity:.5;pointer-events:none':''}">${HL.map(h=>`<label class="holrow ${h.date<t?'past':''}"><span class="hd">${WDAYS_S[wdOf(h.date)]} ${fmtShort(h.date)}</span><span class="grow">${esc(h.name)}</span><input type="checkbox" data-hol="${h.id}" ${holOn(h)?'checked':''}></label>`).join('')}</div>
+   <button type="button" class="btn sm ghost" id="hl-reset" style="margin-top:10px">↩︎ Επαναφορά στις βασικές αργίες</button></div>`;
+  $('#st-hr',el).onclick=agendaCfgDialog;$('#hl-reset',el).onclick=holReset;$('#hl-on',el).onchange=e=>{B.holOff=!e.target.checked;save();render();};$$('[data-hol]',el).forEach(x=>x.onchange=()=>{B.hol=B.hol||{};B.hol[x.dataset.hol]=x.checked;save();});},
  look(el){const base=profLex(),L=S.data.settings.lex||{},cur=themeColor();
   const lx=(k,l)=>`<div class="field"><label class="f" for="lx-${k}">${l}</label><input class="in" id="lx-${k}" data-lx="${k}" value="${esc(L[k]||'')}" placeholder="${esc(base[k]||'')}"></div>`;
   el.innerHTML=`<div class="card section"><h3>Χρώμα εφαρμογής</h3>${THEME_COLORS.map(([n,cs])=>`<div class="small muted" style="margin:10px 0 6px">${n}</div><div class="thgrid">${cs.map(c=>`<button type="button" data-th="${c}" style="background:${c}" class="${cur===c?'on':''}" aria-label="Χρώμα ${c}">${cur===c?ic('check',18):''}</button>`).join('')}</div>`).join('')}
@@ -1284,13 +1295,15 @@ function viewYear(r){const t=todayISO();const Y=+(r.q.y||(r.q.d||t).slice(0,4));
   const H=holList(Y).filter(h=>holOn(h)&&!biz().holOff);
   M().innerHTML=`<div class="agbar"><div class="seg">${[['day','Ημέρα'],['week','Εβδομάδα'],['month','Μήνας'],['year','Έτος'],['list','Λίστα']].map(([k,l])=>`<a href="#/agenda?view=${k}${k==='year'?'&y='+Y:'&d='+(Y===+t.slice(0,4)?t:Y+'-01-01')}" class="${k==='year'?'on':''}">${l}</a>`).join('')}</div></div>
    ${periodHead([`#/agenda?view=year&y=${Y-1}`,'',`#/agenda?view=year&y=${Y+1}`],String(Y),Y===+t.slice(0,4),`#/agenda?view=year&y=${t.slice(0,4)}`)}
-   ${YEAR_PICK?`<div class="ypick"><b>🏖️ ${YEAR_PICK.a?'Τώρα πάτα την τελευταία μέρα':'Πάτα την πρώτη μέρα'}</b><span class="small">${YEAR_PICK.a?'Για μία μόνο μέρα, πάτα την ίδια ξανά.':'της άδειας ή του κλεισίματος. Για να ανοίξεις ξανά μια κλειστή μέρα, πάτα την δύο φορές.'}</span><button class="btn sm" id="y-cx">Άκυρο</button></div>`:`<div class="row" style="gap:8px;flex-wrap:wrap;margin:4px 0 10px"><button class="btn pri" id="y-off">🏖️ Δήλωσε άδεια ή κλειστό</button></div>`}
+   ${YEAR_PICK?`<div class="ypick"><b>🏖️ ${YEAR_PICK.a?'Τώρα πάτα την τελευταία μέρα':'Πάτα την πρώτη μέρα'}</b><span class="small">${YEAR_PICK.a?'Για μία μόνο μέρα, πάτα την ίδια ξανά.':'της άδειας ή του κλεισίματος. Για να ανοίξεις ξανά μια κλειστή μέρα, πάτα την δύο φορές.'}</span><button class="btn sm" id="y-cx">Άκυρο</button></div>`:`<div class="row" style="gap:8px;flex-wrap:wrap;margin:4px 0 10px"><button class="btn pri" id="y-off">🏖️ Δήλωσε άδεια ή κλειστό</button><button class="btn" id="y-fs">⛶ Όλο το έτος σε μία οθόνη</button></div>`}
    <div class="ylegend small"><span><i class="yd h2"></i> ραντεβού (ο αριθμός)</span><span><i class="yd off"></i> κλειστό · αργία · άδεια</span><span><i class="yd rest"></i> ρεπό</span>${Object.keys(DJ).length?'<span><i class="ydj" style="position:static">2</i> δουλειές Δρομολογίου</span>':''}</div>
    <div class="ygrid">${[1,2,3,4,5,6,7,8,9,10,11,12].map(mini).join('')}</div>
    <div class="card section" style="margin-top:14px"><div class="card-h"><h3>Άδειες και κλειστές μέρες ${Y}</h3></div>
     ${R.length?`<div class="yoffl">${R.map((x,i)=>`<div class="yoff"><span>${offIcon(x.why)}</span><span class="grow"><b>${esc(x.why)}</b><small>${x.a===x.b?esc(WDAYS_S[wdOf(x.a)]+' '+fmtShort(x.a)):esc(fmtShort(x.a)+' – '+fmtShort(x.b))}${x.a!==x.b?` · ${Math.round((new Date(x.b)-new Date(x.a))/864e5)+1} μέρες`:''}${(n=>n?` · <b class="ywt">⚠️ ${n} ραντεβού μένουν μέσα</b>`:'')(hiddenOnce(x.a,x.b).length)}</small></span><button class="rngx" data-yrm="${i}" aria-label="Αφαίρεση">✕</button></div>`).join('')}</div>`:'<p class="small muted" style="margin:0">Δεν έχεις δηλώσει άδειες. Πάτα «Δήλωσε άδεια ή κλειστό».</p>'}
-    ${H.length?`<details class="small" style="margin-top:10px"><summary><b>Αργίες που κλείνεις (${H.length})</b></summary><p class="muted" style="margin:6px 0 0">${H.map(h=>esc(fmtShort(h.date)+' '+h.name)).join(' · ')}</p></details>`:''}</div>`;
+    <details class="small" style="margin-top:10px"><summary><b>Αργίες που κλείνεις (${H.length})</b></summary><p class="muted" style="margin:6px 0 0">${H.length?H.map(h=>esc(fmtShort(h.date)+' '+h.name)).join(' · '):'Καμία — έχεις ανοίξει όλες τις αργίες.'}</p></details>
+    <button type="button" class="btn sm ghost" id="y-holr" style="margin-top:8px">↩︎ Επαναφορά στις βασικές αργίες</button></div>`;
   M().onclick=e=>{const rm=e.target.closest('[data-yrm]');if(rm){const x=R[+rm.dataset.yrm];if(!confirm(`Να ανοίξουν ξανά οι μέρες ${fmtShort(x.a)}${x.a!==x.b?' – '+fmtShort(x.b):''};`))return;for(let d=x.a;d<=x.b;d=addDays(d,1))delete C[d];save();glenOutbox('open',x.a,x.b);toast('Οι μέρες άνοιξαν ξανά.','ok');return render();}
+    if(e.target.closest('#y-fs'))return yearFull(Y);if(e.target.closest('#y-holr'))return holReset();
     if(e.target.closest('#y-off')){YEAR_PICK={};return render();}if(e.target.closest('#y-cx')){YEAR_PICK=null;return render();}
     const b=e.target.closest('[data-yd]');if(!b)return;const d=b.dataset.yd;
     if(!YEAR_PICK)return go(`agenda?view=day&d=${d}`);
@@ -1302,7 +1315,7 @@ function offDialog(a,z){const days=[];for(let d=a;d<=z;d=addDays(d,1))days.push(
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${a===z?esc(WDAYS[wdOf(a)]+' '+fmtDate(a)):esc(fmtShort(a)+' – '+fmtShort(z))+` <span class="muted small">(${days.length} μέρες)</span>`}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    ${allOff?`<p class="small" style="margin-top:0">${a===z?'Αυτή η μέρα είναι ήδη κλειστή':'Αυτές οι μέρες είναι ήδη κλειστές'} (${esc(offWhy(a))}).</p><button class="btn pri" id="of-open" style="width:100%">🔓 Άνοιξέ ${a===z?'την':'τες'} ξανά</button><p class="small muted">ή άλλαξε τον λόγο:</p>`:`<p class="small muted" style="margin-top:0">Τι είναι; Δεν θα κλείνονται ραντεβού, ούτε από τον σύνδεσμο κρατήσεων.</p>`}
    <div class="ofr">${OFF_REASONS.map(([n,i])=>`<button class="btn" data-ofr="${esc(n)}">${i} ${esc(n)}</button>`).join('')}</div>
-   ${X.length?`<div class="note small" style="margin-top:12px">⚠️ <b>Έχεις ${X.length} ραντεβού ${a===z?'αυτή τη μέρα':'αυτές τις μέρες'}.</b> Δεν σβήνονται — μετακίνησέ τα ή ακύρωσέ τα:<div style="margin-top:6px">${X.slice(0,8).map(o=>`<a class="chipt" href="#/agenda?view=day&d=${o.date}">${esc(fmtShort(o.date)+' '+o.s+' '+stuName(stOf(o.a.sid)))}</a>`).join(' ')}${X.length>8?' …':''}</div></div>`:''}`,{guard:false,onClose:()=>{YEAR_PICK=null;render();}});
+   ${X.length?`<div class="note small" style="margin-top:12px">⚠️ <b>Έχεις ${X.length} ραντεβού ${a===z?'αυτή τη μέρα':'αυτές τις μέρες'}.</b> Δεν σβήνονται — μετακίνησέ τα ή ακύρωσέ τα:<div style="margin-top:6px">${X.slice(0,8).map(o=>`<a class="chipt" href="#/agenda?view=day&d=${o.date}">${esc(fmtShort(o.date)+' '+o.s+' '+stuName(stOf(o.a.sid)))}</a>`).join(' ')}${X.length>8?' …':''}</div></div>`:''}`,{guard:false,onClose:()=>{YEAR_PICK=null;render();if(window._yfsDraw)_yfsDraw();}});
   md.el.addEventListener('click',e=>{const r=e.target.closest('[data-ofr]');if(r){days.forEach(d=>{C[d]=r.dataset.ofr;});save();glenOutbox('close',a,z,r.dataset.ofr);toast(`Δηλώθηκε: ${r.dataset.ofr} (${days.length} ${days.length===1?'μέρα':'μέρες'}).`,'ok');md.close();return;}
     if(e.target.closest('#of-open')){days.forEach(d=>{if(holidayOf(d))C[d]=false;else delete C[d];});save();glenOutbox('open',a,z);toast('Άνοιξαν ξανά.','ok');md.close();}});}
 /* κοινή «βιτρίνα» για τις άλλες εφαρμογές GlenApps (π.χ. Δρομολόγιο): ποιες μέρες είσαι κλειστός και πόσα ραντεβού έχεις — μόνο στο ίδιο κινητό */
@@ -1319,3 +1332,31 @@ function glenInbox(){try{if(!S.data||!S.data.settings)return;const K='glenapps-a
   if(nc||no){save();toast('Από το Δρομολόγιο: '+[nc?`κλειστές ${nc} μέρες`:'',no?`άνοιξαν ${no} μέρες`:''].filter(Boolean).join(' · ')+'.','ok');if(/^#\/(agenda|today)?/.test(location.hash))render();}}catch(e){}}
 function dromoBusy(){try{const D=JSON.parse(localStorage.getItem('glenapps-dromologio')||'null');return D&&D.busy||null;}catch(e){return null;}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)glenInbox();});setTimeout(glenInbox,900);setTimeout(()=>window.glenShare&&glenShare(),1200);
+
+/* όλο το έτος σε μία οθόνη: 12 μήνες χωρίς κύλισμα· πάτημα σε μέρα → η μέρα· και δήλωση άδειας από εδώ */
+function yearFull(Y){const md=modal('<div id="yfs"></div>',{guard:false,onClose:()=>{window._yfsDraw=null;YEAR_PICK=null;try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}}});
+  md.el.classList.add('yfsdlg');md.el.parentElement.classList.add('yfsov');try{if(innerWidth<900&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});}catch(e){}
+  const t=todayISO();
+  const draw=()=>{const YC=yearCounts(Y),N=YC.M,W=YC.W;const DJ=dromoBusy()||{};const mx=Math.max(3,...Object.values(N));
+    const mini=mo=>{const ym=`${Y}-${pad(mo)}`;const last=isoDate(new Date(Y,mo,0));const cells=[];for(let d=mondayOf(ym+'-01');d<=last;d=addDays(d,1))cells.push(d);while(cells.length<42)cells.push('');
+      let busy=0;cells.forEach(d=>{if(d&&d.slice(0,7)===ym)busy+=N[d]||0;});
+      return`<div class="yfm"><div class="yfh"><b>${MONTHS[mo-1]}</b>${busy?`<span>${busy}</span>`:''}</div><div class="yfw">${DAY_ORDER.map(d=>`<i>${WDAYS_S[d][0]}</i>`).join('')}</div><div class="yfd">${cells.map(d=>{if(!d||d.slice(0,7)!==ym)return'<span></span>';
+        const n=N[d]||0,why=offWhy(d),rest=!why&&!workDay(d),lv=n?Math.min(4,Math.ceil(n/mx*4)):0;const pk=YEAR_PICK&&YEAR_PICK.a&&d>=YEAR_PICK.a&&d<=(YEAR_PICK.b||YEAR_PICK.a);
+        return`<button type="button" class="yd ${why?'off':''} ${rest?'rest':''} ${d===t?'today':''} ${pk?'pk':''} ${lv?'h'+lv:''}" data-yfd="${d}"><small>${+d.slice(8)}</small>${W[d]?`<b class="yw">⚠${W[d]}</b>`:n?`<b>${n}</b>`:''}${DJ[d]?`<i class="ydj">${DJ[d]}</i>`:''}</button>`;}).join('')}</div></div>`;};
+    $('#yfs',md.el).innerHTML=`<div class="yfbar"><button class="iconbtn" data-yfy="${Y-1}" aria-label="Προηγούμενο έτος">${ic('left',20)}</button><b>${Y}</b><button class="iconbtn" data-yfy="${Y+1}" aria-label="Επόμενο έτος">${ic('right',20)}</button>
+      <span class="grow small">${YEAR_PICK?(YEAR_PICK.a?'Πάτα την τελευταία μέρα':'Πάτα την πρώτη μέρα'):''}</span>
+      <button class="btn sm ${YEAR_PICK?'':'pri'}" id="yf-off">${YEAR_PICK?'Άκυρο':'🏖️ Άδεια'}</button><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',20)}</button></div>
+      <div class="yfgrid">${[1,2,3,4,5,6,7,8,9,10,11,12].map(mini).join('')}</div>`;};
+  window._yfsDraw=draw;draw();
+  md.el.addEventListener('click',e=>{const y=e.target.closest('[data-yfy]');if(y){Y=+y.dataset.yfy;return draw();}
+    if(e.target.closest('#yf-off')){YEAR_PICK=YEAR_PICK?null:{};return draw();}
+    const b=e.target.closest('[data-yfd]');if(!b)return;const d=b.dataset.yfd;
+    if(!YEAR_PICK){md.close();return setTimeout(()=>go(`agenda?view=day&d=${d}`),160);}
+    if(!YEAR_PICK.a){YEAR_PICK.a=d;return draw();}
+    let a=YEAR_PICK.a,z=d;if(z<a)[a,z]=[z,a];YEAR_PICK.a=a;YEAR_PICK.b=z;draw();offDialog(a,z);});}
+
+/* επαναφορά στις βασικές αργίες: ό,τι άλλαξες στις αργίες γυρίζει όπως ήταν (οι δικές σου άδειες μένουν) */
+function holReset(){const B=biz();const C=closedDays();const n=Object.keys(B.hol||{}).length+Object.keys(C).filter(d=>C[d]===false).length+(B.holOff?1:0);
+  if(!n){toast('Οι αργίες είναι ήδη οι βασικές.','ok');return;}
+  confirmDlg('Να γυρίσουν οι αργίες στις βασικές; Ξανακλείνουν όλες οι επίσημες αργίες (και Καθαρά Δευτέρα, Πάσχα, Αγίου Πνεύματος). Οι άδειες και οι κλειστές μέρες που δήλωσες εσύ μένουν όπως είναι.',{ok:'Επαναφορά'}).then(ok=>{if(!ok)return;
+    delete B.hol;B.holOff=false;Object.keys(C).forEach(d=>{if(C[d]===false)delete C[d];});save();toast('Οι αργίες γύρισαν στις βασικές.','ok');render();if(window._yfsDraw)_yfsDraw();});}

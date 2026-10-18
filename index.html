@@ -7,7 +7,7 @@
 <html lang="el">
 <head>
 <meta charset="UTF-8">
-<meta name="app-version" content="1.52">
+<meta name="app-version" content="1.53">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -525,6 +525,19 @@ button.chip[data-av]{padding:7px 12px;font-size:.85rem}button.chip.on{background
 .ypick span{flex:1 1 100%;order:3;color:#7a5200}
 .yoffl{display:grid;gap:6px}.yoff{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px}.yoff small{display:block;color:var(--muted)}
 .ofr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.ofr .btn{justify-content:center}
+/* 1.53 έτος σε μία οθόνη */
+.ov.yfsov{padding:0!important;align-items:stretch!important;justify-content:stretch!important}
+.dlg.yfsdlg{position:fixed;inset:0;width:100%!important;max-width:none!important;height:100%;max-height:none!important;margin:0!important;border-radius:0!important;padding:6px 6px calc(6px + env(safe-area-inset-bottom))!important;display:flex;flex-direction:column;overflow:hidden!important;transform:none!important;animation:none!important}
+#yfs{display:flex;flex-direction:column;height:100%;min-height:0}
+.yfbar{display:flex;align-items:center;gap:6px;padding:0 2px 6px}.yfbar>b{font-size:1.15rem;min-width:46px;text-align:center}.yfbar .grow{color:#a16207;font-weight:600}
+.yfgrid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:5px}
+@media (orientation:landscape){.yfgrid{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}}
+@media (orientation:landscape) and (min-aspect-ratio:2/1){.yfgrid{grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}}
+.yfm{display:flex;flex-direction:column;min-height:0;min-width:0;border:1px solid var(--line);border-radius:10px;padding:3px 3px 2px;background:var(--paper)}
+.yfh{display:flex;justify-content:space-between;align-items:center;font-size:.68rem;padding:0 2px 1px}.yfh span{font-size:.6rem;font-weight:700;color:var(--brand-txt)}
+.yfw{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.yfw i{font-style:normal;font-size:.5rem;color:var(--muted);text-align:center}
+.yfd{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));gap:1px}
+.yfd .yd{height:auto;min-height:0;border-radius:4px;padding:0}.yfd .yd small{font-size:.5rem}.yfd .yd b{font-size:.62rem;line-height:1}.yfd .ydj{font-size:.45rem;top:-2px;right:-1px;padding:1px 2px;min-width:9px}
 @media (prefers-reduced-motion:reduce){.wcbg i{animation:none!important}}
 .app{position:relative;z-index:1}
 body{background:var(--cream)}
