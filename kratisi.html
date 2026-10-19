@@ -74,7 +74,7 @@ footer{text-align:center;color:var(--ink3);font-size:.75rem;margin-top:18px}
 /* ---------- γλώσσα ---------- */
 const T={
  el:{title:'Κράτηση ραντεβού',pick:'Διάλεξε μέρα',time:'Διάλεξε ώρα',free:n=>n+(n===1?' ώρα':' ώρες'),none:'Δεν υπάρχουν ελεύθερες ώρες αυτή τη μέρα.',
-  you:'Τα στοιχεία σου',name:'Ονοματεπώνυμο',phone:'Τηλέφωνο',note:'Σημείωση (προαιρετικό)',promo:'Θέλω να λαμβάνω και προσφορές και νέα (μπορώ να το σταματήσω όποτε θέλω).',
+  you:'Τα στοιχεία σου',name:'Ονοματεπώνυμο',phone:'Τηλέφωνο',note:'Σημείωση (προαιρετικό)',hpNote:'Μη γράφετε εδώ συμπτώματα ή στοιχεία υγείας — θα τα πείτε από κοντά.',promo:'Θέλω να λαμβάνω και προσφορές και νέα (μπορώ να το σταματήσω όποτε θέλω).',
   sendWith:'Στείλε την κράτηση με',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
   priv:b=>`Τα στοιχεία σου πηγαίνουν μόνο στον/στην «${b}», μέσα από την εφαρμογή μηνυμάτων σου. Η σελίδα αυτή δεν τα αποθηκεύει και δεν τα στέλνει πουθενά αλλού.`,
   asOf:d=>'Ελεύθερες ώρες όπως ήταν στις '+d,expired:'Ο σύνδεσμος έχει λήξει. Ζήτησε νέο σύνδεσμο.',withWho:'Με ποιον θέλεις;',wantWho:'Θέλεις συγκεκριμένο άτομο;',askT:'Έστειλες το μήνυμα;',askP:b=>`Η κράτηση φτάνει στον/στην «${b}» μόνο αν πατήσεις «Αποστολή» μέσα στην εφαρμογή μηνυμάτων. Αν δεν άνοιξε ή δεν το έστειλες, δοκίμασε ξανά ή στείλε με SMS.`,askYes:'Ναι, το έστειλα',askRe:'Άνοιξέ το ξανά',trySms:'Στείλε με SMS (πιο σίγουρο)',
@@ -88,7 +88,7 @@ const T={
   addCal:'Βάλ\' το στο ημερολόγιο του κινητού μου',pending:'Περιμένει επιβεβαίωση από την επιχείρηση.',ownT:'Θέλεις κι εσύ τέτοιο ημερολόγιο;',ownP:'Για τη δουλειά σου ή για εσένα — δωρεάν, στα ελληνικά, τα δεδομένα μένουν στο κινητό σου.',ownB:'Κατέβασε το Ημερολόγιο',
   at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
  en:{title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
-  you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',promo:'I also want to receive offers and news (I can stop anytime).',
+  you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',hpNote:'Please don\'t write symptoms or health details here — you\'ll discuss them in person.',promo:'I also want to receive offers and news (I can stop anytime).',
   sendWith:'Send the booking via',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
   priv:b=>`Your details go only to “${b}”, through your own messaging app. This page does not store them or send them anywhere else.`,
   asOf:d=>'Free times as of '+d,expired:'This link has expired. Please ask for a new one.',withWho:'Who would you like?',wantWho:'Want someone specific?',askT:'Did you send the message?',askP:b=>`The booking reaches “${b}” only if you tap “Send” in the messaging app. If it didn’t open or you didn’t send it, try again or send by SMS.`,askYes:'Yes, I sent it',askRe:'Open it again',trySms:'Send by SMS (more reliable)',
@@ -138,7 +138,7 @@ function liveSlots(){const now=new Date(),td=isoDate(now),nm=now.getHours()*60+n
 function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');document.documentElement.lang=L;
   if(!D){app.innerHTML=`<div class="card done"><div class="big">🔗</div><p>${esc(window.__err||t('bad'))}</p>${window.__why?`<p class="tiny muted">(${esc(window.__why)})</p>`:''}</div>`;return;}
   const S=liveSlots();
-  const head=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(PC&&!other?t('hiTop')(PC.n.split(' ')[0]):t('title'))}</p></div><button class="lang" id="lg" aria-label="${L==='el'?'Ελληνικά — πάτα για English':'English — tap for Ελληνικά'}" title="${L==='el'?'Ελληνικά — πάτα για English':'English — tap for Ελληνικά'}">${L==='el'?'🇬🇷':'🇬🇧'}</button></div>`;
+  const head=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(PC&&!other?t('hiTop')(PC.n.split(' ')[0]):t('title'))}</p></div><button class="lang" id="lg" aria-label="Language">${L==='el'?'🇬🇧':'🇬🇷'}</button></div>`;
   if(!S.length){app.innerHTML=head+`<div class="card done"><div class="big">⏳</div><p>${esc(t(D.off?'off':'expired'))}</p>${D.off&&D.ph?`<a class="send" style="display:inline-block;margin-top:10px;background:var(--brand)" href="tel:${esc(intl(D.ph))}">📞 ${esc(t('call'))} ${esc(D.ph)}</a>`:''}</div>`;bindLang();return;}
   if(!day||!S.some(x=>x[0]===day))day=S[0][0];const cur=(S.find(x=>x[0]===day)||[,[]])[1];if(slot&&!cur.includes(slot))slot=null;
   const g=new Date(D.g);const ch=String(D.ch||'svwe');
@@ -154,7 +154,7 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
    <div class="${PC&&!other?'hidden':''}"><label class="f" for="nm">${esc(t('name'))}</label><input class="in" id="nm" autocomplete="name" maxlength="80" value="${esc(PC&&!other?PC.n:'')}">
    <label class="f" for="ph">${esc(t('phone'))}</label><input class="in" id="ph" type="tel" inputmode="tel" autocomplete="tel" maxlength="25" value="${esc(PC&&!other?PC.ph:'')}"></div>${!(PC&&!other)&&saved.n?`<button type="button" class="linkb" id="useme">${esc(t('useMe')(saved.n))}</button>`:''}
    ${PC&&!other?`<button type="button" class="linkb" id="notme">${esc(t('notMe')(PC.n))}</button>`:''}
-   <label class="f" for="no">${esc(t('note'))}</label><textarea class="in" id="no" rows="2" maxlength="200"></textarea>
+   <label class="f" for="no">${esc(t('note'))}</label><textarea class="in" id="no" rows="2" maxlength="200"${D.hp?` placeholder="${esc(t('hpNote'))}"`:''}></textarea>${D.hp?`<p class="tiny muted" style="margin:4px 0 0">🩺 ${esc(t('hpNote'))}</p>`:''}
    <details class="adr"><summary class="small">${esc(t('addrS'))}</summary><input class="in" id="ad" autocomplete="street-address" maxlength="120" placeholder="${esc(t('addrP'))}" style="margin-top:8px"></details>
    <div class="cons"><b class="small">${esc(t('consT'))}</b>
     <label class="chk"><input type="checkbox" id="ca" checked><span>${esc(t('consA')(D.n||''))}</span></label>

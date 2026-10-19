@@ -100,6 +100,13 @@ function profAddDialog(groupName,old){return new Promise(res=>{const g=IM_GROUPS
 function prof(){return findProf(S.data.settings.prof)||findProf('allo');}
 function profLex(){const{g,p}=prof();return Object.assign({},g.lex,p.lex||{});}
 /* η λέξη του επαγγέλματος για το ραντεβού (ραντεβού, μάθημα, συνεδρία…) σε πληθυντικό και ενικό για φράσεις */
+/* επαγγέλματα υγείας (όχι κτηνίατρος): οι κρατήσεις δεν περνούν ποτέ με ονόματα από διακομιστή — μόνο κατευθείαν στον επαγγελματία */
+function isHealthProf(){try{const{g,p}=prof();return(g.g==='Υγεία & φροντίδα'||g.id==='ygeia')&&p.id!=='ktiniatros';}catch(e){return false;}}
+const HP_TXT=`<div class="hpnote"><b>🩺 Πώς δουλεύουν οι κρατήσεις στα επαγγέλματα υγείας</b>
+ <ul><li>Το όνομα και το τηλέφωνο του ασθενούς έρχονται <b>κατευθείαν σε σένα</b> με Viber ή SMS, από το δικό του κινητό. Δεν περνούν από κανέναν διακομιστή και δεν τα βλέπει κανείς άλλος — ούτε εμείς.</li>
+ <li>Στη σελίδα κράτησης ο ασθενής βλέπει σημείωση να μη γράφει συμπτώματα ή στοιχεία υγείας.</li>
+ <li>Όταν ενεργοποιηθεί ο διακομιστής, οι ελεύθερες ώρες θα ενημερώνονται ζωντανά <b>χωρίς ονόματα</b> — μόνο «πιασμένη / ελεύθερη ώρα» — ώστε να μη διπλοκλείνεται ώρα. Τα στοιχεία του ασθενούς θα συνεχίσουν να έρχονται μόνο σε σένα.</li>
+ <li>Για τα στοιχεία των ασθενών σου υπεύθυνος είσαι εσύ: κράτα το κινητό κλειδωμένο και κάνε αντίγραφα ασφαλείας.</li></ul></div>`;
 function onePl(){const o=(LX('one')||'Ραντεβού').trim();const M={'ραντεβού':'ραντεβού','μάθημα':'μαθήματα','προπόνηση':'προπονήσεις','δουλειά':'δουλειές','κράτηση':'κρατήσεις','διαδρομή':'διαδρομές','επίδειξη':'επιδείξεις','φωτογράφιση':'φωτογραφίσεις','συνεδρία':'συνεδρίες','επίσκεψη':'επισκέψεις','θεραπεία':'θεραπείες','εξέταση':'εξετάσεις','ραντεβού ':'ραντεβού'};const k=o.toLocaleLowerCase('el');return M[k]||k;}
 function oneSg(){const o=(LX('one')||'Ραντεβού').trim().toLocaleLowerCase('el');return o;}
 function LX(k){const L=Object.assign(profLex(),S.data.settings.lex||{});return L[k]||'';}
@@ -759,7 +766,7 @@ function qrPrint(url,name){const w=window.open('','_blank');if(!w)return toast('
    <p>Άνοιξε την κάμερα του κινητού σου, στόχευσε τον κωδικό και πάτα τον σύνδεσμο που εμφανίζεται. Διαλέγεις ώρα και μας τη στέλνεις.</p><p class="s">Ημερολόγιο · GlenApps</p>
    <script>setTimeout(function(){window.print()},400)<\/script></body></html>`);w.document.close();}
 async function bookLink(p){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
-  const D=Object.assign({v:2,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},p?{pc:{i:p.id,n:stuName(p),ph:p.phone||((p.contacts||[])[0]||{}).phone||''},my:occ(todayISO(),addDays(todayISO(),c.days),{sid:p.id,by:''}).filter(o=>o.st==='').map(o=>[o.date,o.s]).slice(0,20)}:{},slotPack(S2,c.days));Object.assign(D,pvPack(D,c.days));
+  const D=Object.assign({v:2,hp:isHealthProf()?1:0,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},p?{pc:{i:p.id,n:stuName(p),ph:p.phone||((p.contacts||[])[0]||{}).phone||''},my:occ(todayISO(),addDays(todayISO(),c.days),{sid:p.id,by:''}).filter(o=>o.st==='').map(o=>[o.date,o.s]).slice(0,20)}:{},slotPack(S2,c.days));Object.assign(D,pvPack(D,c.days));
   const k='c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));
   return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k='+k,slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
 /* ---------- Ημερολόγιο Pro (15 € τον χρόνο): ο σύνδεσμος κρατήσεων για τους πελάτες ----------
@@ -821,10 +828,11 @@ function proSheet(why){const st=proState();const W={bk:'Η δωρεάν αποσ
 async function bookShareDialog(p){const B=biz();
   if(!isPro()&&proState().left<=0)return proSheet('bk');
   if(!B.phone&&!B.email){if(await confirmDlg('Για να σου στέλνουν κρατήσεις, χρειάζεται το τηλέφωνο της επιχείρησης (για Viber / SMS) ή email. Να πας να το γράψεις;',{ok:'Πάμε'}))go('settings/info');return;}
+  if(isHealthProf()&&!S.data.settings.hpAck){const ok=await new Promise(res=>{const m=modal(`${HP_TXT}<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" data-close>Όχι τώρα</button><button class="btn pri" id="hp-ok">Κατάλαβα, συνέχεια</button></div>`,{guard:false,onClose:()=>res(false)});$('#hp-ok',m.el).onclick=()=>{res(true);m.close();};});if(!ok)return;S.data.settings.hpAck=new Date().toISOString();save();}
   const L0=await bookLink(p);const nm=p?(p.name||'').split(' ')[0]:'';
   const txt=window.LANG==='en'?(nm?'Hello '+nm+'! ':'Hello! ')+'Pick a time that suits you here:\n'+L0.url:(nm?'Καλησπέρα '+nm+'! ':'Καλησπέρα! ')+'Διάλεξε μόνος σου ώρα για '+LX('one').toLowerCase()+' εδώ:\n'+L0.url;
   const ph=p&&(p.phone||((p.contacts||[])[0]||{}).phone);
-  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📲 Σύνδεσμος κρατήσεων</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📲 Σύνδεσμος κρατήσεων</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>${isHealthProf()?`<button type="button" class="hpline" id="hp-why">🩺 Επάγγελμα υγείας: τα στοιχεία των ασθενών έρχονται μόνο σε σένα. <u>Πώς δουλεύει</u></button>`:''}
    <p class="small" style="margin-top:0">Ο ${esc(LX('who')).toLowerCase()} ανοίγει τον σύνδεσμο, διαλέγει μέρα και ώρα από τις <b>ελεύθερες</b> σου και σου στέλνει την κράτηση με Viber, SMS, WhatsApp ή email. Εσύ πατάς τον σύνδεσμο στο μήνυμα και μπαίνει στο ημερολόγιο.</p>
    <div class="note small">📅 Μέσα: <b>${L0.slots}</b> ελεύθερες ώρες σε <b>${L0.days}</b> μέρες (επόμενες ${bkCfg().days}).<br>⏱️ Οι ώρες είναι όπως είναι <b>τώρα</b>· για φρέσκες ώρες στείλε νέο σύνδεσμο.</div>
    ${isPro()?'':`<div class="note small freenote" style="margin-top:8px">🎁 <b>Δωρεάν δοκιμή:</b> ${PRO_FREE===1?'μία αποστολή':PRO_FREE+' αποστολές'}, για να δεις πώς δουλεύει. Μετά χρειάζεται το <b>Ημερολόγιο Pro</b> (${PRO_FIRST} € τον πρώτο χρόνο). <button type="button" class="linkbtn small" id="bk-pro">Τι περιλαμβάνει →</button></div>`}
@@ -840,6 +848,7 @@ async function bookShareDialog(p){const B=biz();
     <div class="field" style="margin-top:8px"><label class="f">Πόσες μέρες μπροστά</label><div class="seg" id="bk-days">${[7,14,21,30].map(n=>`<button type="button" data-bd="${n}" class="${bkCfg().days===n?'on':''}">${n}</button>`).join('')}</div></div>
     <div class="field"><label class="f">Πώς μπορούν να σου στείλουν</label><div class="chips">${[['v','Viber'],['s','SMS'],['w','WhatsApp'],['e','Email']].map(([k,l])=>`<button type="button" class="chipt ${bkCfg().ch.includes(k)?'on':''}" data-bch="${k}">${l}</button>`).join('')}</div>
      <div class="tiny muted" style="margin-top:4px">Viber / SMS / WhatsApp στο ${esc(B.phone||'— (λείπει τηλέφωνο)')} · Email στο ${esc(B.email||'— (λείπει email)')}</div></div></details>`,{guard:false});
+  {const hw=$('#hp-why',md.el);if(hw)hw.onclick=()=>modal(`${HP_TXT}<div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn pri" data-close>Εντάξει</button></div>`,{guard:false});}
   $('#bk-vb',md.el).onclick=async()=>{try{await navigator.clipboard.writeText(txt);}catch(_){}if(p)logMsg(p,'Σύνδεσμος κρατήσεων','Viber');
     if(navigator.share){toast('Διάλεξε «Viber» από τη λίστα και μετά τον παραλήπτη.','ok');navigator.share({text:txt}).catch(()=>{});}
     else{toast('Ο σύνδεσμος αντιγράφηκε. Αν στο Viber δεν φαίνεται ολόκληρος, κάνε «Επικόλληση».','ok');location.href=viberHref(txt);}};
