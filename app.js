@@ -5,6 +5,8 @@
 /* κοινές μεταβλητές που χρειάζεται ήδη η πρώτη εμφάνιση (έτος, μνήμη θέσης) */
 var YEAR_PICK=null,NAVSTK=[location.hash||'#/today'],SCROLLMEM={},_scT=0,_scLock=0,_shT=0;
 var START_OPTS=[['last','Τελευταία που είχες ανοίξει','↩️'],['today','Σήμερα','🏠'],['day','Ημέρα','📅'],['week','Εβδομάδα','🗓️'],['month','Μήνας','▦'],['year','Έτος','📆'],['list','Λίστα','☰']];
+/* κρυπτογράφηση στοιχείων στη συσκευή: DEK = κλειδί δεδομένων (μόνο στη μνήμη όσο είναι ξεκλείδωτη), DATA_LOCKED = δεν έχουν ανοίξει ακόμα */
+var DEK=null,DEKR=null,BKK=null,DATA_LOCKED=false,_wrQ=Promise.resolve(),DATA_V='glen-data-1',LOCK_ITER2=600000,LOCK_SKIP=0;
 var LOCK_KEY='imerologio-lock',LOCK_ITER=200000,LOCK_AFTER=[[0,'αμέσως'],[1,'1 λεπτό'],[5,'5 λεπτά'],[15,'15 λεπτά'],[60,'1 ώρα']],LOCKED=false,LOCK_AWAY=0,LOCK_PEND=null;
 /* βιβλιοθήκες τρίτων: φιλοξενούνται στο lib/ και ελέγχονται με integrity (SHA-384) πριν τρέξουν — αν αλλάξει έστω ένα byte, δεν φορτώνονται */
 var LIB_SRI={'lib/leaflet.js':'sha384-tM1WyRnQZLXgeuR/dXHqqQcD5jN9+bgKmZW55OJtM9Bv7zCG4VFwmgdJudAtzIni',
@@ -19,14 +21,24 @@ const BACKUP_SUB='Imerologio';
 /* ---------- κατάσταση ---------- */
 const S={user:{id:'me',name:'Εγώ'},meta:{org:''},data:null,curHash:null};
 function loadData(){let d=null;try{d=JSON.parse(localStorage.getItem(STORE));}catch(e){}
-  if(!d||typeof d!=='object')d={};
+  if(d&&d.enc===DATA_V){DATA_LOCKED=true;d=null;}/* κρυπτογραφημένα: ανοίγουν μόνο με τον κωδικό */
+  return normData(d);}
+function normData(d){if(!d||typeof d!=='object')d={};
   d.students=Array.isArray(d.students)?d.students:[];
   d.settings=Object.assign({prof:null,lex:{},myName:''},d.settings||{});
   d.meta=Object.assign({created:new Date().toISOString(),changes:0,lastBackup:0},d.meta||{});
   return d;}
 function applyIdentity(){const B=biz();S.user.name=S.data.settings.myName||'Εγώ';S.meta.org=B.name||'';ROLES=profRoles();
   if(!ROLES.some(r=>r[0]===B.meRole))B.meRole=(ROLES.find(r=>r[2])||ROLES[0])[0];}
-function save(){S.data.meta.changes=(S.data.meta.changes||0)+1;try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){toast('Δεν αποθηκεύτηκε — η μνήμη της συσκευής είναι γεμάτη.','bad');}applyIdentity();if(window.glenShare)glenShare();}
+/* γράψιμο στη συσκευή: με κλείδωμα πάντα κρυπτογραφημένα (AES-GCM 256)· ποτέ απλό κείμενο όσο υπάρχει κλείδωμα */
+function storeWrite(d){if(DATA_LOCKED)return;const txt=JSON.stringify(d);const c=lockCfg();
+  if(c&&c.v>=2){if(!DEK)return;_wrQ=_wrQ.then(async()=>{const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},DEK,new TextEncoder().encode(txt)));
+      localStorage.setItem(STORE,JSON.stringify({enc:DATA_V,iv:b64uEnc(iv),ct:b64uEnc(ct)}));}).catch(e=>{toast(e&&e.name==='QuotaExceededError'?'Δεν αποθηκεύτηκε — η μνήμη της συσκευής είναι γεμάτη.':'Δεν αποθηκεύτηκε — σφάλμα κρυπτογράφησης.','bad');});return;}
+  localStorage.setItem(STORE,txt);}
+async function dataOpen(){let o=null;try{o=JSON.parse(localStorage.getItem(STORE));}catch(e){}
+  if(!o||o.enc!==DATA_V)return normData(o);if(!DEK)throw new Error('λείπει το κλειδί');
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64uDec(o.iv)},DEK,b64uDec(o.ct));return normData(JSON.parse(new TextDecoder().decode(pt)));}
+function save(){if(DATA_LOCKED)return;S.data.meta.changes=(S.data.meta.changes||0)+1;try{storeWrite(S.data);}catch(e){toast('Δεν αποθηκεύτηκε — η μνήμη της συσκευής είναι γεμάτη.','bad');}applyIdentity();if(window.glenShare)glenShare();}
 
 /* ---------- πρόσωπα (στο κοινό κομμάτι λέγονται «students» για συμβατότητα) ---------- */
 function getStudent(id){return S.data.students.find(x=>x.id===id)||null;}
@@ -154,7 +166,7 @@ addEventListener('keydown',e=>{if(e.key!=='Escape')return;const t=topModal();if(
 
 /* ---------- πλοήγηση ---------- */
 function parseRoute(){const h=location.hash.replace(/^#\/?/,'');const[p,q]=h.split('?');const parts=p.split('/').filter(Boolean);return{name:parts[0]||'today',id:parts[1]||null,q:Object.fromEntries(new URLSearchParams(q||''))};}
-function render(){document.body&&document.body.classList.toggle('hidenames',!!(S.data&&S.data.settings.hideNames));
+function render(){if(DATA_LOCKED)return;document.body&&document.body.classList.toggle('hidenames',!!(S.data&&S.data.settings.hideNames));
   {const qm=new URLSearchParams(location.search).get('mine');if(qm){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';if(mineImport(qm)){applyIdentity&&applyIdentity();return render();}}}
   applyTheme();if(!S.data.settings.prof){shellHTML('today');M().innerHTML='';return firstRun();}
   const prevH=S.curHash,newH=location.hash,sameH=prevH===newH,y0=scrollY;let back=null;
@@ -626,10 +638,10 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   ${isNew?`<div class="card conscard"><h3>🛡️ Συγκαταθέσεις για μηνύματα</h3><p class="small muted" style="margin:0">Μπαίνουν μόλις αποθηκεύσεις ${esc(LX('whoAcc'))}.</p></div>`:`<div class="card conscard" id="p-cons"></div>`}`;
   const F=$('#pf');let col=p.color||'';
   // πρόχειρο: ό,τι γράφεις κρατιέται, ακόμα κι αν το κινητό κλείσει την εφαρμογή στο παρασκήνιο
-  const DK='imer-pdraft';const saveDraft=()=>{try{const o=fd(F);localStorage.setItem(DK,JSON.stringify({rid:r.id,t:Date.now(),o,col}));}catch(e){}};
-  const clearDraft=()=>{try{localStorage.removeItem(DK);localStorage.removeItem('imer-conpick');}catch(e){}};
+  const DK='imer-pdraft';const saveDraft=()=>{try{const o=fd(F);draftSt().setItem(DK,JSON.stringify({rid:r.id,t:Date.now(),o,col}));}catch(e){}};
+  const clearDraft=()=>{try{draftSt().removeItem(DK);localStorage.removeItem('imer-conpick');}catch(e){}};
   F._base0=formSnap(F);const poke=()=>F.dispatchEvent(new Event('input',{bubbles:true}));
-  try{const d=JSON.parse(localStorage.getItem(DK)||'null');if(d&&d.rid===r.id&&Date.now()-d.t<6*36e5){['name','phone','phone2','phone3','email','addr','notes'].forEach(k=>{if(d.o[k]!=null&&F[k])F[k].value=d.o[k];});if(d.col!=null){col=d.col;F.color.value=col;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x.dataset.pc===col));}
+  try{const d=JSON.parse(draftSt().getItem(DK)||'null');if(d&&d.rid===r.id&&Date.now()-d.t<6*36e5){['name','phone','phone2','phone3','email','addr','notes'].forEach(k=>{if(d.o[k]!=null&&F[k])F[k].value=d.o[k];});if(d.col!=null){col=d.col;F.color.value=col;$$('[data-pc]',F).forEach(x=>x.classList.toggle('on',x.dataset.pc===col));}
     const cp=localStorage.getItem('imer-conpick');if(cp){localStorage.removeItem('imer-conpick');toast('Το κινητό έκλεισε τη λίστα επαφών όσο ήσουν σε άλλη εφαρμογή. Ό,τι είχες γράψει κρατήθηκε — πάτα ξανά «Από τις επαφές».','bad');}else if(d.o.name||d.o.phone)toast('Συνεχίζεις από εκεί που είχες μείνει.','ok');}}catch(e){}
   F.addEventListener('input',saveDraft);
   const pm=$('#p-many');if(pm)pm.onclick=importMenu;const pc=$('#p-con');if(pc)pc.onclick=async()=>{saveDraft();try{localStorage.setItem('imer-conpick','1');}catch(e){}const L=(await IM_PICKCONTACTS(false))||[];try{localStorage.removeItem('imer-conpick');}catch(e){}const c=L[0];if(!c)return;const said=[];
@@ -1031,15 +1043,15 @@ const SETP={
   $('#st-lx',el).onclick=()=>{const o={};$$('[data-lx]',el).forEach(i=>{const v=i.value.trim();if(v&&v!==base[i.dataset.lx])o[i.dataset.lx]=v;});S.data.settings.lex=o;save();toast('Αποθηκεύτηκε.','ok');render();};},
  backup(el){backupPage(el);},
  lock(el){const L=lockCfg();el.innerHTML=`<div class="card">
-   <p class="small" style="margin-top:0">${L?'Η εφαρμογή ζητά κωδικό όταν ανοίγει και όταν γυρίζεις σε αυτήν μετά από λίγη ώρα.':`Με κωδικό, όποιος πιάσει το κινητό σου ξεκλείδωτο δεν βλέπει ${isHealthProf()?'ασθενείς':LX('whoPlL')} και ραντεβού.${isHealthProf()?' <b>Για επάγγελμα υγείας το συνιστούμε.</b>':''}`}</p>
+   <p class="small" style="margin-top:0">${L?(L.v>=2?'✓ Τα στοιχεία είναι κρυπτογραφημένα. ':'')+'Η εφαρμογή ζητά κωδικό όταν ανοίγει και όταν γυρίζεις σε αυτήν μετά από λίγη ώρα.':`Με κωδικό, όποιος πιάσει το κινητό σου δεν βλέπει ${isHealthProf()?'ασθενείς':LX('whoPlL')} και ραντεβού — και τα στοιχεία κρυπτογραφούνται.${isHealthProf()?' <b>Για επάγγελμα υγείας το συνιστούμε.</b>':''}`}</p>
    ${L?`<div class="field"><label class="f" for="lk-a">Κλείδωμα όταν φύγεις από την εφαρμογή για</label><select class="in" id="lk-a">${LOCK_AFTER.map(([m,t])=>`<option value="${m}" ${+L.after===m?'selected':''}>${t}</option>`).join('')}</select></div>
     <div class="row" style="flex-wrap:wrap"><button class="btn pri" id="lk-now">🔒 Κλείδωσε τώρα</button><button class="btn" id="lk-ch">🔑 Αλλαγή κωδικού</button><button class="btn ghost" id="lk-off">Κατάργηση</button></div>`
    :`<button class="btn pri" id="lk-on">🔒 Όρισε κωδικό</button>`}
-   <p class="tiny muted" style="margin:12px 0 0">Ο κωδικός δεν φυλάγεται πουθενά — μόνο ένα «αποτύπωμά» του. Αν τον ξεχάσεις, ο μόνος δρόμος είναι διαγραφή των στοιχείων από αυτή τη συσκευή και επαναφορά από αντίγραφο. Το κλείδωμα της εφαρμογής δεν αντικαθιστά το κλείδωμα του ίδιου του κινητού — κράτα κι εκείνο ενεργό.</p></div>`;
+   <p class="tiny muted" style="margin:12px 0 0">Με το κλείδωμα, όλα τα στοιχεία στη συσκευή και τα αντίγραφα κρυπτογραφούνται (AES-256) με κλειδί από τον κωδικό σου· ο κωδικός δεν φυλάγεται πουθενά. Χωρίς αυτόν δεν διαβάζονται ούτε αν κάποιος πάρει τα αρχεία του κινητού. Ο κατάλογος ${esc(LX('whoPlL'))} δεν μοιράζεται με άλλες εφαρμογές. Αν ξεχάσεις τον κωδικό, ο μόνος δρόμος είναι διαγραφή και επαναφορά από αντίγραφο. Κράτα ενεργό και το κλείδωμα του ίδιου του κινητού.</p></div>`;
   const b=id=>$('#'+id,el);
   if(b('lk-on'))b('lk-on').onclick=async()=>{if(await lockSet())render();};
   if(b('lk-ch'))b('lk-ch').onclick=async()=>{if(await lockAsk('Γράψε τον τωρινό κωδικό')&&await lockSet())render();};
-  if(b('lk-off'))b('lk-off').onclick=async()=>{if(!await lockAsk('Γράψε τον κωδικό για κατάργηση'))return;try{localStorage.removeItem(LOCK_KEY);}catch(e){}toast('Το κλείδωμα καταργήθηκε.');render();};
+  if(b('lk-off'))b('lk-off').onclick=lockOff;
   if(b('lk-now'))b('lk-now').onclick=()=>lockShow();
   if(b('lk-a'))b('lk-a').onchange=e=>{const c=lockCfg();c.after=+e.target.value;try{localStorage.setItem(LOCK_KEY,JSON.stringify(c));}catch(x){}toast('Αποθηκεύτηκε.','ok');};},
  pro(el){const st=proState();el.innerHTML=`<div class="card section">${st.pro?`<div class="prook">⭐ <b>Το Pro είναι ενεργό</b> έως <b>${fmtDate(st.until)}</b>${st.full?' · με το κλειδί GlenApps Full':''}<br><span class="small muted">${esc(st.email||'')}</span></div>`:proPriceHTML()}
@@ -1120,31 +1132,48 @@ function backupText(){return JSON.stringify({app:'imerologio',version:APP_VERSIO
    Αν λείπει το κλειδί ενώ η κρυπτογράφηση είναι ανοιχτή, ΔΕΝ γράφεται αντίγραφο σε απλό κείμενο. */
 const ENC_V='glen-aes-gcm-1',ENC_ITER=310000;
 const encOn=()=>!!(S.data.settings.bkEnc&&S.data.settings.bkEnc.on);
-async function encDerive(pass,salt){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
-  return crypto.subtle.deriveKey({name:'PBKDF2',hash:'SHA-256',salt,iterations:ENC_ITER},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
-const encKeyGet=()=>fsDo('readonly',st=>st.get('imerologio-enckey')),encKeyPut=k=>fsDo('readwrite',st=>st.put(k,'imerologio-enckey')),encKeyDel=()=>fsDo('readwrite',st=>st.delete('imerologio-enckey'));
+async function encDerive(pass,salt,ext){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',hash:'SHA-256',salt,iterations:ENC_ITER},base,{name:'AES-GCM',length:256},!!ext,['encrypt','decrypt']);}
+const encKeyPut=k=>fsDo('readwrite',st=>st.put(k,'imerologio-enckey')),encKeyDel=()=>{BKK=null;return fsDo('readwrite',st=>st.delete('imerologio-enckey'));};
+async function encKeyGet(){if(BKK)return BKK;const rec=await fsDo('readonly',st=>st.get('imerologio-enckey'));if(!rec)return null;
+  if(rec.wrap){if(!DEK)return null;try{const raw=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64uDec(rec.wrap.iv)},DEK,b64uDec(rec.wrap.ct)));
+      BKK={key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt']),salt:rec.salt,raw};return BKK;}catch(e){return null;}}
+  return rec;}
+/* ορίζει τον κωδικό των αντιγράφων (χωρίς ερώτηση) — με κλείδωμα το κλειδί του κλειδώνεται με το κλειδί δεδομένων */
+async function encSetupWith(p){const salt=crypto.getRandomValues(new Uint8Array(16));
+  if(DEK){const k=await encDerive(p,salt,true);const raw=new Uint8Array(await crypto.subtle.exportKey('raw',k));const iv=crypto.getRandomValues(new Uint8Array(12));
+    const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},DEK,raw));await encKeyPut({wrap:{iv:b64uEnc(iv),ct:b64uEnc(ct)},salt});
+    BKK={key:await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt']),salt,raw};}
+  else{BKK=null;await encKeyPut({key:await encDerive(p,salt,false),salt});}
+  S.data.settings.bkEnc={on:true,since:new Date().toISOString()};save();await bkReseal();await opfsSave();return true;}
+/* τα παλιά αντίγραφα σε απλό κείμενο (μέσα στην εφαρμογή και στον φάκελο) ξαναγράφονται κρυπτογραφημένα */
+async function bkReseal(){const K=await encKeyGet();if(!K||!K.key)return;const dirs=[await opfsDir()];try{const root=await fsRoot(false);if(root)dirs.push(await fsDir(root));}catch(e){}
+  for(const d of dirs){if(!d)continue;try{for await(const[n,h]of d.entries()){if(h.kind!=='file'||!/\.json$/.test(n))continue;try{const t=await(await h.getFile()).text();let o=null;try{o=JSON.parse(t);}catch(_){continue;}
+      if(!o||o.enc||o.app!=='imerologio'||!o.data)continue;const out=await sealBackup(t,K,o.data);const w=await h.createWritable();await w.write(out);await w.close();}catch(e){}}}catch(e){}}}
+async function sealBackup(plain,K,data){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},K.key,new TextEncoder().encode(plain)));
+  return JSON.stringify({app:'imerologio',enc:ENC_V,kdf:{name:'PBKDF2',hash:'SHA-256',iter:ENC_ITER,salt:b64uEnc(K.salt)},iv:b64uEnc(iv),ct:b64uEnc(ct),version:APP_VERSION,savedAt:new Date().toISOString(),count:{people:(data.students||[]).length,appts:(data.appts||[]).length}});}
 /* το κείμενο που γράφεται: κρυπτογραφημένο αν είναι ανοιχτή η κρυπτογράφηση· null = δεν πρέπει να γραφτεί τίποτα */
-async function backupOut(){const plain=backupText();if(!encOn())return plain;const K=await encKeyGet();if(!K||!K.key||!K.salt)return null;
-  const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},K.key,new TextEncoder().encode(plain)));
-  return JSON.stringify({app:'imerologio',enc:ENC_V,kdf:{name:'PBKDF2',hash:'SHA-256',iter:ENC_ITER,salt:b64uEnc(K.salt)},iv:b64uEnc(iv),ct:b64uEnc(ct),version:APP_VERSION,savedAt:new Date().toISOString(),count:{people:S.data.students.length,appts:(S.data.appts||[]).length}});}
+async function backupOut(){if(DATA_LOCKED)return null;const plain=backupText();if(!encOn()){if(lockCfg())return null;return plain;}/* με κλείδωμα ποτέ αντίγραφο σε απλό κείμενο */
+  const K=await encKeyGet();if(!K||!K.key||!K.salt)return null;return sealBackup(plain,K,S.data);}
 async function encDecrypt(o,pass){const salt=b64uDec(o.kdf.salt);const key=await encDerive(pass,salt);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64uDec(o.iv)},key,b64uDec(o.ct));return new TextDecoder().decode(pt);}
-function passDlg(title,{twice=false,note='',min=8}={}){return new Promise(res=>{let done=false;const md=modal(`<h3 style="margin-top:0">${title}</h3>${note?`<p class="small muted" style="margin-top:0">${note}</p>`:''}
+function pwWeak(p){p=String(p||'');if(p.length<8)return'Τουλάχιστον 8 χαρακτήρες.';if(/^\d+$/.test(p)&&p.length<12)return'Μόνο με αριθμούς σπάει εύκολα — βάλε και γράμματα, ή τουλάχιστον 12 ψηφία.';
+  if(new Set(p.toLowerCase()).size<4||/^(?:0?123456789?0?|987654321|password|passw0rd|qwerty|asdfgh|abcdef|κωδικ)/i.test(p))return'Πολύ εύκολος κωδικός — διάλεξε κάτι που δεν μαντεύεται.';return'';}
+function passDlg(title,{twice=false,note='',min=8,check=null}={}){return new Promise(res=>{let done=false;const md=modal(`<h3 style="margin-top:0">${title}</h3>${note?`<p class="small muted" style="margin-top:0">${note}</p>`:''}
    <form id="pw"><div class="field"><label class="f" for="pw1">Κωδικός</label><input class="in" id="pw1" type="password" autocomplete="new-password" minlength="${twice?min:1}" required></div>
    ${twice?`<div class="field"><label class="f" for="pw2">Ξανά ο κωδικός</label><input class="in" id="pw2" type="password" autocomplete="new-password" required></div>`:''}
    <label class="check small"><input type="checkbox" id="pws"> Εμφάνιση κωδικού</label>
    <div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">${ic('check',16)} Εντάξει</button></div></form>`,{guard:false,onClose:()=>{if(!done)res(null);}});
   setTimeout(()=>$('#pw1',md.el).focus(),60);$('#pws',md.el).onchange=e=>$$('input[type=password],input.pwv',md.el).forEach(i=>{i.type=e.target.checked?'text':'password';i.classList.add('pwv');});
-  $('#pw',md.el).onsubmit=e=>{e.preventDefault();const a=$('#pw1',md.el).value;if(twice){if(a.length<min)return toast(`Τουλάχιστον ${min} χαρακτήρες.`,'bad');if(a!==$('#pw2',md.el).value)return toast('Οι δύο κωδικοί δεν είναι ίδιοι.','bad');}done=true;md.close();res(a);};});}
+  $('#pw',md.el).onsubmit=e=>{e.preventDefault();const a=$('#pw1',md.el).value;if(twice){const w=check?check(a):(a.length<min?`Τουλάχιστον ${min} χαρακτήρες.`:'');if(w)return toast(w,'bad');if(a!==$('#pw2',md.el).value)return toast('Οι δύο κωδικοί δεν είναι ίδιοι.','bad');}done=true;md.close();res(a);};});}
 async function encSetup(){const p=await passDlg('🔐 Κωδικός για τα αντίγραφα',{twice:true,note:'Με αυτόν κλειδώνουν τα αντίγραφα (φάκελος, σύννεφο, κοινοποίηση, μέσα στην εφαρμογή). <b>Αν τον ξεχάσεις, τα αντίγραφα δεν ανοίγουν με κανέναν τρόπο</b> — γράψ\' τον κάπου ασφαλές. Τουλάχιστον 8 χαρακτήρες.'});if(!p)return false;
-  const salt=crypto.getRandomValues(new Uint8Array(16));const key=await encDerive(p,salt);await encKeyPut({key,salt});
-  S.data.settings.bkEnc={on:true,since:new Date().toISOString()};save();await opfsSave();toast('Τα αντίγραφα κρυπτογραφούνται πλέον με τον κωδικό σου.','ok');return true;}
-async function encOff(){if(!await confirmDlg('Να σταματήσει η κρυπτογράφηση; Τα επόμενα αντίγραφα θα είναι απλό κείμενο και όποιος τα βρει θα τα διαβάζει.',{ok:'Σταμάτησε',danger:true}))return;
+  await encSetupWith(p);toast('Τα αντίγραφα κρυπτογραφούνται πλέον με τον κωδικό σου.','ok');return true;}
+async function encOff(){if(lockCfg())return toast('Όσο είναι ενεργό το κλείδωμα της εφαρμογής, τα αντίγραφα μένουν υποχρεωτικά κρυπτογραφημένα.','bad');if(!await confirmDlg('Να σταματήσει η κρυπτογράφηση; Τα επόμενα αντίγραφα θα είναι απλό κείμενο και όποιος τα βρει θα τα διαβάζει.',{ok:'Σταμάτησε',danger:true}))return;
   await encKeyDel();S.data.settings.bkEnc={on:false};save();toast('Η κρυπτογράφηση σταμάτησε.');render();}
 async function encNeedKey(){if(!encOn())return true;const K=await encKeyGet();if(K&&K.key)return true;
   toast('Λείπει το κλειδί των αντιγράφων σε αυτή τη συσκευή — όρισε ξανά τον κωδικό.','bad');return encSetup();}
 const bkName=()=>'imerologio-'+todayISO()+'.json';
 function bkWays(){return Object.assign({folder:false,cloud:false},S.data.settings.bkWays||{});}
-function markBacked(){S.data.meta.lastBackup=Date.now();S.data.meta.changes=0;try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){}}
+function markBacked(){S.data.meta.lastBackup=Date.now();S.data.meta.changes=0;try{storeWrite(S.data);}catch(e){}}
 function bkStatusShort(){const m=S.data.meta;return m.lastBackup?'Τελευταίο: '+fmtShort(isoDate(new Date(m.lastBackup)))+(m.changes?' · '+m.changes+' αλλαγές από τότε':''):'Δεν έχει κρατηθεί ακόμα';}
 async function cloudShare(){if(!await encNeedKey())return false;const out=await backupOut();if(!out)return false;const f=new File([out],bkName(),{type:'application/json'});
   if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Αντίγραφο Ημερολογίου'});S.data.meta.cloudLast=Date.now();markBacked();toast('Έτοιμο. Αν διάλεξες το σύννεφο, το αρχείο ανέβηκε εκεί.','ok');return true;}catch(e){if(e&&e.name==='AbortError'){toast('Ακυρώθηκε· δεν ανέβηκε τίποτα.');return false;}}}
@@ -1154,8 +1183,8 @@ async function backupAllNow(){if(!await encNeedKey())return;const W=bkWays(),ok=
   if(W.cloud){(await cloudShare())?ok.push('σύννεφο'):no.push('σύννεφο');}
   markBacked();toast('✓ Αντίγραφο σε: '+ok.join(', ')+'.'+(no.length?' Δεν έγινε σε: '+no.join(', ')+'.':'')+(!W.folder&&!W.cloud?' Διάλεξε και έναν τρόπο έξω από την εφαρμογή.':''),no.length?'bad':'ok');render();}
 // αυτόματο: μία φορά τη μέρα μέσα στην εφαρμογή και στον φάκελο (αν έχει ήδη άδεια)
-async function autoBackup(){const m=S.data.meta;if(!S.data.students.length&&!(S.data.appts||[]).length)return;const day=24*36e5;
-  if(Date.now()-(m.opfsLast||0)>day)await opfsSave();if(bkWays().folder&&Date.now()-(m.folderLast||0)>day)await fsSave();try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){}}
+async function autoBackup(){if(DATA_LOCKED)return;const m=S.data.meta;if(!S.data.students.length&&!(S.data.appts||[]).length)return;const day=24*36e5;
+  if(Date.now()-(m.opfsLast||0)>day)await opfsSave();if(bkWays().folder&&Date.now()-(m.folderLast||0)>day)await fsSave();try{storeWrite(S.data);}catch(e){}}
 async function backupPage(el){const W=bkWays(),m=S.data.meta;const root=fsOK()?await fsGet():null;const ago=t=>t?fmtShort(isoDate(new Date(t))):'ποτέ';
   el.innerHTML=`<div class="card section bkhead"><p class="small" style="margin:0 0 10px">${m.lastBackup?'Τελευταίο αντίγραφο: <b>'+fmtDate(new Date(m.lastBackup).toISOString())+'</b>.':'<b>Δεν έχει κρατηθεί ακόμα αντίγραφο.</b>'} Αλλαγές από τότε: ${m.changes||0}.</p>
    <button class="btn pri wide" id="bk-all">🛟 Κράτα αντίγραφο τώρα</button>
@@ -1199,7 +1228,8 @@ async function restoreFrom(txt){let o=null;try{const t=String(txt||'');o=JSON.pa
   const d=o&&o.app==='imerologio'&&o.data;
   if(!d||!Array.isArray(d.students))return toast('Το αρχείο δεν είναι αντίγραφο του Ημερολογίου.','bad');
   if(!await confirmDlg(`Επαναφορά αντιγράφου με ${d.students.length} πρόσωπα και ${(d.appts||[]).length} ραντεβού; Ό,τι υπάρχει τώρα θα αντικατασταθεί.`,{ok:'Επαναφορά',danger:true}))return;
-  await opfsSave();localStorage.setItem(STORE,JSON.stringify(d));S.data=loadData();applyIdentity();toast('Έγινε επαναφορά.','ok');go('today');render();}
+  const keep={bkWays:S.data.settings.bkWays,bkEnc:S.data.settings.bkEnc};await opfsSave();const nd=normData(d);['bkWays','bkEnc'].forEach(k=>{if(keep[k]===undefined)delete nd.settings[k];else nd.settings[k]=keep[k];});
+  S.data=nd;storeWrite(S.data);await _wrQ;applyIdentity();toast('Έγινε επαναφορά.','ok');go('today');render();}
 
 /* ---------- εγκατάσταση: παράθυρο που βγαίνει μόνο του ---------- */
 async function installNow(){if(!INST)return;INST.prompt();let r=null;try{r=await INST.userChoice;}catch(e){}INST=null;if(r&&r.outcome==='accepted')toast('Η εφαρμογή μπαίνει στην αρχική οθόνη.','ok');render();}
@@ -1494,39 +1524,75 @@ S.data=loadData();{const L=S.data&&S.data.settings&&S.data.settings.lex;if(L&&/^
 /* ---------- κλείδωμα εφαρμογής με κωδικό (προαιρετικό) ----------
    Φυλάγεται μόνο αποτύπωμα PBKDF2 του κωδικού. Κλειδώνει στο άνοιγμα και όταν γυρίζεις μετά από τον χρόνο που όρισες·
    όσο είναι κρυφή η εφαρμογή, σκεπάζεται η οθόνη ώστε να μη φαίνονται στοιχεία στη λίστα πρόσφατων εφαρμογών. */
-function lockCfg(){try{const c=JSON.parse(localStorage.getItem(LOCK_KEY)||'null');return c&&c.h&&c.s?c:null;}catch(e){return null;}}
+function lockCfg(){try{const c=JSON.parse(localStorage.getItem(LOCK_KEY)||'null');return c&&c.s&&(c.h||(c.w&&c.w.ct))?c:null;}catch(e){return null;}}
 function lockAfterTxt(m){return(LOCK_AFTER.find(x=>x[0]===+m)||LOCK_AFTER[1])[1];}
 async function lockHash(pass,saltB64){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveBits']);
   return b64uEnc(new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:b64uDec(saltB64),iterations:LOCK_ITER},base,256)));}
-async function lockCheck(pass){const c=lockCfg();if(!c)return true;return(await lockHash(pass,c.s))===c.h;}
-async function lockSet(){const p=await passDlg('🔒 Κωδικός εφαρμογής',{twice:true,min:6,note:'Τουλάχιστον 6 χαρακτήρες — μπορεί να είναι και μόνο αριθμοί. <b>Αν τον ξεχάσεις</b>, ο μόνος δρόμος είναι διαγραφή των στοιχείων από αυτή τη συσκευή και επαναφορά από αντίγραφο.'});if(!p)return false;
-  const s=b64uEnc(crypto.getRandomValues(new Uint8Array(16)));const old=lockCfg();const c={v:1,s,h:await lockHash(p,s),after:old?old.after:5};try{localStorage.setItem(LOCK_KEY,JSON.stringify(c));}catch(e){return false;}
-  toast('Η εφαρμογή κλειδώνει πλέον με κωδικό.','ok');return true;}
+async function lockKek(pass,salt,it){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',hash:'SHA-256',salt,iterations:it},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+/* γυρίζει: τα 32 byte του κλειδιού δεδομένων (v2) · true (παλιό κλείδωμα, σωστός κωδικός) · null (λάθος) */
+async function lockOpen(pass){const c=lockCfg();if(!c)return true;
+  if(c.v>=2&&c.w){try{const k=await lockKek(pass,b64uDec(c.s),c.it||LOCK_ITER2);return new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64uDec(c.w.iv)},k,b64uDec(c.w.ct)));}catch(e){return null;}}
+  return(await lockHash(pass,c.s))===c.h?true:null;}
+async function lockCheck(pass){return!!(await lockOpen(pass));}
+async function dekUse(raw){DEKR=raw;DEK=await crypto.subtle.importKey('raw',raw,'AES-GCM',false,['encrypt','decrypt']);}
+async function lockWrite(pass,raw){const s=crypto.getRandomValues(new Uint8Array(16));const k=await lockKek(pass,s,LOCK_ITER2);const iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,raw));const old=lockCfg();
+  localStorage.setItem(LOCK_KEY,JSON.stringify({v:2,s:b64uEnc(s),it:LOCK_ITER2,w:{iv:b64uEnc(iv),ct:b64uEnc(ct)},after:old?old.after:5}));}
+/* μετάβαση από το παλιό κλείδωμα (μόνο οθόνη) στο νέο (κρυπτογράφηση) με τον κωδικό που μόλις δόθηκε */
+async function lockUpgrade(pass){const raw=crypto.getRandomValues(new Uint8Array(32));await lockWrite(pass,raw);await dekUse(raw);storeWrite(S.data);await _wrQ;try{localStorage.removeItem('imer-pdraft');}catch(_){}if(window.glenShare)glenShare();}
+function draftSt(){try{return lockCfg()?sessionStorage:localStorage;}catch(e){return sessionStorage;}}
+async function lockSet(){const p=await passDlg('🔒 Κωδικός εφαρμογής',{twice:true,check:pwWeak,note:'Τουλάχιστον 8 χαρακτήρες, όχι μόνο αριθμοί (ή τουλάχιστον 12 ψηφία). Με αυτόν <b>κρυπτογραφούνται όλα τα στοιχεία στη συσκευή και τα αντίγραφα</b>. <b>Αν τον ξεχάσεις, δεν ανοίγουν με κανέναν τρόπο</b> — μένει μόνο διαγραφή και επαναφορά από αντίγραφο με τον ίδιο κωδικό. Γράψ\' τον κάπου ασφαλές.'});if(!p)return false;
+  const st=toast('Κρυπτογράφηση… περίμενε λίγο.');
+  try{const raw=DEKR||crypto.getRandomValues(new Uint8Array(32));await lockWrite(p,raw);await dekUse(raw);storeWrite(S.data);await _wrQ;
+    try{localStorage.removeItem('imer-pdraft');}catch(_){}await encSetupWith(p);if(window.glenShare)glenShare();}
+  catch(e){toast('Δεν ολοκληρώθηκε: '+(e&&e.message||e),'bad');return false;}
+  toast('✓ Η εφαρμογή κλειδώνει με κωδικό και τα στοιχεία και τα αντίγραφα είναι κρυπτογραφημένα.','ok');return true;}
+async function lockOff(){if(!await lockAsk('Γράψε τον κωδικό για κατάργηση'))return;
+  if(!await confirmDlg(`Χωρίς κλείδωμα τα στοιχεία${isHealthProf()?' των ασθενών':''} μένουν στη συσκευή <b>χωρίς κρυπτογράφηση</b> και όποιος έχει πρόσβαση στο κινητό μπορεί να τα διαβάσει. Τα αντίγραφα συνεχίζουν κρυπτογραφημένα με τον ίδιο κωδικό. Να καταργηθεί;`,{ok:'Κατάργηση',danger:true}))return;
+  const K=await encKeyGet();if(K&&K.raw){await encKeyPut({key:await crypto.subtle.importKey('raw',K.raw,'AES-GCM',false,['encrypt','decrypt']),salt:K.salt});}
+  BKK=null;await _wrQ;try{localStorage.removeItem(LOCK_KEY);}catch(e){}DEK=null;DEKR=null;storeWrite(S.data);if(window.glenShare)glenShare();toast('Το κλείδωμα καταργήθηκε.');render();}
 async function lockAsk(title){const p=await passDlg(title);if(p==null)return false;if(await lockCheck(p))return true;toast('Λάθος κωδικός.','bad');return false;}
-function lockCover(){if(!lockCfg()||document.getElementById('lockov'))return;const d=document.createElement('div');d.id='lockov';d.className='lockov';d.innerHTML='<div class="lockbox"><div class="lockic">🔒</div></div>';document.documentElement.appendChild(d);}/* έξω από το body: το ξαναζωγράφισμα της σελίδας δεν το σβήνει */
-function lockShow(){if(!lockCfg())return;LOCKED=true;lockCover();const d=document.getElementById('lockov');let fails=+(sessionStorage.getItem('im-lockf')||0);
+function lockCover(){if((!lockCfg()&&!DATA_LOCKED)||document.getElementById('lockov'))return;const d=document.createElement('div');d.id='lockov';d.className='lockov';d.innerHTML='<div class="lockbox"><div class="lockic">🔒</div></div>';document.documentElement.appendChild(d);}/* έξω από το body: το ξαναζωγράφισμα της σελίδας δεν το σβήνει */
+function lockShow(){if(!lockCfg()&&!DATA_LOCKED)return;LOCKED=true;lockCover();const d=document.getElementById('lockov');let fails=+(sessionStorage.getItem('im-lockf')||0);
   d.innerHTML=`<form class="lockbox" id="lkf" autocomplete="off"><div class="lockic">🔒</div><h2>Ημερολόγιο</h2><p class="small muted">Γράψε τον κωδικό για να ανοίξει</p>
    <input class="in" id="lkp" type="password" autocomplete="current-password" inputmode="text" aria-label="Κωδικός"><div id="lke" class="small" style="color:#b91c1c;min-height:1.3em;margin:6px 0"></div>
    <button class="btn pri wide" id="lkb">Ξεκλείδωμα</button><button type="button" class="linkbtn small" id="lkx" style="margin-top:14px">Ξέχασα τον κωδικό</button></form>`;
   const inp=d.querySelector('#lkp');setTimeout(()=>inp.focus(),60);
   d.querySelector('#lkf').onsubmit=async e=>{e.preventDefault();const wait=+(sessionStorage.getItem('im-lockw')||0)-Date.now();if(wait>0){d.querySelector('#lke').textContent=`Περίμενε ${Math.ceil(wait/1000)}″ και ξαναδοκίμασε.`;return;}
-    if(await lockCheck(inp.value)){fails=0;sessionStorage.removeItem('im-lockf');LOCKED=false;LOCK_AWAY=0;d.remove();if(LOCK_PEND){const f=LOCK_PEND;LOCK_PEND=null;f();}return;}
+    const btn=d.querySelector('#lkb');btn.disabled=true;const bt=btn.textContent;btn.textContent='Ξεκλείδωμα…';let res=null;try{res=await lockOpen(inp.value);}finally{btn.disabled=false;btn.textContent=bt;}
+    if(res){const pass=inp.value;inp.value='';
+      try{if(res!==true)await dekUse(res);
+        if(DATA_LOCKED){S.data=await dataOpen();DATA_LOCKED=false;applyIdentity();}
+        else if(res===true&&lockCfg())await lockUpgrade(pass);}
+      catch(e){d.querySelector('#lke').textContent='Τα στοιχεία δεν άνοιξαν ('+(e&&e.message||'σφάλμα')+'). Δοκίμασε επαναφορά από αντίγραφο.';return;}
+      fails=0;sessionStorage.removeItem('im-lockf');LOCKED=false;LOCK_AWAY=0;d.remove();
+      if(!BOOTED){bootStart();render();setTimeout(glenInbox,300);setTimeout(()=>window.glenShare&&glenShare(),600);setTimeout(autoBackup,3000);}
+      if(pwWeak(pass)&&!sessionStorage.getItem('im-weak')){sessionStorage.setItem('im-weak','1');setTimeout(()=>toast('Ο κωδικός σου είναι εύκολος — άλλαξέ τον από Ρυθμίσεις → Κλείδωμα εφαρμογής.','bad'),800);}
+      if(LOCK_PEND){const f=LOCK_PEND;LOCK_PEND=null;f();}return;}
     fails++;sessionStorage.setItem('im-lockf',fails);inp.value='';if(fails>=5){sessionStorage.setItem('im-lockw',Date.now()+Math.min(300,30*2**(fails-5))*1000);}
     d.querySelector('#lke').textContent=fails>=5?'Πολλές λάθος προσπάθειες — περίμενε λίγο.':'Λάθος κωδικός.';};
   d.querySelector('#lkx').onclick=async()=>{if(!confirm('Χωρίς τον κωδικό η εφαρμογή δεν ανοίγει. Μπορείς να ΣΒΗΣΕΙΣ όλα τα στοιχεία της από αυτή τη συσκευή και να κάνεις επαναφορά από αντίγραφο (φάκελος ή σύννεφο). Να σβηστούν τώρα;'))return;
-    if(!confirm('Σίγουρα; Ό,τι δεν υπάρχει σε αντίγραφο θα χαθεί οριστικά.'))return;try{localStorage.removeItem(STORE);localStorage.removeItem(LOCK_KEY);}catch(e){}location.replace(location.pathname+'#/settings/backup');location.reload();};}
-document.addEventListener('visibilitychange',()=>{if(!lockCfg())return;if(document.hidden){LOCK_AWAY=Date.now();lockCover();}
-  else{const c=lockCfg();if(LOCKED||(LOCK_AWAY&&Date.now()-LOCK_AWAY>=(+c.after||0)*6e4))lockShow();else{const d=document.getElementById('lockov');if(d&&!LOCKED)d.remove();}}});
+    if(!confirm('Σίγουρα; Ό,τι δεν υπάρχει σε αντίγραφο θα χαθεί οριστικά.'))return;try{localStorage.removeItem(STORE);localStorage.removeItem(LOCK_KEY);localStorage.removeItem('glenapps-imerologio');}catch(e){}try{await encKeyDel();}catch(e){}location.replace(location.pathname+'#/settings/backup');location.reload();};}
+/* κοινοποίηση, επαφές, επιλογή φακέλου: η εφαρμογή «κρύβεται» για λίγο — να μην κλειδώσει μόλις γυρίσεις */
+(function(){const wrap=(o,k)=>{try{const f=o&&o[k];if(typeof f!=='function')return;o[k]=function(){LOCK_SKIP=Date.now()+5*6e4;return f.apply(this,arguments);};}catch(e){}};wrap(navigator,'share');wrap(window,'showDirectoryPicker');if(navigator.contacts)wrap(navigator.contacts,'select');})();
+document.addEventListener('click',e=>{try{const l=e.target.closest('input[type=file],label');if(l&&(l.type==='file'||l.querySelector('input[type=file]')))LOCK_SKIP=Date.now()+5*6e4;}catch(_){}},true);
+document.addEventListener('visibilitychange',()=>{if(!lockCfg())return;if(document.hidden){LOCK_AWAY=Date.now();if(Date.now()>LOCK_SKIP)lockCover();}
+  else{const c=lockCfg();if(LOCK_SKIP>Date.now()&&!LOCKED){LOCK_SKIP=0;LOCK_AWAY=0;const d=document.getElementById('lockov');if(d)d.remove();return;}if(LOCKED||(LOCK_AWAY&&Date.now()-LOCK_AWAY>=(+c.after||0)*6e4))lockShow();else{const d=document.getElementById('lockov');if(d&&!LOCKED)d.remove();}}});
 /* έναρξη: η οθόνη που διάλεξες στις Ρυθμίσεις (ή η τελευταία) — μόνο στο πρώτο άνοιγμα, όχι σε σύνδεσμο προς συγκεκριμένη σελίδα */
-{let first=true;try{first=!sessionStorage.getItem('im-started');sessionStorage.setItem('im-started','1');}catch(_){}
+var BOOTED=false;
+function bootStart(){BOOTED=true;let first=true;try{first=!sessionStorage.getItem('im-started');sessionStorage.setItem('im-started','1');}catch(_){}
  const plain=!location.hash||/^#\/?(today|agenda)?$/.test(location.hash);
  if(first&&plain&&S.data&&S.data.settings&&S.data.settings.prof&&!new URLSearchParams(location.search).get('book')&&!new URLSearchParams(location.search).get('mine')){
   let k=S.data.settings.startView||'last';if(k==='last'){try{k=localStorage.getItem('imer-lasthome')||'';}catch(_){k='';}}
   const h=k==='today'?'#/today':['day','week','month','year','list'].includes(k)?'#/agenda?view='+k:'';
-  if(h){history.replaceState(null,'',h);NAVSTK[0]=h;}}}
-if(!location.hash)history.replaceState(null,'','#/today');
-if(lockCfg())lockShow();
+  if(h){history.replaceState(null,'',h);NAVSTK[0]=h;}}
+ if(!location.hash)history.replaceState(null,'','#/today');}
+if(!DATA_LOCKED)bootStart();
+if(lockCfg()||DATA_LOCKED)lockShow();
 render();
+/* ο φυλλομετρητής να μη σβήνει μόνος του τα στοιχεία όταν γεμίζει η μνήμη */
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persisted().then(x=>{if(!x)navigator.storage.persist();});}catch(e){}
 setTimeout(autoBackup,5000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&/^#\/agenda/.test(location.hash)&&!topModal())render();});
 
@@ -1579,16 +1645,17 @@ function offDialog(a,z){const days=[];for(let d=a;d<=z;d=addDays(d,1))days.push(
   md.el.addEventListener('click',e=>{const r=e.target.closest('[data-ofr]');if(r){days.forEach(d=>{C[d]=r.dataset.ofr;});save();glenOutbox('close',a,z,r.dataset.ofr);toast(`Δηλώθηκε: ${r.dataset.ofr} (${days.length} ${days.length===1?'μέρα':'μέρες'}).`,'ok');md.close();return;}
     if(e.target.closest('#of-open')){days.forEach(d=>{if(holidayOf(d))C[d]=false;else delete C[d];});save();glenOutbox('open',a,z);toast('Άνοιξαν ξανά.','ok');md.close();}});}
 /* κοινή «βιτρίνα» για τις άλλες εφαρμογές GlenApps (π.χ. Δρομολόγιο): ποιες μέρες είσαι κλειστός και πόσα ραντεβού έχεις — μόνο στο ίδιο κινητό */
-function glenShare(){clearTimeout(_shT);_shT=setTimeout(()=>{try{if(!S.data||!S.data.settings)return;const t=todayISO();const off={},busy={};const to=addDays(t,400);
+function glenShare(){clearTimeout(_shT);_shT=setTimeout(()=>{try{if(DATA_LOCKED||!S.data||!S.data.settings)return;const t=todayISO();const off={},busy={};const to=addDays(t,400);
   occ(addDays(t,-31),to,{by:''}).concat(hiddenOnce(addDays(t,-31),to)).forEach(o=>{if(o.st==='cancel')return;busy[o.date]=(busy[o.date]||0)+1;});
   for(let d=addDays(t,-31);d<=to;d=addDays(d,1)){const w=offWhy(d);if(w)off[d]=w;else if(!workDay(d))off[d]='Ρεπό';}
-  const c=agCfg();const clients=S.data.students.filter(p=>!p.demo&&!p.archived).map(p=>({id:p.id,n:stuName(p),ph:p.phone||'',a:(p.loc&&p.loc.addr)||'',lat:p.loc&&p.loc.lat!=null?p.loc.lat:null,lng:p.loc&&p.loc.lng!=null?p.loc.lng:null}));
+  const c=agCfg();/* με κλείδωμα ή σε επάγγελμα υγείας ΔΕΝ μοιράζονται ονόματα/τηλέφωνα με άλλη εφαρμογή — μόνο πότε είσαι πιασμένος */
+  const clients=(lockCfg()||isHealthProf())?[]:S.data.students.filter(p=>!p.demo&&!p.archived).map(p=>({id:p.id,n:stuName(p),ph:p.phone||'',a:(p.loc&&p.loc.addr)||'',lat:p.loc&&p.loc.lat!=null?p.loc.lat:null,lng:p.loc&&p.loc.lng!=null?p.loc.lng:null}));
   localStorage.setItem('glenapps-imerologio',JSON.stringify({v:1,at:Date.now(),name:S.data.settings.myName||'',from:c.from,to:c.to,days:c.days,off,busy,clients,url:location.href.split('#')[0]}));}catch(e){}},400);}
 /* ---------- 1.52: ανταλλαγή αδειών με το Δρομολόγιο (ίδιο κινητό) ----------
    Κάθε εφαρμογή γράφει ΜΟΝΟ στα δικά της δεδομένα. Για αλλαγή στην άλλη αφήνει αίτημα:
    localStorage 'glenapps-aitimata-<εφαρμογή>' = [{t:'close'|'open', a:'YYYY-MM-DD', b:'YYYY-MM-DD', why, apo, at}] */
 function glenOutbox(t,a,b,why){try{const K='glenapps-aitimata-dromologio';const L=JSON.parse(localStorage.getItem(K)||'[]');L.push({t,a,b,why:why||'',apo:'imerologio',at:Date.now()});localStorage.setItem(K,JSON.stringify(L.slice(-200)));}catch(e){}}
-function glenInbox(){try{if(!S.data||!S.data.settings)return;const K='glenapps-aitimata-imerologio';const L=JSON.parse(localStorage.getItem(K)||'[]');if(!L.length)return;localStorage.removeItem(K);
+function glenInbox(){try{if(DATA_LOCKED||!S.data||!S.data.settings)return;const K='glenapps-aitimata-imerologio';const L=JSON.parse(localStorage.getItem(K)||'[]');if(!L.length)return;localStorage.removeItem(K);
   const C=closedDays();let nc=0,no=0;L.forEach(x=>{if(!x||!x.a)return;for(let d=x.a;d<=(x.b||x.a);d=addDays(d,1)){if(x.t==='close'){if(!offWhy(d)){C[d]=x.why||'Κλειστό';nc++;}}else if(x.t==='open'){if(offWhy(d)){if(holidayOf(d))C[d]=false;else delete C[d];no++;}}}});
   if(nc||no){save();toast('Από το Δρομολόγιο: '+[nc?`κλειστές ${nc} μέρες`:'',no?`άνοιξαν ${no} μέρες`:''].filter(Boolean).join(' · ')+'.','ok');if(/^#\/(agenda|today)?/.test(location.hash))render();}}catch(e){}}
 function dromoData(){try{const D=JSON.parse(localStorage.getItem('glenapps-dromologio')||'null');if(!D||!D.busy)return null;return{busy:D.busy,open:D.open||D.busy};}catch(e){return null;}}
