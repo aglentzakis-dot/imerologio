@@ -10,9 +10,7 @@ var LOCK_KEY='imerologio-lock',LOCK_ITER=200000,LOCK_AFTER=[[0,'αμέσως'],[
 var LIB_SRI={'lib/leaflet.js':'sha384-tM1WyRnQZLXgeuR/dXHqqQcD5jN9+bgKmZW55OJtM9Bv7zCG4VFwmgdJudAtzIni',
  'lib/leaflet.css':'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H',
  'lib/MarkerCluster.css':'sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV',
- 'lib/leaflet.markercluster.js':'sha384-LX47TNczFAfEZHVwAv6z4jjDF8/gxQrpZeJK7RJC/dOTXDwh3eCwsfBOcpn9tyBG',
- 'lib/xlsx.full.min.js':'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw',
- 'lib/html2pdf.bundle.min.js':'sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc'};
+ 'lib/leaflet.markercluster.js':'sha384-LX47TNczFAfEZHVwAv6z4jjDF8/gxQrpZeJK7RJC/dOTXDwh3eCwsfBOcpn9tyBG'};
 var OFF_REASONS=[['Άδεια','🏖️'],['Κλειστό','🔒'],['Σεμινάριο','🎓'],['Ταξίδι','✈️'],['Προσωπικό','🏠']];
 const APP_VERSION=document.querySelector('meta[name="app-version"]').content;
 const STORE='imerologio-data';
@@ -384,18 +382,15 @@ async function importFile(f,pick){try{const rows=await readImportFile(f);if(!row
   catch(err){toast('Δεν διαβάστηκε το αρχείο: '+(err.message||''),'bad');return[];}}
 const XLS_HEAD=['Ονοματεπώνυμο','Τηλέφωνο','Τηλέφωνο 2','Email','Διεύθυνση','Σημειώσεις','Κωδικός (μην τον αλλάζεις)'];
 /* πρότυπο Excel: οι στήλες μας + όλοι οι πελάτες που υπάρχουν ήδη, ώστε να διορθώνεις και να το ξαναφέρνεις */
-async function xlsTemplate(){try{await loadScript('lib/xlsx.full.min.js');}catch(e){return toast(e.message,'bad');}
-  const X=window.XLSX;const L=S.data.students.filter(p=>!p.demo&&!p.archived).sort((a,b)=>stuName(a).localeCompare(stuName(b),'el'));
+async function xlsTemplate(){const L=S.data.students.filter(p=>!p.demo&&!p.archived).sort((a,b)=>stuName(a).localeCompare(stuName(b),'el'));
   const rows=[XLS_HEAD].concat(L.map(p=>[stuName(p),p.phone||'',p.phone2||'',p.email||'',(p.loc&&p.loc.addr)||'',p.notes||'',p.id]));
-  const ws=X.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:28},{wch:15},{wch:15},{wch:26},{wch:32},{wch:30},{wch:14}];ws['!autofilter']={ref:'A1:G'+Math.max(rows.length,2)};
-  const help=X.utils.aoa_to_sheet([['Πώς το γεμίζεις'],[''],['• Μία γραμμή για κάθε '+LX('who').toLowerCase()+'. Αρκεί το Ονοματεπώνυμο· τα υπόλοιπα είναι προαιρετικά.'],['• Τηλέφωνο: όπως το γράφεις στο κινητό, π.χ. 6912345678.'],['• Για να διορθώσεις κάποιον που υπάρχει, άλλαξε τα στοιχεία του στη γραμμή του. Μην πειράζεις τη στήλη «Κωδικός».'],['• Για νέους, γράψε σε κενές γραμμές στο τέλος και άφησε τον «Κωδικό» κενό.'],['• Αποθήκευσε ως .xlsx και ανέβασέ το από το Ημερολόγιο: '+LX('whoPl')+' → Νέος → «Πολλοί μαζί».'],[''],['Πριν αλλάξει οτιδήποτε, η εφαρμογή σου δείχνει ποιοι μπαίνουν και ποιοι ενημερώνονται.']]);help['!cols']=[{wch:100}];
-  const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,String(LX('whoPl')).slice(0,30));X.utils.book_append_sheet(wb,help,'Οδηγίες');
-  X.writeFile(wb,'pelates-imerologio.xlsx');toast('Κατέβηκε το «pelates-imerologio.xlsx». Γέμισέ το και ανέβασέ το εδώ.','ok');}
+  const help=([['Πώς το γεμίζεις'],[''],['• Μία γραμμή για κάθε '+LX('who').toLowerCase()+'. Αρκεί το Ονοματεπώνυμο· τα υπόλοιπα είναι προαιρετικά.'],['• Τηλέφωνο: όπως το γράφεις στο κινητό, π.χ. 6912345678.'],['• Για να διορθώσεις κάποιον που υπάρχει, άλλαξε τα στοιχεία του στη γραμμή του. Μην πειράζεις τη στήλη «Κωδικός».'],['• Για νέους, γράψε σε κενές γραμμές στο τέλος και άφησε τον «Κωδικό» κενό.'],['• Αποθήκευσε ως .xlsx και ανέβασέ το από το Ημερολόγιο: '+LX('whoPl')+' → Νέος → «Πολλοί μαζί».'],[''],['Πριν αλλάξει οτιδήποτε, η εφαρμογή σου δείχνει ποιοι μπαίνουν και ποιοι ενημερώνονται.']]);
+  downloadBlob('pelates-imerologio.xlsx',xlsxMake([{name:String(LX('whoPl')),rows,widths:[28,15,15,26,32,30,14],filter:true},{name:'Οδηγίες',rows:help,widths:[100]}]));toast('Κατέβηκε το «pelates-imerologio.xlsx». Γέμισέ το και ανέβασέ το εδώ.','ok');}
 async function readImportFile(f){const n=f.name.toLowerCase();
   if(n.endsWith('.vcf')){return{kind:'people',list:parseVcf(await f.text())};}
   if(n.endsWith('.csv')||n.endsWith('.txt')){return{kind:'table',table:parseCsv(await f.text())};}
-  await loadScript('lib/xlsx.full.min.js');const wb=window.XLSX.read(await f.arrayBuffer(),{type:'array'});const sh=wb.Sheets[wb.SheetNames[0]];
-  return{kind:'table',table:window.XLSX.utils.sheet_to_json(sh,{header:1,raw:false,defval:''})};}
+  if(f.size>XL_MAX)throw new Error('πολύ μεγάλο αρχείο');
+  return{kind:'table',table:await xlsxRead(await f.arrayBuffer())};}
 function parseCsv(t){t=t.replace(/^﻿/,'');const first=t.split(/\r?\n/)[0]||'';const sep=[';',',','\t'].map(c=>[c,first.split(c).length]).sort((a,b)=>b[1]-a[1])[0][0];
   const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
     else if(ch==='"')q=true;else if(ch===sep){row.push(cur);cur='';}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&t[i+1]==='\n')i++;row.push(cur);rows.push(row);row=[];cur='';}else cur+=ch;}
@@ -1357,8 +1352,142 @@ function viewStats(){const fb=$('#fab');if(fb)fb.remove();const pro=isPro()||S.d
   $$('tr[data-go]').forEach(r=>r.onclick=()=>go('person/'+r.dataset.go));
   const sp=$('#st-pro');if(sp)sp.onclick=()=>proSheet('st');
   $('#st-csv').onclick=()=>{if(!pro)return proSheet('st');const rows=[['Όνομα','Τηλέφωνο','Επισκέψεις','Έσοδα €','Μέση €','Τελευταία','Κάθε (μέρες)']].concat(R.list.sort((a,b)=>b.rev-a.rev).map(x=>[stuName(x.p),x.p.phone||'',x.v,x.rev||'',x.avg?Math.round(x.avg*100)/100:'',x.last,x.gap||'']));
-    const csv='﻿'+rows.map(r=>r.map(v=>{v=String(v);return/[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(';')).join('\r\n');
+    const csv='﻿'+rows.map(r=>r.map(v=>{v=typeof v==='number'?String(v):csvSafe(v);return/[;"\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}).join(';')).join('\r\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='statistika-'+R.from+'-'+R.to+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);};}
+
+/* ---------- δικό μας Excel (.xlsx): ανάγνωση και γραφή χωρίς ξένη βιβλιοθήκη ----------
+   Η παλιά βιβλιοθήκη (0.18.5) είχε γνωστά κενά ασφαλείας με πειραγμένα αρχεία. Εδώ διαβάζουμε μόνο κείμενο:
+   αποσυμπίεση με τα εργαλεία του ίδιου του φυλλομετρητή, όρια μεγέθους (κατά «βομβών» συμπίεσης), XML χωρίς εκτέλεση τίποτα. */
+var XL_MAX=40*1024*1024,XL_CELLS=300000;
+function zipEntries(u8){const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);let e=-1;
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-65557);i--)if(dv.getUint32(i,true)===0x06054b50){e=i;break;}
+  if(e<0)throw new Error('δεν είναι αρχείο Excel (.xlsx)');const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const out=Object.create(null);
+  if(n>5000)throw new Error('χαλασμένο αρχείο');
+  for(let k=0;k<n;k++){if(p+46>u8.length||dv.getUint32(p,true)!==0x02014b50)throw new Error('χαλασμένο αρχείο');
+    const meth=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),usz=dv.getUint32(p+24,true),fl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),off=dv.getUint32(p+42,true);
+    out[new TextDecoder().decode(u8.subarray(p+46,p+46+fl))]={meth,csz,usz,off};p+=46+fl+xl+cl;}
+  return out;}
+async function zipRead(u8,ent){if(!ent)return null;const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);const p=ent.off;
+  if(p+30>u8.length||dv.getUint32(p,true)!==0x04034b50)throw new Error('χαλασμένο αρχείο');
+  const s=p+30+dv.getUint16(p+26,true)+dv.getUint16(p+28,true);if(s+ent.csz>u8.length)throw new Error('χαλασμένο αρχείο');const raw=u8.subarray(s,s+ent.csz);
+  if(ent.meth===0)return new TextDecoder().decode(raw);if(ent.meth!==8)throw new Error('άγνωστη συμπίεση');
+  if(ent.usz>XL_MAX)throw new Error('πολύ μεγάλο αρχείο');
+  if(typeof DecompressionStream!=='function')throw new Error('η συσκευή δεν ανοίγει .xlsx — αποθήκευσέ το ως .csv');
+  const rd=new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();const parts=[];let tot=0;
+  for(;;){const{done,value}=await rd.read();if(done)break;tot+=value.length;if(tot>XL_MAX){try{rd.cancel();}catch(_){}throw new Error('πολύ μεγάλο αρχείο');}parts.push(value);}
+  return new TextDecoder().decode(await new Blob(parts).arrayBuffer());}
+function xmlDoc(t){if(t==null)return null;if(/<!DOCTYPE|<!ENTITY/i.test(t))throw new Error('μη αποδεκτό αρχείο');const d=new DOMParser().parseFromString(t,'application/xml');
+  if(d.getElementsByTagName('parsererror').length)throw new Error('χαλασμένο αρχείο');return d;}
+const xq=(n,tag)=>n?Array.from(n.getElementsByTagNameNS('*',tag)):[];
+function xlColIdx(ref){const m=/^([A-Z]{1,3})/.exec(ref||'');if(!m)return -1;let n=0;for(const ch of m[1])n=n*26+ch.charCodeAt(0)-64;return n-1;}
+function xlColName(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;}
+function xlNum(v){const n=Number(v);if(!isFinite(n))return String(v);if(Number.isInteger(n))return Math.abs(n)<1e21?n.toLocaleString('en-US',{useGrouping:false,maximumFractionDigits:0}):String(n);return String(+n.toPrecision(15));}
+function xlDate(v){const n=Number(v);if(!isFinite(n))return String(v);const d=new Date(Date.UTC(1899,11,30)+Math.round(n*864e5));const p=x=>String(x).padStart(2,'0');
+  const day=`${p(d.getUTCDate())}/${p(d.getUTCMonth()+1)}/${d.getUTCFullYear()}`;const fr=n-Math.floor(n);return fr>1e-6?day+` ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`:day;}
+async function xlsxRead(buf){const u8=new Uint8Array(buf);
+  if(u8[0]===0xD0&&u8[1]===0xCF)throw new Error('είναι παλιό αρχείο .xls — άνοιξέ το και αποθήκευσέ το ως .xlsx ή .csv');
+  const Z=zipEntries(u8);if(!Z['xl/workbook.xml'])throw new Error(Z['content.xml']?'είναι αρχείο .ods — αποθήκευσέ το ως .xlsx ή .csv':'δεν είναι αρχείο Excel (.xlsx)');
+  const wb=xmlDoc(await zipRead(u8,Z['xl/workbook.xml']));const sh=xq(wb,'sheet')[0];if(!sh)return[];
+  const rid=sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id')||sh.getAttribute('r:id');
+  let path='xl/worksheets/sheet1.xml';const rl=Z['xl/_rels/workbook.xml.rels'];
+  if(rl){const R=xq(xmlDoc(await zipRead(u8,rl)),'Relationship').find(x=>x.getAttribute('Id')===rid);if(R){let t=(R.getAttribute('Target')||'').replace(/\\/g,'/');t=t.startsWith('/')?t.slice(1):'xl/'+t.replace(/^\.\//,'');if(Z[t])path=t;}}
+  const SS=xq(xmlDoc(await zipRead(u8,Z['xl/sharedStrings.xml'])),'si').map(si=>xq(si,'t').filter(t=>t.parentNode&&t.parentNode.localName!=='rPh').map(t=>t.textContent).join(''));
+  /* ποια στυλ είναι ημερομηνίες, για να μη βγαίνουν αριθμοί σαν 45231 */
+  const isDate=[];{const st=xmlDoc(await zipRead(u8,Z['xl/styles.xml']));if(st){const fm={};xq(st,'numFmt').forEach(f=>fm[f.getAttribute('numFmtId')]=f.getAttribute('formatCode')||'');
+    const cx=xq(st,'cellXfs')[0];xq(cx,'xf').filter(x=>x.parentNode===cx).forEach((x,i)=>{const id=+x.getAttribute('numFmtId')||0;const code=String(fm[id]||'').replace(/"[^"]*"|\[[^\]]*\]|\\./g,'');
+      isDate[i]=(id>=14&&id<=22)||(id>=45&&id<=47)||(id>=164&&/[dmy]/i.test(code)&&!/^(general|@)$/i.test(code));});}}
+  const ws=xmlDoc(await zipRead(u8,Z[path]));if(!ws)throw new Error('δεν βρέθηκε φύλλο');
+  const rows=[];let cells=0;xq(ws,'row').forEach((row,ri)=>{const rn=(+row.getAttribute('r')||ri+1)-1;if(rn<0||rn>200000)return;const out=[];let ci=0;
+    xq(row,'c').forEach(c=>{if(++cells>XL_CELLS)throw new Error('πολύ μεγάλο αρχείο');const r=c.getAttribute('r');const k=r?xlColIdx(r):ci;ci=k+1;if(k<0||k>300)return;
+      const t=c.getAttribute('t')||'n';const vEl=xq(c,'v')[0];const v=vEl?vEl.textContent:'';let o='';
+      if(t==='s')o=SS[+v]||'';else if(t==='inlineStr')o=xq(c,'t').map(x=>x.textContent).join('');else if(t==='str'||t==='e')o=v;else if(t==='b')o=v==='1'?'TRUE':'FALSE';
+      else if(v!=='')o=isDate[+c.getAttribute('s')||0]?xlDate(v):xlNum(v);
+      while(out.length<k)out.push('');out[k]=o;});
+    if(out.some(x=>String(x).trim()!==''))rows[rn]=out;});
+  return rows.filter(Boolean);}
+/* γραφή: μόνο κείμενο (inlineStr) — ποτέ τύποι, άρα κανένα «=…» από πελάτη δεν εκτελείται στο Excel */
+var CRC_T=null;function crc32(u8){if(!CRC_T){CRC_T=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;CRC_T[n]=c>>>0;}}
+  let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC_T[(c^u8[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+function zipMake(files){const enc=new TextEncoder();const parts=[],cen=[];let off=0;const now=new Date();
+  const dt=((now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1))&0xFFFF,dd=(((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate())&0xFFFF;
+  files.forEach(([name,txt])=>{const nb=enc.encode(name),data=typeof txt==='string'?enc.encode(txt):txt,crc=crc32(data);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,0,true);h.setUint16(10,dt,true);h.setUint16(12,dd,true);h.setUint32(14,crc,true);h.setUint32(18,data.length,true);h.setUint32(22,data.length,true);h.setUint16(26,nb.length,true);h.setUint16(28,0,true);
+    parts.push(new Uint8Array(h.buffer),nb,data);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint16(10,0,true);c.setUint16(12,dt,true);c.setUint16(14,dd,true);c.setUint32(16,crc,true);c.setUint32(20,data.length,true);c.setUint32(24,data.length,true);c.setUint16(28,nb.length,true);c.setUint32(42,off,true);
+    cen.push(new Uint8Array(c.buffer),nb);off+=30+nb.length+data.length;});
+  const csz=cen.reduce((a,x)=>a+x.length,0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,csz,true);e.setUint32(16,off,true);
+  return new Blob(parts.concat(cen,[new Uint8Array(e.buffer)]),{type:'application/zip'});}
+const xlEsc=s=>String(s==null?'':s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+/* sheets: [{name, rows:[[…]], widths:[…], filter:true, bold:true(πρώτη γραμμή)}] */
+function xlsxMake(sheets){const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  const names=[];sheets.forEach((s,i)=>{let n=String(s.name||('Φύλλο'+(i+1))).replace(/[\[\]:*?\/\\']/g,' ').trim().slice(0,31)||('Φύλλο'+(i+1));while(names.includes(n))n=n.slice(0,28)+' '+(i+1);names.push(n);});
+  const files=[['[Content_Types].xml',X+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>'],
+   ['_rels/.rels',X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+   ['xl/workbook.xml',X+`<workbook ${NS}><sheets>${names.map((n,i)=>`<sheet name="${xlEsc(n)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets>`+
+     (sheets.some(s=>s.filter&&s.rows.length)?'<definedNames>'+sheets.map((s,i)=>s.filter&&s.rows.length?`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${xlEsc(names[i])}'!$A$1:$${xlColName(Math.max(1,...s.rows.map(r=>r.length))-1)}$${Math.max(s.rows.length,2)}</definedName>`:'').join('')+'</definedNames>':'')+'</workbook>'],
+   ['xl/_rels/workbook.xml.rels',X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+`<Relationship Id="rId${sheets.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
+   ['xl/styles.xml',X+`<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`]];
+  sheets.forEach((s,i)=>{const nc=Math.max(1,...s.rows.map(r=>r.length));
+    const body=s.rows.map((r,ri)=>`<row r="${ri+1}">`+r.map((v,ci)=>{const t=String(v==null?'':v);if(t==='')return'';return`<c r="${xlColName(ci)}${ri+1}" t="inlineStr" s="${ri===0&&s.bold!==false&&s.filter?1:2}"><is><t xml:space="preserve">${xlEsc(t)}</t></is></c>`;}).join('')+'</row>').join('');
+    files.push([`xl/worksheets/sheet${i+1}.xml`,X+`<worksheet ${NS}>`+(s.filter?'<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>':'')+
+      (s.widths?'<cols>'+s.widths.map((w,ci)=>`<col min="${ci+1}" max="${ci+1}" width="${+w||12}" customWidth="1"/>`).join('')+'</cols>':'')+
+      `<sheetData>${body}</sheetData>`+(s.filter&&s.rows.length?`<autoFilter ref="A1:${xlColName(nc-1)}${Math.max(s.rows.length,2)}"/>`:'')+'</worksheet>']);});
+  return new Blob([zipMake(files)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});}
+function downloadBlob(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},4000);}
+/* κείμενο για CSV: ό,τι αρχίζει με = + - @ το Excel το τρέχει ως τύπο — μπαίνει απόστροφος μπροστά (κατά «ενέσεων» από ονόματα πελατών) */
+const csvSafe=v=>{v=String(v==null?'':v);return/^[=+\-@\t\r]/.test(v)?"'"+v:v;};
+
+/* ---------- δικό μας PDF: η σελίδα ζωγραφίζεται σε καμβά και μπαίνει σε PDF χωρίς ξένη βιβλιοθήκη ---------- */
+async function pdfFromJpegs(pages,title){/* pages: [{jpg:Uint8Array,w,h}] σε pixel· η σελίδα είναι A4 */
+  const enc=new TextEncoder();const chunks=[];let len=0;const offs=[];const push=x=>{const b=typeof x==='string'?enc.encode(x):x;chunks.push(b);len+=b.length;};
+  const obj=(n,body)=>{offs[n]=len;push(`${n} 0 obj\n`);body.forEach(push);push('\nendobj\n');};
+  const hexU=s=>'<FEFF'+Array.from(String(s)).map(ch=>{const c=ch.codePointAt(0);if(c>0xFFFF){const v=c-0x10000;return((0xD800+(v>>10)).toString(16)+(0xDC00+(v&1023)).toString(16)).toUpperCase().padStart(8,'0');}return c.toString(16).toUpperCase().padStart(4,'0');}).join('')+'>';
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');const W=595.28,H=841.89;const N=pages.length;const kids=pages.map((_,i)=>`${4+i*3} 0 R`).join(' ');
+  obj(1,['<< /Type /Catalog /Pages 2 0 R >>']);obj(2,[`<< /Type /Pages /Kids [${kids}] /Count ${N} >>`]);
+  obj(3,[`<< /Title ${hexU(title||'Ημερολόγιο')} /Producer ${hexU('GlenApps Ημερολόγιο')} /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g,'').slice(0,14)}Z) >>`]);
+  pages.forEach((p,i)=>{const pg=4+i*3,ct=pg+1,im=pg+2;const cs=`q ${W} 0 0 ${H} 0 0 cm /Im0 Do Q`;
+    obj(pg,[`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im0 ${im} 0 R >> >> /Contents ${ct} 0 R >>`]);
+    obj(ct,[`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`]);
+    obj(im,[`<< /Type /XObject /Subtype /Image /Width ${p.w} /Height ${p.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.jpg.length} >>\nstream\n`,p.jpg,'\nendstream']);});
+  const total=4+N*3;const xref=len;let x=`xref\n0 ${total}\n0000000000 65535 f \n`;for(let n=1;n<total;n++)x+=String(offs[n]).padStart(10,'0')+' 00000 n \n';
+  push(x+`trailer\n<< /Size ${total} /Root 1 0 R /Info 3 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  return new Blob(chunks,{type:'application/pdf'});}
+/* γενικός «τυπογράφος» αναφορών: blocks = [{t:'h',text,red}] επικεφαλίδα ημέρας, {t:'table',cols:[[τίτλος,πλάτος]],rows:[{cells,strike}]}, {t:'p',text,muted} */
+async function reportPDF({title,sub,blocks,filename}){const SC=2,PW=794,PH=1123,MX=40,MT=40,MB=50;const font=(getComputedStyle(document.body).fontFamily||'sans-serif');
+  try{if(document.fonts&&document.fonts.ready)await document.fonts.ready;}catch(_){}
+  let logo=null;try{logo=await new Promise((ok,no)=>{const im=new Image();im.onload=()=>ok(im);im.onerror=no;im.src='icon-192.png';});}catch(_){}
+  const mk=()=>{const c=document.createElement('canvas');c.width=PW*SC;c.height=PH*SC;const g=c.getContext('2d');g.scale(SC,SC);g.fillStyle='#fff';g.fillRect(0,0,PW,PH);g.textBaseline='alphabetic';return{c,g};};
+  const fit=(g,s,w)=>{s=String(s==null?'':s);if(g.measureText(s).width<=w)return s;while(s.length>1&&g.measureText(s+'…').width>w)s=s.slice(0,-1);return s+'…';};
+  /* πρώτα σχεδίαση σε «σελίδες» (μετράμε), μετά ζωγράφισμα — για να ξέρουμε το σύνολο σελίδων */
+  const ops=[[]];let y=MT;const bottom=PH-MB;const page=()=>{ops.push([]);y=MT;};const add=f=>ops[ops.length-1].push(f);
+  {const yy=y;add(g=>{if(logo)g.drawImage(logo,MX,yy,48,48);g.fillStyle='#2E2A33';g.font=`600 22px ${font}`;g.fillText(fit(g,title,PW-2*MX-62),MX+62,yy+22);g.font=`13px ${font}`;g.fillStyle='#6B6573';g.fillText(fit(g,sub||'',PW-2*MX-62),MX+62,yy+42);
+    g.strokeStyle='#ECE5DA';g.lineWidth=1;g.beginPath();g.moveTo(MX,yy+62.5);g.lineTo(PW-MX,yy+62.5);g.stroke();});y+=80;}
+  const RH=26,HH=24;
+  const tableHead=(cols)=>{const yy=y;add(g=>{g.font=`600 11px ${font}`;g.fillStyle='#6B6573';let x=MX;cols.forEach(([t,w])=>{g.fillText(fit(g,t,w-10),x+6,yy+16);x+=w;});g.strokeStyle='#ECE5DA';g.beginPath();g.moveTo(MX,yy+HH-.5);g.lineTo(PW-MX,yy+HH-.5);g.stroke();});y+=HH;};
+  blocks.forEach((b,bi)=>{
+    if(b.t==='h'){const next=blocks[bi+1];const need=34+(next&&next.t==='table'?HH+RH:0);if(y+need>bottom)page();const yy=y+6;
+      add(g=>{g.font=`600 16px ${font}`;g.fillStyle='#2E2A33';g.fillText(b.text,MX,yy+18);if(b.red){const w=g.measureText(b.text+'  ').width;g.font=`14px ${font}`;g.fillStyle='#C2524A';g.fillText(fit(g,b.red,PW-2*MX-w),MX+w,yy+18);}});y+=34;}
+    else if(b.t==='table'){const tw=PW-2*MX;const fixed=b.cols.reduce((a,c)=>a+(c[1]||0),0);const flex=b.cols.filter(c=>!c[1]).length;const cols=b.cols.map(c=>[c[0],c[1]||Math.max(60,(tw-fixed)/Math.max(1,flex))]);
+      if(y+HH+RH>bottom)page();tableHead(cols);
+      b.rows.forEach(r=>{if(y+RH>bottom){page();tableHead(cols);}const yy=y;add(g=>{g.font=`13px ${font}`;g.fillStyle=r.strike?'#999':'#2E2A33';let x=MX;
+        r.cells.forEach((v,i)=>{const w=cols[i][1];const s=fit(g,v,w-12);g.fillText(s,x+6,yy+17);if(r.strike&&s){const tw2=g.measureText(s).width;g.strokeStyle='#999';g.beginPath();g.moveTo(x+6,yy+12.5);g.lineTo(x+6+tw2,yy+12.5);g.stroke();}x+=w;});
+        g.strokeStyle='#F3EEE6';g.beginPath();g.moveTo(MX,yy+RH-.5);g.lineTo(PW-MX,yy+RH-.5);g.stroke();});y+=RH;});y+=6;}
+    else if(b.t==='p'){if(y+30>bottom)page();const yy=y+8;add(g=>{g.font=`13px ${font}`;g.fillStyle=b.muted?'#888':'#2E2A33';g.fillText(fit(g,b.text,PW-2*MX),MX,yy+14);});y+=30;}});
+  const N=ops.length;const pages=[];const made=new Date();const stamp=made.toLocaleDateString('el-GR')+' '+made.toLocaleTimeString('el-GR',{hour:'2-digit',minute:'2-digit'});
+  for(let i=0;i<N;i++){const{c,g}=mk();ops[i].forEach(f=>f(g));g.font=`11px ${font}`;g.fillStyle='#9C95A5';g.fillText(`Σελίδα ${i+1} από ${N}`,MX,PH-24);const st='Φτιάχτηκε '+stamp;g.fillText(st,PW-MX-g.measureText(st).width,PH-24);
+    const blob=await new Promise(res=>c.toBlob(res,'image/jpeg',.92));pages.push({jpg:new Uint8Array(await blob.arrayBuffer()),w:c.width,h:c.height});c.width=c.height=1;}
+  downloadBlob(filename,await pdfFromJpegs(pages,title));}
+/* η αναφορά ραντεβού (Ημερολόγιο → «PDF») με τον δικό μας τυπογράφο */
+async function agendaPDF(from,to,title){try{const days=[];for(let d=from;d<=to;d=addDays(d,1))days.push(d);const L=occ(from,to,{withCancel:true});const multi=providers().length>1;const B=biz();
+  const stx={done:'Ήρθε',absent:'Απουσία',cancel:'Ακυρώθηκε','':''};const blocks=[];
+  days.forEach(d=>{const X=L.filter(o=>o.date===d);const hol=holidayOf(d);const cl=isClosed(d);if(!X.length&&!cl)return;
+    blocks.push({t:'h',text:WDAYS[wdOf(d)]+' '+fmtDate(d),red:cl?'· κλειστά'+(hol?' ('+hol+')':''):''});
+    if(X.length)blocks.push({t:'table',cols:[['Ώρα',100],[LX('who'),0]].concat(multi?[['Με ποιον',140]]:[],[['Είδος',120],['Κατάσταση',110]]),
+      rows:X.map(o=>({strike:o.st==='cancel',cells:[o.s+'–'+o.e,stuName(stOf(o.a.sid))].concat(multi?[provById(provOcc(o)).name]:[],[kindTxt(o.a.kind),stx[o.st]||'']).map(v=>String(v==null?'':v).replace(/<[^>]*>/g,''))}))});});
+  if(!blocks.length)blocks.push({t:'p',text:'Δεν υπάρχουν ραντεβού σε αυτό το διάστημα.'});
+  const ok=L.filter(o=>o.st!=='cancel');blocks.push({t:'p',muted:true,text:`Σύνολο: ${ok.length} ραντεβού · ${hoursNum(ok.reduce((a,o)=>a+sessMin(o.s,o.e),0))} ώρες`});
+  await reportPDF({title,sub:(B.name||S.user.name)+(AGF?' · '+provById(AGF).name:''),blocks,filename:`rantevou-${from}${to!==from?'_'+to:''}.pdf`});toast('Το PDF κατέβηκε.','ok');}
+  catch(e){console.error(e);toast('Δεν φτιάχτηκε το PDF.','bad');}}
 
 /* ---------- έναρξη ---------- */
 S.data=loadData();{const L=S.data&&S.data.settings&&S.data.settings.lex;if(L&&/^Ιδιοκτήτ/.test(L.who||'')){['who','whoAcc','whoGen','whoPl','whoPlL'].forEach(k=>delete L[k]);try{save();}catch(_){}}}applyIdentity();

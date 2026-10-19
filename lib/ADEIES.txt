@@ -3,5 +3,6 @@
 
 - Leaflet 1.9.4 — https://github.com/Leaflet/Leaflet (άδεια BSD-2-Clause) — από το επίσημο leaflet.zip της έκδοσης v1.9.4
 - Leaflet.markercluster 1.5.3 — https://github.com/Leaflet/Leaflet.markercluster (άδεια MIT) — συναρμολογημένο από τον κώδικα της ετικέτας v1.5.3
-- SheetJS (xlsx) 0.18.5 — https://github.com/SheetJS/sheetjs (άδεια Apache-2.0) — dist/xlsx.full.min.js της ετικέτας v0.18.5
-- html2pdf.js 0.10.1 — https://github.com/eKoopmans/html2pdf.js (άδεια MIT) — dist/html2pdf.bundle.min.js της ετικέτας v0.10.1
+
+Δεν χρησιμοποιούνται πια (1.64): SheetJS (κενά ασφαλείας στην 0.18.5) και html2pdf.js (παλιό jsPDF με κενά ασφαλείας).
+Τα αρχεία Excel και τα PDF φτιάχνονται πλέον με δικό μας κώδικα μέσα στο app.js.
