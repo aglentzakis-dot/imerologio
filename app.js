@@ -2,6 +2,9 @@
    © 2026 Ανδρέας Μ. Γλεντζάκης (Andreas M. Glentzakis). Με την επιφύλαξη παντός δικαιώματος. All rights reserved.
    Απαγορεύεται η αντιγραφή, τροποποίηση και διάθεση, εν όλω ή εν μέρει, χωρίς προηγούμενη γραπτή άδεια του κατόχου. */
 'use strict';
+/* κοινές μεταβλητές που χρειάζεται ήδη η πρώτη εμφάνιση (έτος, μνήμη θέσης) */
+var YEAR_PICK=null,NAVSTK=[location.hash||'#/today'],SCROLLMEM={},_scT=0,_scLock=0,_shT=0;
+var OFF_REASONS=[['Άδεια','🏖️'],['Κλειστό','🔒'],['Σεμινάριο','🎓'],['Ταξίδι','✈️'],['Προσωπικό','🏠']];
 const APP_VERSION=document.querySelector('meta[name="app-version"]').content;
 const STORE='imerologio-data';
 const BACKUP_SUB='Imerologio';
@@ -149,7 +152,6 @@ function render(){document.body&&document.body.classList.toggle('hidenames',!!(S
   if(back)scrollBack(back);else if(sameH&&!window.AGPOS){scrollTo(0,y0);requestAnimationFrame(()=>scrollTo(0,y0));}
 }
 /* μνήμη θέσης ανά σελίδα (και της λωρίδας ωρών του ημερολογίου) */
-const NAVSTK=[location.hash||'#/today'],SCROLLMEM={};let _scT=0,_scLock=0;
 function scrollRec(){if(Date.now()<_scLock)return;const h=S.curHash||location.hash;if(!h)return;const sc=document.getElementById('tlScroll');SCROLLMEM[h]={y:scrollY,tl:sc?sc.scrollTop:null};}
 addEventListener('scroll',()=>{clearTimeout(_scT);_scT=setTimeout(scrollRec,80);},{passive:true});
 document.addEventListener('scroll',e=>{if(e.target&&e.target.id==='tlScroll'){clearTimeout(_scT);_scT=setTimeout(scrollRec,80);}},{passive:true,capture:true});
@@ -1274,11 +1276,9 @@ setTimeout(autoBackup,5000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&/^#\/agenda/.test(location.hash)&&!topModal())render();});
 
 /* ---------- 1.51: προβολή «Έτος» — 12 μήνες, πόσα ραντεβού έχει κάθε μέρα, άδειες και κλειστές μέρες ---------- */
-const OFF_REASONS=[['Άδεια','🏖️'],['Κλειστό','🔒'],['Σεμινάριο','🎓'],['Ταξίδι','✈️'],['Προσωπικό','🏠']];
 const offIcon=r=>(OFF_REASONS.find(x=>x[0]===r)||[0,'🔒'])[1];
 /* γιατί είναι κλειστή η μέρα: αργία, δηλωμένη άδεια/κλειστό ή ρεπό */
 function offWhy(d){const C=closedDays();if(C[d]===false)return'';if(C[d])return typeof C[d]==='string'?C[d]:'Κλειστό';const h=holidayOf(d);if(h)return h;return'';}
-let YEAR_PICK=null;
 /* ραντεβού μίας φοράς που έπεσαν σε κλειστή μέρα: το ημερολόγιο δεν τα δείχνει, άρα πρέπει να φωνάξουμε */
 function hiddenOnce(from,to){const SID=new Set(S.data.students.map(x=>x.id));return appts().filter(a=>a.kind==='once'&&a.date>=from&&a.date<=to&&SID.has(a.sid)&&isClosed(a.date)&&!((a.ex||{})[a.date]&&['cancel','moved'].includes(a.ex[a.date].st))).map(a=>({a,date:a.date,s:a.s,sid:a.sid}));}
 function yearCounts(Y){const M={},W={};occ(`${Y}-01-01`,`${Y}-12-31`,{by:''}).forEach(o=>{if(o.st==='cancel')return;M[o.date]=(M[o.date]||0)+1;});hiddenOnce(`${Y}-01-01`,`${Y}-12-31`).forEach(o=>{W[o.date]=(W[o.date]||0)+1;});return{M,W};}
@@ -1319,7 +1319,7 @@ function offDialog(a,z){const days=[];for(let d=a;d<=z;d=addDays(d,1))days.push(
   md.el.addEventListener('click',e=>{const r=e.target.closest('[data-ofr]');if(r){days.forEach(d=>{C[d]=r.dataset.ofr;});save();glenOutbox('close',a,z,r.dataset.ofr);toast(`Δηλώθηκε: ${r.dataset.ofr} (${days.length} ${days.length===1?'μέρα':'μέρες'}).`,'ok');md.close();return;}
     if(e.target.closest('#of-open')){days.forEach(d=>{if(holidayOf(d))C[d]=false;else delete C[d];});save();glenOutbox('open',a,z);toast('Άνοιξαν ξανά.','ok');md.close();}});}
 /* κοινή «βιτρίνα» για τις άλλες εφαρμογές GlenApps (π.χ. Δρομολόγιο): ποιες μέρες είσαι κλειστός και πόσα ραντεβού έχεις — μόνο στο ίδιο κινητό */
-let _shT=0;function glenShare(){clearTimeout(_shT);_shT=setTimeout(()=>{try{if(!S.data||!S.data.settings)return;const t=todayISO();const off={},busy={};const to=addDays(t,400);
+function glenShare(){clearTimeout(_shT);_shT=setTimeout(()=>{try{if(!S.data||!S.data.settings)return;const t=todayISO();const off={},busy={};const to=addDays(t,400);
   occ(addDays(t,-31),to,{by:''}).concat(hiddenOnce(addDays(t,-31),to)).forEach(o=>{if(o.st==='cancel')return;busy[o.date]=(busy[o.date]||0)+1;});
   for(let d=addDays(t,-31);d<=to;d=addDays(d,1)){const w=offWhy(d);if(w)off[d]=w;else if(!workDay(d))off[d]='Ρεπό';}
   const c=agCfg();localStorage.setItem('glenapps-imerologio',JSON.stringify({v:1,at:Date.now(),name:S.data.settings.myName||'',from:c.from,to:c.to,days:c.days,off,busy,url:location.href.split('#')[0]}));}catch(e){}},400);}
