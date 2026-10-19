@@ -112,6 +112,12 @@ const isoDate=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const tstr=m=>pad(Math.floor(m/60))+':'+pad(m%60);
 function b64uDec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
 function b64uEnc(u){let b='';for(let i=0;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+/* κρυπτογράφηση συνδέσμων (AES-GCM, τυχαίο κλειδί μέσα στον σύνδεσμο, μετά το «#»): «e» + δεδομένα + «.» + κλειδί */
+async function sealTxt(type,obj){const key=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));const k=await crypto.subtle.importKey('raw',key,'AES-GCM',false,['encrypt']);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(type+JSON.stringify(obj))));const buf=new Uint8Array(12+ct.length);buf.set(iv);buf.set(ct,12);return'e'+b64uEnc(buf)+'.'+b64uEnc(key);}
+/* ανοίγει «e…» και γυρίζει τον παλιό κωδικό (τύπος + base64) για να τον διαβάσουν οι υπάρχουσες συναρτήσεις· οι παλιοί σύνδεσμοι περνούν όπως είναι */
+async function openTxt(s){s=String(s||'');if(s[0]!=='e')return s;try{const[a,b]=s.slice(1).split('.');const buf=b64uDec(a),key=b64uDec(b);const k=await crypto.subtle.importKey('raw',key,'AES-GCM',false,['decrypt']);
+  const pt=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},k,buf.slice(12)));return pt[0]+b64uEnc(new TextEncoder().encode(pt.slice(1)));}catch(e){return'';}}
 async function unpack(s){const k=s[0],body=s.slice(1);let bytes=b64uDec(body);
   if(k==='c'){const o=JSON.parse(new TextDecoder().decode(bytes));const out=[];
     if(o.pm&&Array.isArray(o.w)){if(!o.x||o.x<isoDate(new Date())){o.s=[];o.off=1;o.v=1;return o;}const dec=h=>{const L=[];for(let j=0;j<h.length;j++){const v=parseInt(h[j],16);for(let b=0;b<4;b++)if(v&(8>>b))L.push(o.t0+(j*4+b)*15);}return L;};const W=o.w.map(h=>h?dec(h):[]);
@@ -199,14 +205,14 @@ const keepF0=()=>Object.fromEntries([...document.querySelectorAll('#app input[id
 const backF0=o=>{for(const[k,v]of Object.entries(o)){const e=document.getElementById(k);if(!e)continue;if(e.type==='checkbox')e.checked=v;else e.value=v;}};
 function bindLang(){const b=$('#lg');if(b)b.onclick=()=>{L=L==='el'?'en':'el';draw();};}
 
-function send(via){const er=$('#er');er.textContent='';
+async function send(via){const er=$('#er');er.textContent='';
   if(!slot)return er.textContent=t('needSlot');
   const n=clip($('#nm').value,80),ph=clip($('#ph').value,25),no=clip($('#no').value,200),pr=$('#pr').checked,ca=$('#ca').checked,ad=clip(($('#ad')||{}).value,120);
   if(n.length<2)return er.textContent=t('needName');
   if(ph.replace(/\D/g,'').length<8)return er.textContent=t('needPhone');
   if(!(PC&&!other))try{localStorage.setItem('kr-me',JSON.stringify({n,p:ph}));}catch(_){}
   const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,ca:ca?1:0,ad,ts:Date.now(),g:D.g,id:Math.random().toString(36).slice(2,10)};if(whoObj()){req.pv=whoObj().i;req.pn=clip(whoObj().n,40);}if(PC&&!other&&PC.i)req.sid=PC.i;
-  const link=new URL(D.a||'./',location.href).href.split('#')[0].split('?')[0].replace(/kratisi\.html$/,'')+'?book=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(req)));
+  const link=new URL(D.a||'./',location.href).href.split('#')[0].split('?')[0].replace(/kratisi\.html$/,'')+'#/book?r='+await sealTxt('j',req);
   const when=dayLabel(day).long+' '+t('at')+' '+tstr(slot)+(whoObj()?' · '+t('with')+' '+whoObj().n:'');
   const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,no,link,pr,ca,ad);
   let href;const num=intl(D.ph);
@@ -246,10 +252,10 @@ function showSent(when){$('#app').innerHTML=`<div class="card done"><div class="
    <div class="card promo"><b>${esc(t('ownT'))}</b><p class="small muted" style="margin:4px 0 8px">${esc(t('ownP'))}</p><a class="time" href="${esc(new URL('./',location.href).href)}" target="_blank" rel="noopener">⬇️ ${esc(t('ownB'))}</a></div>`;
   $('#bk').onclick=draw;$('#ics').onclick=icsFile;
   const mq={v:1,d:day,s:tstr(slot),u:D.u,n:D.n||'',ph:D.ph||'',no:'',id:'m'+Math.random().toString(36).slice(2,9)};
-  $('#mine').href=new URL('./',location.href).href.split('?')[0]+'?mine=j'+b64uEnc(new TextEncoder().encode(JSON.stringify(mq)));}
+  sealTxt('j',mq).then(c=>{const m=$('#mine');if(m)m.href=new URL('./',location.href).href.split('?')[0].split('#')[0]+'#/mine?r='+c;});}
 
 /* ---------- εκκίνηση ---------- */
-(async()=>{try{const k=new URLSearchParams(location.search).get('k')||new URLSearchParams(location.hash.slice(1)).get('k');if(!k)throw new Error('χωρίς δεδομένα');
+(async()=>{try{let k=new URLSearchParams(location.hash.slice(1)).get('k')||new URLSearchParams(location.search).get('k');if(!k)throw new Error('χωρίς δεδομένα');k=await openTxt(k);if(!k)throw new Error('ο σύνδεσμος δεν ανοίγει');
     D=await unpack(k);if(!D||D.v!==1||!Array.isArray(D.s))throw 0;
     D.n=clip(D.n,60);D.o=clip(D.o,30);D.ph=clip(D.ph,25);D.em=clip(D.em,80);
     if(D.l==='en'||D.l==='el'){try{if(!localStorage.getItem('glen-lang'))L=String(navigator.language||'').toLowerCase().startsWith('el')?'el':(D.l||L);}catch(_){}}

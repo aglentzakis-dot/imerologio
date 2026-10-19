@@ -156,8 +156,9 @@ function render(){document.body&&document.body.classList.toggle('hidenames',!!(S
   if(!sameH){const K=NAVSTK;if(K.length>1&&K[K.length-2]===newH){K.pop();back=SCROLLMEM[newH]||null;}else{if(K[K.length-1]!==newH)K.push(newH);if(K.length>60)K.shift();}}
   window.AGPOS=null;if(/^#\/agenda/.test(S.curHash||'')&&/^#\/agenda/.test(location.hash)&&typeof agPosSave==='function')agPosSave();
   S.curHash=location.hash;
-  {const qb=new URLSearchParams(location.search).get('book');if(qb){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';setTimeout(()=>bookImport(qb),200);}}
-  const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(()=>bookImport(c),150);return render();}const sec=r.name==='person'?'people':r.name==='stats'?'today':r.name;
+  {const qb=new URLSearchParams(location.search).get('book');if(qb){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';setTimeout(async()=>bookImport(await openTxt(qb)),200);}}
+  const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(async()=>bookImport(await openTxt(c)),150);return render();}
+  if(r.name==='mine'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(async()=>{if(mineImport(await openTxt(c))){applyIdentity&&applyIdentity();render();}},150);return render();}const sec=r.name==='person'?'people':r.name==='stats'?'today':r.name;
   shellHTML(sec);
   try{if(r.name==='today')localStorage.setItem('imer-lasthome','today');else if(r.name==='agenda'){const v=r.q.view||localStorage.getItem('imer-agview')||'day';localStorage.setItem('imer-lasthome',v);}}catch(_){}
   const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewKonta,settings:viewSettingsPage,stats:viewStats}[r.name]||viewToday;
@@ -730,6 +731,12 @@ function dirtyWatch(root){if(!root)return;$$('form',root).forEach(f=>{const btn=
 function bkCfg(){return Object.assign({days:14,ch:'vswe',pvPick:true},S.data.settings.book||{});}
 function b64uEnc(u){let b='';for(let i=0;i<u.length;i++)b+=String.fromCharCode(u[i]);return btoa(b).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
 function b64uDec(x){x=x.replace(/-/g,'+').replace(/_/g,'/');while(x.length%4)x+='=';const b=atob(x);const u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u;}
+/* κρυπτογράφηση συνδέσμων (AES-GCM, τυχαίο κλειδί μέσα στον σύνδεσμο, μετά το «#»): «e» + δεδομένα + «.» + κλειδί */
+async function sealTxt(type,obj){const key=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));const k=await crypto.subtle.importKey('raw',key,'AES-GCM',false,['encrypt']);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(type+JSON.stringify(obj))));const buf=new Uint8Array(12+ct.length);buf.set(iv);buf.set(ct,12);return'e'+b64uEnc(buf)+'.'+b64uEnc(key);}
+/* ανοίγει «e…» και γυρίζει τον παλιό κωδικό (τύπος + base64) για να τον διαβάσουν οι υπάρχουσες συναρτήσεις· οι παλιοί σύνδεσμοι περνούν όπως είναι */
+async function openTxt(s){s=String(s||'');if(s[0]!=='e')return s;try{const[a,b]=s.slice(1).split('.');const buf=b64uDec(a),key=b64uDec(b);const k=await crypto.subtle.importKey('raw',key,'AES-GCM',false,['decrypt']);
+  const pt=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},k,buf.slice(12)));return pt[0]+b64uEnc(new TextEncoder().encode(pt.slice(1)));}catch(e){return'';}}
 async function packZ(obj){const bytes=new TextEncoder().encode(JSON.stringify(obj));
   if(window.CompressionStream){const cs=new CompressionStream('deflate-raw');const z=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(cs)).arrayBuffer());return 'z'+b64uEnc(z);}
   return 'j'+b64uEnc(bytes);}
@@ -753,7 +760,7 @@ function weekTemplate(){const c=agCfg(),du=IM_DEF.dur(),t=todayISO();const W=[[]
 async function bookLinkPerm(){const B=biz(),c=bkCfg();const W=weekTemplate();const all=W.flat();const t0=all.length?Math.floor(Math.min(...all)/15)*15:0;
   const w=W.map(L=>{if(!L.length)return'';const n=Math.floor((Math.max(...all)-t0)/15)+1;const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);return h.replace(/0+$/,'');});
   const D={v:2,pm:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,dd:c.days,t0,w,x:proState().until||''};if(providers().length>1&&bkCfg().pvPick)D.pv=providers().map(p=>({i:p.id,n:pvPub(p),c:p.color}));
-  return new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k=c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));}
+  return new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'#k='+await sealTxt('c',D);}
 async function qrDialog(){await loadScript('qr.js');const now=(await bookLink()).url,perm=await bookLinkPerm();const B=biz();const name=(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'';
   let tab='now';const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">🔳 Κωδικός QR για κρατήσεις</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <div class="seg field" id="qr-tab"><button type="button" data-qt="now" class="on">Να σκανάρει τώρα</button><button type="button" data-qt="perm">Μόνιμος (αφίσα)</button></div>
@@ -771,8 +778,8 @@ function qrPrint(url,name){const w=window.open('','_blank');if(!w)return toast('
    <script>setTimeout(function(){window.print()},400)<\/script></body></html>`);w.document.close();}
 async function bookLink(p){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
   const D=Object.assign({v:2,hp:isHealthProf()?1:0,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},p?{pc:{i:p.id,n:stuName(p),ph:p.phone||((p.contacts||[])[0]||{}).phone||''},my:occ(todayISO(),addDays(todayISO(),c.days),{sid:p.id,by:''}).filter(o=>o.st==='').map(o=>[o.date,o.s]).slice(0,20)}:{},slotPack(S2,c.days));Object.assign(D,pvPack(D,c.days));
-  const k='c'+b64uEnc(new TextEncoder().encode(JSON.stringify(D)));
-  return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'?k='+k,slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
+  const k=await sealTxt('c',D);
+  return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'#k='+k,slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
 /* ---------- Ημερολόγιο Pro (15 € τον χρόνο): ο σύνδεσμος κρατήσεων για τους πελάτες ----------
    Κλειδί «IM2…» (υπογραφή «I|») ή το κλειδί GlenApps Full «GA2…» (υπογραφή «GA|»), δεμένο με το email.
    Δωρεάν μένει μία αποστολή, για να δει κανείς πώς δουλεύει. Όλα τα υπόλοιπα του Ημερολογίου είναι δωρεάν. */
