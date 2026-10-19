@@ -1296,7 +1296,7 @@ setTimeout(autoBackup,5000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&/^#\/agenda/.test(location.hash)&&!topModal())render();});
 
 /* ---------- 1.51: προβολή «Έτος» — 12 μήνες, πόσα ραντεβού έχει κάθε μέρα, άδειες και κλειστές μέρες ---------- */
-const offIcon=r=>(OFF_REASONS.find(x=>x[0]===r)||[0,'🔒'])[1];
+function offIcon(r){return(OFF_REASONS.find(x=>x[0]===r)||[0,'🔒'])[1];}
 /* γιατί είναι κλειστή η μέρα: αργία, δηλωμένη άδεια/κλειστό ή ρεπό */
 function offWhy(d){const C=closedDays();if(C[d]===false)return'';if(C[d])return typeof C[d]==='string'?C[d]:'Κλειστό';const h=holidayOf(d);if(h)return h;return'';}
 /* ραντεβού μίας φοράς που έπεσαν σε κλειστή μέρα: το ημερολόγιο δεν τα δείχνει, άρα πρέπει να φωνάξουμε */
