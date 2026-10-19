@@ -4,6 +4,7 @@
 'use strict';
 /* κοινές μεταβλητές που χρειάζεται ήδη η πρώτη εμφάνιση (έτος, μνήμη θέσης) */
 var YEAR_PICK=null,NAVSTK=[location.hash||'#/today'],SCROLLMEM={},_scT=0,_scLock=0,_shT=0;
+var START_OPTS=[['last','Τελευταία που είχες ανοίξει','↩️'],['today','Σήμερα','🏠'],['day','Ημέρα','📅'],['week','Εβδομάδα','🗓️'],['month','Μήνας','▦'],['year','Έτος','📆'],['list','Λίστα','☰']];
 var OFF_REASONS=[['Άδεια','🏖️'],['Κλειστό','🔒'],['Σεμινάριο','🎓'],['Ταξίδι','✈️'],['Προσωπικό','🏠']];
 const APP_VERSION=document.querySelector('meta[name="app-version"]').content;
 const STORE='imerologio-data';
@@ -145,6 +146,7 @@ function render(){document.body&&document.body.classList.toggle('hidenames',!!(S
   {const qb=new URLSearchParams(location.search).get('book');if(qb){history.replaceState(null,'',location.pathname+'#/today');S.curHash='#/today';setTimeout(()=>bookImport(qb),200);}}
   const r=parseRoute();if(r.name==='book'){const c=r.q.r;history.replaceState(null,'','#/today');S.curHash='#/today';setTimeout(()=>bookImport(c),150);return render();}const sec=r.name==='person'?'people':r.name==='stats'?'today':r.name;
   shellHTML(sec);
+  try{if(r.name==='today')localStorage.setItem('imer-lasthome','today');else if(r.name==='agenda'){const v=r.q.view||localStorage.getItem('imer-agview')||'day';localStorage.setItem('imer-lasthome',v);}}catch(_){}
   const V={today:viewToday,agenda:viewAgendaApp,people:viewPeople,person:viewPerson,map:viewKonta,settings:viewSettingsPage,stats:viewStats}[r.name]||viewToday;
   if(!window.AGPOS&&!sameH&&!back)window.scrollTo(0,0);
   setTimeout(()=>dirtyWatch(M()),60);setTimeout(mineMsgShow,500);
@@ -222,7 +224,7 @@ function viewToday(){const t=todayISO(),tm=addDays(t,1),now=nowMin();
   bindInstall();}
 
 /* ---------- ημερολόγιο: τα σπάνια κουμπιά πάνε στο «Περισσότερα» ---------- */
-function viewAgendaApp(r){M().onclick=null;setTimeout(()=>window.glenInbox&&glenInbox(),0);{let v=r.q.view;if(!v&&!r.q.d&&!r.q.w&&!r.q.m){try{v=localStorage.getItem('imer-agview');}catch(e){}}if(v==='year')return viewYear(r);}YEAR_PICK=null;viewAgenda(r);
+function viewAgendaApp(r){M().onclick=null;M().onchange=null;setTimeout(()=>window.glenInbox&&glenInbox(),0);{let v=r.q.view;if(!v&&!r.q.d&&!r.q.w&&!r.q.m){try{v=localStorage.getItem('imer-agview');}catch(e){}}if(v==='year')return viewYear(r);}YEAR_PICK=null;viewAgenda(r);
   /* κλειστή μέρα με ραντεβού μίας φοράς: δείξ' τα για να μετακινηθούν */
   {const v=r.q.view||(()=>{try{return localStorage.getItem('imer-agview');}catch(e){return'';}})();const d=r.q.d||todayISO();const H=(v==='day'||!v)&&isClosed(d)?hiddenOnce(d,d):[];
    if(H.length){const box=document.createElement('div');box.className='note';box.style.margin='10px 0';box.innerHTML=`⚠️ <b>Η μέρα είναι κλειστή (${esc(offWhy(d))}) αλλά έχει ${H.length} ραντεβού.</b> Μετακίνησέ τα ή ακύρωσέ τα:<div class="aglist" style="margin-top:8px">${H.map(o=>apptCard({a:o.a,date:o.date,s:o.a.s,e:o.a.e,st:'',key:o.a.id+'|'+o.date})).join('')}</div>`;const ref=$('#main .dstrip-h')||$('#main .perhd')||$('#main .agbar');if(ref)ref.after(box);}}
@@ -307,25 +309,33 @@ function viewKonta(r){const fb=$('#fab');if(fb)fb.remove();const tab=(r&&r.q&&r.
    <a class="tiny muted" href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px">Άνοιγμα σε ξεχωριστό παράθυρο ↗</a>`;}
 const kmTabs=t=>`<div class="seg field" id="km-tabs" style="margin-top:4px"><a href="#/map" class="${t==='km'?'on':''}">📍 Κοντά μου</a><a href="#/map?v=clients" class="${t==='clients'?'on':''}">🗺️ Οι ${esc(LX('whoPlL'))} μου</a></div>`;
 async function viewMap(){setTimeout(()=>{const g=$('#geo-on');if(g)g.onchange=()=>{S.data.settings.geoOff=!g.checked;save();toast(g.checked?'Ο εντοπισμός άνοιξε.':'Ο εντοπισμός έκλεισε — καμία διεύθυνση δεν στέλνεται.','ok');render();};},0);const all=myStudents();const on=all.filter(p=>p.loc&&p.loc.lat!=null),noPin=all.filter(p=>!(p.loc&&p.loc.lat!=null));
+  const DC=dromoClients();const dOn=S.data.settings.mapDromo!==false;const DCp=dOn?DC.filter(c=>c.lat!=null&&c.lng!=null):[];
   const areas={};on.forEach(p=>{const k=p.loc.area||'Χωρίς περιοχή';areas[k]=(areas[k]||0)+1;});const AR=Object.entries(areas).sort((a,b)=>b[1]-a[1]);
   M().innerHTML=`<div class="mapwrap"><div id="imap"></div>${PLACE?`<div class="placebar">📍 Πάτα στον χάρτη πού βρίσκεται: <b>${esc(stuName(getStudent(PLACE)))}</b> <button class="btn sm" id="plx">Άκυρο</button></div>`:''}</div>
   <section class="mapsheet"><div class="tsec-h"><h2>Από πού έρχονται</h2><span class="small muted">${on.length} από ${all.length} στον χάρτη</span></div>
+   ${DC.length?`<label class="switch"><span><b>🚐 Πελάτες από το Δρομολόγιο (${DC.length})</b><small>Πράσινες πινέζες· όσοι δεν είναι ήδη εδώ. Πάτα μία για να τον προσθέσεις στους ${esc(LX('whoPlL'))}.</small></span><input type="checkbox" id="map-dr" ${dOn?'checked':''}></label>`:`<p class="tiny muted" style="margin:0 0 8px">🚐 Αν έχεις και το Δρομολόγιο σε αυτό το κινητό, εδώ θα φαίνονται και οι πελάτες του.</p>`}
    <label class="switch geosw"><span><b>Αυτόματος εντοπισμός διευθύνσεων</b><small>${S.data.settings.geoOff?'Κλειστός: καμία διεύθυνση δεν φεύγει από το κινητό· την πινέζα τη βάζεις με το χέρι.':'Η διεύθυνση (χωρίς όνομα) στέλνεται στο OpenStreetMap μόνο για να βρεθεί το σημείο στον χάρτη.'}</small></span><input type="checkbox" id="geo-on" ${S.data.settings.geoOff?'':'checked'}></label>
    ${AR.length?`<div class="arealist">${AR.map(([a,n])=>`<div class="arow"><span class="grow">${esc(a)}</span><span class="abar"><i style="width:${Math.round(n/AR[0][1]*100)}%"></i></span><b>${n}</b></div>`).join('')}</div>`:`<p class="small muted">Γράψε διεύθυνση στην καρτέλα ${esc(LX('whoGen'))} και θα εμφανιστεί εδώ ως κουκίδα.</p>`}
    ${noPin.length?`<details class="nopin"><summary class="small"><b>Χωρίς σημείο στον χάρτη</b> (${noPin.length})</summary>${noPin.some(p=>p.loc&&p.loc.addr)?`<button class="btn sm" id="geoAll" style="margin:8px 0">${ic('route',14)} Εντοπισμός από τις διευθύνσεις</button>`:''}<div class="list">${noPin.map(p=>`<div class="rw static"><span class="grow"><b>${esc(stuName(p))}</b><small>${p.loc&&p.loc.addr?esc(p.loc.addr):'χωρίς διεύθυνση'}</small></span><button class="btn sm" data-place="${p.id}">📍 Βάλε</button></div>`).join('')}</div></details>`:''}
    <p class="tiny muted" style="margin-top:12px">Ο χάρτης φαίνεται μόνο σε αυτή τη συσκευή. Για τον εντοπισμό, η διεύθυνση στέλνεται στην υπηρεσία χαρτών OpenStreetMap.</p></section>`;
+  setTimeout(()=>{const t=$('#map-dr');if(t)t.onchange=()=>{S.data.settings.mapDromo=t.checked;save();render();};},0);
+  M().onclick=async e=>{const da=e.target.closest('[data-dadd]');if(da){const c=DC.find(x=>String(x.id)===da.dataset.dadd);if(!c)return;const id=IM_NEWPERSON(c.n,{phone:c.ph||'',addr:c.a||''});const p=getStudent(id);if(p&&c.lat!=null){p.loc=Object.assign(p.loc||{},{addr:c.a||'',lat:c.lat,lng:c.lng,home:true});save();}toast(`Ο/Η ${c.n} μπήκε στους ${LX('whoPlL')}.`,'ok');render();return;}
+    const b=e.target.closest('[data-place]');if(b){PLACE=b.dataset.place;render();window.scrollTo(0,0);return;}if(e.target.closest('#plx')){PLACE=null;render();return;}
+    if(e.target.closest('#geoAll')){const L=noPin.filter(p=>p.loc&&p.loc.addr);toast('Εντοπισμός '+L.length+' διευθύνσεων…');let n=0;for(const p of L)if(await geocodePerson(p,false))n++;toast(`Βρέθηκαν ${n} από ${L.length}.`,n?'ok':'bad');render();}};
   try{await loadLeaflet();}catch(e){$('#imap').innerHTML='<p class="small muted" style="padding:20px">Ο χάρτης χρειάζεται σύνδεση στο διαδίκτυο.</p>';return;}
   if(!$('#imap'))return;const Lf=window.L;MAP=Lf.map('imap',{zoomControl:true});Lf.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
   MAPCL=Lf.markerClusterGroup({showCoverageOnHover:false,maxClusterRadius:46,iconCreateFunction:c=>Lf.divIcon({className:'',html:`<div class="clus" style="background:var(--brand)"><b>${c.getChildCount()}</b></div>`,iconSize:[44,44]})});
   on.forEach(p=>{const m=Lf.marker([p.loc.lat,p.loc.lng],{icon:Lf.divIcon({className:'',html:`<div class="pinwrap"><div class="pin" style="background:${p.color||'var(--brand)'}"><span>${esc(initial(p.name))}</span></div></div>`,iconSize:[30,30],iconAnchor:[4,30]})});
     m.bindPopup(`<b>${esc(stuName(p))}</b><br><span class="small">${esc(p.loc.area||p.loc.addr||'')}</span><br><a href="#/person/${p.id}">Καρτέλα</a>`);MAPCL.addLayer(m);});
-  MAP.addLayer(MAPCL);if(on.length)MAP.fitBounds(on.map(p=>[p.loc.lat,p.loc.lng]),{padding:[40,40],maxZoom:14});else MAP.setView([38.2,23.8],6);
+  DCp.forEach(c=>{const m=Lf.marker([c.lat,c.lng],{icon:Lf.divIcon({className:'',html:`<div class="pinwrap"><div class="pin drpin"><span>🚐</span></div></div>`,iconSize:[30,30],iconAnchor:[4,30]})});
+    m.bindPopup(`<b>${esc(c.n)}</b> <span class="tiny muted">· Δρομολόγιο</span><br><span class="small">${esc(c.a||'')}</span>${c.ph?`<br><a href="tel:${esc(c.ph)}">${esc(c.ph)}</a>`:''}<br><button class="btn sm" data-dadd="${esc(c.id)}" style="margin-top:6px">➕ Στους ${esc(LX('whoPlL'))}</button>`);MAPCL.addLayer(m);});
+  const PTS=on.map(p=>[p.loc.lat,p.loc.lng]).concat(DCp.map(c=>[c.lat,c.lng]));
+  MAP.addLayer(MAPCL);if(PTS.length)MAP.fitBounds(PTS,{padding:[40,40],maxZoom:14});else MAP.setView([38.2,23.8],6);
   setTimeout(()=>MAP.invalidateSize(),200);
   MAP.on('click',e=>{if(!PLACE)return;const p=getStudent(PLACE);PLACE=null;if(!p)return render();p.loc=Object.assign(p.loc||{},{lat:e.latlng.lat,lng:e.latlng.lng});if(!p.loc.addr)p.loc.addr='';
     fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=el&lat=${e.latlng.lat}&lon=${e.latlng.lng}`).then(r=>r.json()).then(j=>{const a=(j&&j.address)||{};p.loc.area=a.suburb||a.city_district||a.town||a.village||a.city||'';save();render();}).catch(()=>{save();render();});
     toast('Η πινέζα μπήκε.','ok');});
-  M().onclick=async e=>{const b=e.target.closest('[data-place]');if(b){PLACE=b.dataset.place;render();window.scrollTo(0,0);return;}if(e.target.closest('#plx')){PLACE=null;render();return;}
-    if(e.target.closest('#geoAll')){const L=noPin.filter(p=>p.loc&&p.loc.addr);toast('Εντοπισμός '+L.length+' διευθύνσεων…');let n=0;for(const p of L)if(await geocodePerson(p,false))n++;toast(`Βρέθηκαν ${n} από ${L.length}.`,n?'ok':'bad');render();}};}
+}
 
 /* ---------- εισαγωγή πολλών μαζί: επαφές κινητού, Excel/CSV, αρχείο επαφών (.vcf) ---------- */
 const normPh=p=>{let d=String(p||'').replace(/\D/g,'');if(d.startsWith('0030'))d=d.slice(4);else if(d.startsWith('30')&&d.length===12)d=d.slice(2);return d;};
@@ -634,6 +644,7 @@ const SET_SECS=()=>[
   ['info','me',isPrivate()?'👤':'🏢',isPrivate()?'Προσωπικά στοιχεία':'Στοιχεία επιχείρησης',isPrivate()?(S.data.settings.myName||'Όνομα, τηλέφωνο'):(biz().name||'Επωνυμία, τηλέφωνο, ΑΦΜ')],
   ['staff','me',`👥`,'Προσωπικό',(providers().length===1?'1 άτομο κάνει ραντεβού':providers().length+' άτομα κάνουν ραντεβού')],
   ['hours','me','🕘','Ωράριο και αργίες',agCfg().from+'–'+agCfg().to],
+  ['start','view','🚪','Άνοιγμα εφαρμογής','Ανοίγει σε: '+START_OPTS.find(x=>x[0]===(S.data.settings.startView||'last'))[1]],
   ['look','view','🎨','Χρώμα και φόντο','Το χρώμα της εφαρμογής και το υδατογράφημα'],
   ['words','cli','🏷️','Πελάτες ή ασθενείς ή μαθητές;','Τώρα λέγονται «'+LX('whoPl')+'» και κλείνεις «'+LX('one')+'»'],
   ['msgs','cli','💬','Μηνύματα και συγκαταθέσεις','Επιβεβαιώσεις, κείμενο συγκατάθεσης, προσφορές'],
@@ -921,6 +932,8 @@ function langDialog(){const md=modal(`<div class="spread" style="margin-bottom:1
 function langPickHTML(){return`<div class="langpick">${LANGS.map(l=>`<button type="button" class="langbtn ${l.k===LANG?'on':''}" data-lang="${l.k}" data-notr><span class="lflag">${l.f}</span><b>${l.n}</b>${l.k===LANG?'<small>✓</small>':''}</button>`).join('')}</div>`;}
 function langPickBind(el){$$('[data-lang]',el).forEach(b=>b.onclick=()=>{if(b.dataset.lang!==LANG)setLang(b.dataset.lang);});}
 const SETP={
+ start(el){const cur=S.data.settings.startView||'last';el.innerHTML=`<div class="card"><p class="small muted" style="margin-top:0">Σε ποια οθόνη ανοίγει η εφαρμογή όταν την ξεκινάς.</p><div class="list">${START_OPTS.map(([k,l,i])=>`<label class="rw"><span class="ricon">${i}</span><span class="grow"><b>${esc(l)}</b>${k==='last'?'<small>Εκεί που την άφησες την τελευταία φορά</small>':''}</span><input type="radio" name="sv" value="${k}" ${cur===k?'checked':''}></label>`).join('')}</div></div>`;
+  el.onchange=e=>{if(e.target.name!=='sv')return;S.data.settings.startView=e.target.value;save();toast('Η εφαρμογή θα ανοίγει: '+START_OPTS.find(x=>x[0]===e.target.value)[1],'ok');};},
  lang(el){el.innerHTML=`<div class="card">${langPickHTML()}<p class="small muted" style="margin:12px 0 0">Ισχύει για όλες τις εφαρμογές GlenApps σε αυτό το κινητό. Τα μηνύματα προς τους πελάτες βγαίνουν στη γλώσσα που διαλέγεις· όσα κείμενα έχεις αλλάξει εσύ μένουν όπως τα έγραψες.</p></div>`;langPickBind(el);},
  prof(el){el.innerHTML=`<p class="small muted" style="margin-top:0">Αλλάζουν οι λέξεις, οι ειδικότητες του προσωπικού, η διάρκεια ραντεβού και το χρώμα. Τα ραντεβού και τα πρόσωπα μένουν όπως είναι.</p>${profPickerHTML(S.data.settings.prof,true)}`;
   el.onclick=async e=>{const pe=e.target.closest('[data-pedit]');if(pe){e.stopPropagation();const r=await profAddDialog((findProf(pe.dataset.pedit)||{g:{}}).g.g,customProfs().find(x=>x.id===pe.dataset.pedit));if(r)render();return;}const ad=e.target.closest('[data-padd]');if(ad){const id=await profAddDialog(ad.dataset.padd);if(id){S.data.settings.prof=id;S.data.settings.lex={};save();toast('Επάγγελμα: '+prof().p.n,'ok');render();}return;}const b=e.target.closest('[data-pf]');if(!b)return;S.data.settings.prof=b.dataset.pf;S.data.settings.lex={};save();toast('Επάγγελμα: '+prof().p.n,'ok');render();};},
@@ -1270,6 +1283,13 @@ function viewStats(){const fb=$('#fab');if(fb)fb.remove();const pro=isPro()||S.d
 
 /* ---------- έναρξη ---------- */
 S.data=loadData();{const L=S.data&&S.data.settings&&S.data.settings.lex;if(L&&/^Ιδιοκτήτ/.test(L.who||'')){['who','whoAcc','whoGen','whoPl','whoPlL'].forEach(k=>delete L[k]);try{save();}catch(_){}}}applyIdentity();
+/* έναρξη: η οθόνη που διάλεξες στις Ρυθμίσεις (ή η τελευταία) — μόνο στο πρώτο άνοιγμα, όχι σε σύνδεσμο προς συγκεκριμένη σελίδα */
+{let first=true;try{first=!sessionStorage.getItem('im-started');sessionStorage.setItem('im-started','1');}catch(_){}
+ const plain=!location.hash||/^#\/?(today|agenda)?$/.test(location.hash);
+ if(first&&plain&&S.data&&S.data.settings&&S.data.settings.prof&&!new URLSearchParams(location.search).get('book')&&!new URLSearchParams(location.search).get('mine')){
+  let k=S.data.settings.startView||'last';if(k==='last'){try{k=localStorage.getItem('imer-lasthome')||'';}catch(_){k='';}}
+  const h=k==='today'?'#/today':['day','week','month','year','list'].includes(k)?'#/agenda?view='+k:'';
+  if(h){history.replaceState(null,'',h);NAVSTK[0]=h;}}}
 if(!location.hash)history.replaceState(null,'','#/today');
 render();
 setTimeout(autoBackup,5000);
@@ -1283,25 +1303,30 @@ function offWhy(d){const C=closedDays();if(C[d]===false)return'';if(C[d])return 
 function hiddenOnce(from,to){const SID=new Set(S.data.students.map(x=>x.id));return appts().filter(a=>a.kind==='once'&&a.date>=from&&a.date<=to&&SID.has(a.sid)&&isClosed(a.date)&&!((a.ex||{})[a.date]&&['cancel','moved'].includes(a.ex[a.date].st))).map(a=>({a,date:a.date,s:a.s,sid:a.sid}));}
 function yearCounts(Y){const M={},W={};occ(`${Y}-01-01`,`${Y}-12-31`,{by:''}).forEach(o=>{if(o.st==='cancel')return;M[o.date]=(M[o.date]||0)+1;});hiddenOnce(`${Y}-01-01`,`${Y}-12-31`).forEach(o=>{W[o.date]=(W[o.date]||0)+1;});return{M,W};}
 function viewYear(r){const t=todayISO();const Y=+(r.q.y||(r.q.d||t).slice(0,4));try{localStorage.setItem('imer-agview','year');}catch(e){}
-  const YC=yearCounts(Y),N=YC.M,W=YC.W;const DJ=dromoBusy()||{};const mx=Math.max(3,...Object.values(N));
+  const YC=yearCounts(Y),N=YC.M,W=YC.W;const DD=dromoData();const DJ=DD?DD.busy:{};const mx=Math.max(3,...Object.values(N));
   const mini=mo=>{const ym=`${Y}-${pad(mo)}`;const first=ym+'-01',last=isoDate(new Date(Y,mo,0));const start=mondayOf(first);const cells=[];for(let d=start;d<=last;d=addDays(d,1))cells.push(d);
     let busy=0;cells.forEach(d=>{if(d.slice(0,7)===ym)busy+=N[d]||0;});
     return`<div class="ymo"><a class="ymh" href="#/agenda?view=month&m=${ym}"><b>${MONTHS[mo-1]}</b>${busy?`<span>${busy}</span>`:''}</a><div class="ywd">${DAY_ORDER.map(d=>`<i>${WDAYS_S[d][0]}</i>`).join('')}</div><div class="ydays">${cells.map(d=>{if(d.slice(0,7)!==ym)return'<span></span>';
       const n=N[d]||0;const why=offWhy(d);const rest=!why&&!workDay(d);const pk=YEAR_PICK&&YEAR_PICK.a&&(d>=YEAR_PICK.a&&d<=(YEAR_PICK.b||YEAR_PICK.a));
       const lv=n?Math.min(4,Math.ceil(n/mx*4)):0;
-      return`<button type="button" class="yd ${why?'off':''} ${rest?'rest':''} ${d===t?'today':''} ${pk?'pk':''} ${lv?'h'+lv:''}" data-yd="${d}" title="${esc(fmtDate(d)+(DJ[d]?' · '+DJ[d]+' δουλειές στο Δρομολόγιο':'')+(why?' · '+why:'')+(n?' · '+n+' ραντεβού':'')+(W[d]?' · '+W[d]+' ραντεβού σε κλειστή μέρα!':''))}"><small>${+d.slice(8)}</small>${DJ[d]?`<i class="ydj">${DJ[d]}</i>`:''}${W[d]?`<b class="yw">⚠${W[d]}</b>`:n?`<b>${n}</b>`:why&&!/^(Άδεια|Κλειστό|Σεμινάριο|Ταξίδι|Προσωπικό)$/.test(why)?'':why?`<em>${offIcon(why)}</em>`:''}</button>`;}).join('')}</div></div>`;};
+      return`<button type="button" class="yd ${why?'off':''} ${rest?'rest':''} ${d===t?'today':''} ${pk?'pk':''} ${lv?'h'+lv:''}${djCls(DD,d)}" data-yd="${d}" title="${esc(fmtDate(d)+(DJ[d]?' · '+(DD.open[d]?DD.open[d]+' ενεργές δουλειές':DJ[d]+' δουλειές (κλεισμένες)')+' στο Δρομολόγιο':'')+(why?' · '+why:'')+(n?' · '+n+' ραντεβού':'')+(W[d]?' · '+W[d]+' ραντεβού σε κλειστή μέρα!':''))}"><small>${+d.slice(8)}</small>${djHTML(DD,d)}${W[d]?`<b class="yw">⚠${W[d]}</b>`:n?`<b>${n}</b>`:why&&!/^(Άδεια|Κλειστό|Σεμινάριο|Ταξίδι|Προσωπικό)$/.test(why)?'':why?`<em>${offIcon(why)}</em>`:''}</button>`;}).join('')}</div></div>`;};
   /* λίστα δηλωμένων: συνεχόμενες μέρες με τον ίδιο λόγο γίνονται ένα διάστημα */
   const C=closedDays();const D=Object.keys(C).filter(d=>d.startsWith(Y+'-')&&C[d]).sort();const R=[];D.forEach(d=>{const why=typeof C[d]==='string'?C[d]:'Κλειστό';const L=R[R.length-1];if(L&&L.why===why&&addDays(L.b,1)===d)L.b=d;else R.push({a:d,b:d,why});});
   const H=holList(Y).filter(h=>holOn(h)&&!biz().holOff);
   M().innerHTML=`<div class="agbar"><div class="seg">${[['day','Ημέρα'],['week','Εβδομάδα'],['month','Μήνας'],['year','Έτος'],['list','Λίστα']].map(([k,l])=>`<a href="#/agenda?view=${k}${k==='year'?'&y='+Y:'&d='+(Y===+t.slice(0,4)?t:Y+'-01-01')}" class="${k==='year'?'on':''}">${l}</a>`).join('')}</div></div>
    ${periodHead([`#/agenda?view=year&y=${Y-1}`,'',`#/agenda?view=year&y=${Y+1}`],String(Y),Y===+t.slice(0,4),`#/agenda?view=year&y=${t.slice(0,4)}`)}
-   ${YEAR_PICK?`<div class="ypick"><b>🏖️ ${YEAR_PICK.a?'Τώρα πάτα την τελευταία μέρα':'Πάτα την πρώτη μέρα'}</b><span class="small">${YEAR_PICK.a?'Για μία μόνο μέρα, πάτα την ίδια ξανά.':'της άδειας ή του κλεισίματος. Για να ανοίξεις ξανά μια κλειστή μέρα, πάτα την δύο φορές.'}</span><button class="btn sm" id="y-cx">Άκυρο</button></div>`:`<div class="row" style="gap:8px;flex-wrap:wrap;margin:4px 0 10px"><button class="btn pri" id="y-off">🏖️ Δήλωσε άδεια ή κλειστό</button><button class="btn" id="y-fs">⛶ Όλο το έτος σε μία οθόνη</button></div>`}
-   <div class="ylegend small"><span><i class="yd h2"></i> ραντεβού (ο αριθμός)</span><span><i class="yd off"></i> κλειστό · αργία · άδεια</span><span><i class="yd rest"></i> ρεπό</span>${Object.keys(DJ).length?'<span><i class="ydj" style="position:static">2</i> δουλειές Δρομολογίου</span>':''}</div>
+   ${YEAR_PICK?`<div class="ypick"><b>🏖️ ${YEAR_PICK.a?'Τώρα πάτα την τελευταία μέρα':'Πάτα την πρώτη μέρα'}</b><span class="small">${YEAR_PICK.a?'Για μία μόνο μέρα, πάτα την ίδια ξανά.':'της άδειας ή του κλεισίματος. Για να ανοίξεις ξανά μια κλειστή μέρα, πάτα την δύο φορές.'}</span><button class="btn sm" id="y-cx">Άκυρο</button></div>`:`<div class="ybtns"><button class="btn pri" id="y-off">🏖️ Άδεια / κλειστό</button><button class="btn" id="y-fs">⛶ Όλο το έτος</button></div>`}
+   <div class="ylegend small"><span><i class="yd h2"></i> ραντεβού (ο αριθμός)</span><span><i class="yd off"></i> κλειστό · αργία · άδεια</span><span><i class="yd rest"></i> ρεπό</span>${DD?'<span><i class="yd djon"></i> ενεργές δουλειές Δρομολογίου <i class="ydj" style="position:static">2</i></span>':''}</div>
    <div class="ygrid">${[1,2,3,4,5,6,7,8,9,10,11,12].map(mini).join('')}</div>
    <div class="card section" style="margin-top:14px"><div class="card-h"><h3>Άδειες και κλειστές μέρες ${Y}</h3></div>
     ${R.length?`<div class="yoffl">${R.map((x,i)=>`<div class="yoff"><span>${offIcon(x.why)}</span><span class="grow"><b>${esc(x.why)}</b><small>${x.a===x.b?esc(WDAYS_S[wdOf(x.a)]+' '+fmtShort(x.a)):esc(fmtShort(x.a)+' – '+fmtShort(x.b))}${x.a!==x.b?` · ${Math.round((new Date(x.b)-new Date(x.a))/864e5)+1} μέρες`:''}${(n=>n?` · <b class="ywt">⚠️ ${n} ραντεβού μένουν μέσα</b>`:'')(hiddenOnce(x.a,x.b).length)}</small></span><button class="rngx" data-yrm="${i}" aria-label="Αφαίρεση">✕</button></div>`).join('')}</div>`:'<p class="small muted" style="margin:0">Δεν έχεις δηλώσει άδειες. Πάτα «Δήλωσε άδεια ή κλειστό».</p>'}
-    <details class="small" style="margin-top:10px"><summary><b>Αργίες που κλείνεις (${H.length})</b></summary><p class="muted" style="margin:6px 0 0">${H.length?H.map(h=>esc(fmtShort(h.date)+' '+h.name)).join(' · '):'Καμία — έχεις ανοίξει όλες τις αργίες.'}</p></details>
-    <button type="button" class="btn sm ghost" id="y-holr" style="margin-top:8px">↩︎ Επαναφορά στις βασικές αργίες</button></div>`;
+</div>
+   <div class="card section" style="margin-top:14px"><div class="card-h"><h3>Αργίες ${Y}</h3><span class="small muted">${H.length} κλειστές</span></div>
+    <p class="small muted" style="margin:0 0 8px">Ξετσέκαρε όσες δουλεύεις. Ισχύει κάθε χρόνο.</p>
+    <label class="switch"><span><b>Κλειστά στις επίσημες αργίες</b></span><input type="checkbox" id="yh-on" ${biz().holOff?'':'checked'}></label>
+    <div style="margin-top:8px;${biz().holOff?'opacity:.5;pointer-events:none':''}">${holList(Y).map(h=>`<label class="holrow ${h.date<t?'past':''}"><span class="hd">${WDAYS_S[wdOf(h.date)]} ${fmtShort(h.date)}</span><span class="grow">${esc(h.name)}</span><input type="checkbox" data-yhol="${h.id}" ${holOn(h)?'checked':''}></label>`).join('')}</div>
+    <button type="button" class="btn sm ghost" id="y-holr" style="margin-top:10px">↩︎ Επαναφορά στις βασικές αργίες</button></div>`;
+  M().onchange=e=>{const B=biz();if(e.target.id==='yh-on'){B.holOff=!e.target.checked;save();return render();}const h=e.target.closest('[data-yhol]');if(h){B.hol=B.hol||{};B.hol[h.dataset.yhol]=h.checked;save();render();}};
   M().onclick=e=>{const rm=e.target.closest('[data-yrm]');if(rm){const x=R[+rm.dataset.yrm];if(!confirm(`Να ανοίξουν ξανά οι μέρες ${fmtShort(x.a)}${x.a!==x.b?' – '+fmtShort(x.b):''};`))return;for(let d=x.a;d<=x.b;d=addDays(d,1))delete C[d];save();glenOutbox('open',x.a,x.b);toast('Οι μέρες άνοιξαν ξανά.','ok');return render();}
     if(e.target.closest('#y-fs'))return yearFull(Y);if(e.target.closest('#y-holr'))return holReset();
     if(e.target.closest('#y-off')){YEAR_PICK={};return render();}if(e.target.closest('#y-cx')){YEAR_PICK=null;return render();}
@@ -1322,7 +1347,8 @@ function offDialog(a,z){const days=[];for(let d=a;d<=z;d=addDays(d,1))days.push(
 function glenShare(){clearTimeout(_shT);_shT=setTimeout(()=>{try{if(!S.data||!S.data.settings)return;const t=todayISO();const off={},busy={};const to=addDays(t,400);
   occ(addDays(t,-31),to,{by:''}).concat(hiddenOnce(addDays(t,-31),to)).forEach(o=>{if(o.st==='cancel')return;busy[o.date]=(busy[o.date]||0)+1;});
   for(let d=addDays(t,-31);d<=to;d=addDays(d,1)){const w=offWhy(d);if(w)off[d]=w;else if(!workDay(d))off[d]='Ρεπό';}
-  const c=agCfg();localStorage.setItem('glenapps-imerologio',JSON.stringify({v:1,at:Date.now(),name:S.data.settings.myName||'',from:c.from,to:c.to,days:c.days,off,busy,url:location.href.split('#')[0]}));}catch(e){}},400);}
+  const c=agCfg();const clients=S.data.students.filter(p=>!p.demo&&!p.archived).map(p=>({id:p.id,n:stuName(p),ph:p.phone||'',a:(p.loc&&p.loc.addr)||'',lat:p.loc&&p.loc.lat!=null?p.loc.lat:null,lng:p.loc&&p.loc.lng!=null?p.loc.lng:null}));
+  localStorage.setItem('glenapps-imerologio',JSON.stringify({v:1,at:Date.now(),name:S.data.settings.myName||'',from:c.from,to:c.to,days:c.days,off,busy,clients,url:location.href.split('#')[0]}));}catch(e){}},400);}
 /* ---------- 1.52: ανταλλαγή αδειών με το Δρομολόγιο (ίδιο κινητό) ----------
    Κάθε εφαρμογή γράφει ΜΟΝΟ στα δικά της δεδομένα. Για αλλαγή στην άλλη αφήνει αίτημα:
    localStorage 'glenapps-aitimata-<εφαρμογή>' = [{t:'close'|'open', a:'YYYY-MM-DD', b:'YYYY-MM-DD', why, apo, at}] */
@@ -1330,25 +1356,38 @@ function glenOutbox(t,a,b,why){try{const K='glenapps-aitimata-dromologio';const 
 function glenInbox(){try{if(!S.data||!S.data.settings)return;const K='glenapps-aitimata-imerologio';const L=JSON.parse(localStorage.getItem(K)||'[]');if(!L.length)return;localStorage.removeItem(K);
   const C=closedDays();let nc=0,no=0;L.forEach(x=>{if(!x||!x.a)return;for(let d=x.a;d<=(x.b||x.a);d=addDays(d,1)){if(x.t==='close'){if(!offWhy(d)){C[d]=x.why||'Κλειστό';nc++;}}else if(x.t==='open'){if(offWhy(d)){if(holidayOf(d))C[d]=false;else delete C[d];no++;}}}});
   if(nc||no){save();toast('Από το Δρομολόγιο: '+[nc?`κλειστές ${nc} μέρες`:'',no?`άνοιξαν ${no} μέρες`:''].filter(Boolean).join(' · ')+'.','ok');if(/^#\/(agenda|today)?/.test(location.hash))render();}}catch(e){}}
-function dromoBusy(){try{const D=JSON.parse(localStorage.getItem('glenapps-dromologio')||'null');return D&&D.busy||null;}catch(e){return null;}}
+function dromoData(){try{const D=JSON.parse(localStorage.getItem('glenapps-dromologio')||'null');if(!D||!D.busy)return null;return{busy:D.busy,open:D.open||D.busy};}catch(e){return null;}}
+/* πελάτες του Δρομολογίου στο ίδιο κινητό: όσοι δεν υπάρχουν ήδη εδώ (ίδιο τηλέφωνο ή ίδιο όνομα) */
+function dromoClients(){try{const D=JSON.parse(localStorage.getItem('glenapps-dromologio')||'null');const L=D&&Array.isArray(D.clients)?D.clients:[];
+  return L.filter(c=>c&&c.n&&!(c.ph&&byPhone(c.ph))&&!S.data.students.some(p=>normNm(p.name)===normNm(c.n))).map((c,i)=>({id:c.id!=null?c.id:'d'+i,n:String(c.n),ph:c.ph||'',a:c.a||'',lat:c.lat!=null?+c.lat:null,lng:c.lng!=null?+c.lng:null}));}catch(e){return[];}}
+function dromoBusy(){const D=dromoData();return D&&D.busy||null;}
+/* σήμα δουλειών Δρομολογίου: πράσινο = ενεργές (δεν έχουν κλείσει), γκρι = όλες κλεισμένες */
+function djHTML(DD,d){if(!DD)return'';const o=DD.open[d]||0,a=DD.busy[d]||0;if(!a&&!o)return'';return o?`<i class="ydj">${o}</i>`:`<i class="ydj done">${a}</i>`;}
+function djCls(DD,d){return DD&&DD.open[d]?' djon':'';}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)glenInbox();});setTimeout(glenInbox,900);setTimeout(()=>window.glenShare&&glenShare(),1200);
 
 /* όλο το έτος σε μία οθόνη: 12 μήνες χωρίς κύλισμα· πάτημα σε μέρα → η μέρα· και δήλωση άδειας από εδώ */
-function yearFull(Y){const md=modal('<div id="yfs"></div>',{guard:false,onClose:()=>{window._yfsDraw=null;YEAR_PICK=null;try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}}});
-  md.el.classList.add('yfsdlg');md.el.parentElement.classList.add('yfsov');try{if(innerWidth<900&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});}catch(e){}
+function yearFull(Y){const fsc=()=>md.el.classList.toggle('fs',!!document.fullscreenElement);
+  const md=modal('<div id="yfs"></div>',{guard:false,onClose:()=>{window._yfsDraw=null;YEAR_PICK=null;document.removeEventListener('fullscreenchange',fsc);try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}}});
+  md.el.classList.add('yfsdlg');md.el.parentElement.classList.add('yfsov');document.addEventListener('fullscreenchange',fsc);
+  /* σύρσιμο: κάτω → κλείνει · αριστερά/δεξιά → άλλο έτος */
+  {let x0=null,y0=0,t0=0;md.el.addEventListener('touchstart',e=>{const p=e.touches[0];x0=p.clientX;y0=p.clientY;t0=Date.now();},{passive:true});
+   md.el.addEventListener('touchend',e=>{if(x0==null)return;const p=e.changedTouches[0];const dx=p.clientX-x0,dy=p.clientY-y0;x0=null;if(Date.now()-t0>900)return;
+     if(dy>90&&Math.abs(dx)<70){md.el.dataset.swiped='1';md.close();return;}
+     if(Math.abs(dx)>80&&Math.abs(dy)<60){md.el.dataset.swiped='1';Y+=dx<0?1:-1;draw();}},{passive:true});}try{if(innerWidth<900&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});}catch(e){}
   const t=todayISO();
-  const draw=()=>{const YC=yearCounts(Y),N=YC.M,W=YC.W;const DJ=dromoBusy()||{};const mx=Math.max(3,...Object.values(N));
+  const draw=()=>{const YC=yearCounts(Y),N=YC.M,W=YC.W;const DD=dromoData();const DJ=DD?DD.busy:{};const mx=Math.max(3,...Object.values(N));
     const mini=mo=>{const ym=`${Y}-${pad(mo)}`;const last=isoDate(new Date(Y,mo,0));const cells=[];for(let d=mondayOf(ym+'-01');d<=last;d=addDays(d,1))cells.push(d);while(cells.length<42)cells.push('');
       let busy=0;cells.forEach(d=>{if(d&&d.slice(0,7)===ym)busy+=N[d]||0;});
       return`<div class="yfm"><div class="yfh"><b>${MONTHS[mo-1]}</b>${busy?`<span>${busy}</span>`:''}</div><div class="yfw">${DAY_ORDER.map(d=>`<i>${WDAYS_S[d][0]}</i>`).join('')}</div><div class="yfd">${cells.map(d=>{if(!d||d.slice(0,7)!==ym)return'<span></span>';
         const n=N[d]||0,why=offWhy(d),rest=!why&&!workDay(d),lv=n?Math.min(4,Math.ceil(n/mx*4)):0;const pk=YEAR_PICK&&YEAR_PICK.a&&d>=YEAR_PICK.a&&d<=(YEAR_PICK.b||YEAR_PICK.a);
-        return`<button type="button" class="yd ${why?'off':''} ${rest?'rest':''} ${d===t?'today':''} ${pk?'pk':''} ${lv?'h'+lv:''}" data-yfd="${d}"><small>${+d.slice(8)}</small>${W[d]?`<b class="yw">⚠${W[d]}</b>`:n?`<b>${n}</b>`:''}${DJ[d]?`<i class="ydj">${DJ[d]}</i>`:''}</button>`;}).join('')}</div></div>`;};
+        return`<button type="button" class="yd ${why?'off':''} ${rest?'rest':''} ${d===t?'today':''} ${pk?'pk':''} ${lv?'h'+lv:''}${djCls(DD,d)}" data-yfd="${d}"><small>${+d.slice(8)}</small>${W[d]?`<b class="yw">⚠${W[d]}</b>`:n?`<b>${n}</b>`:''}${djHTML(DD,d)}</button>`;}).join('')}</div></div>`;};
     $('#yfs',md.el).innerHTML=`<div class="yfbar"><button class="iconbtn" data-yfy="${Y-1}" aria-label="Προηγούμενο έτος">${ic('left',20)}</button><b>${Y}</b><button class="iconbtn" data-yfy="${Y+1}" aria-label="Επόμενο έτος">${ic('right',20)}</button>
       <span class="grow small">${YEAR_PICK?(YEAR_PICK.a?'Πάτα την τελευταία μέρα':'Πάτα την πρώτη μέρα'):''}</span>
       <button class="btn sm ${YEAR_PICK?'':'pri'}" id="yf-off">${YEAR_PICK?'Άκυρο':'🏖️ Άδεια'}</button><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',20)}</button></div>
-      <div class="yfgrid">${[1,2,3,4,5,6,7,8,9,10,11,12].map(mini).join('')}</div>`;};
+      <div class="yfgrid">${[1,2,3,4,5,6,7,8,9,10,11,12].map(mini).join('')}</div><div class="yfhint">Σύρε κάτω για κλείσιμο · αριστερά/δεξιά για άλλο έτος</div>`;};
   window._yfsDraw=draw;draw();
-  md.el.addEventListener('click',e=>{const y=e.target.closest('[data-yfy]');if(y){Y=+y.dataset.yfy;return draw();}
+  md.el.addEventListener('click',e=>{if(md.el.dataset.swiped){delete md.el.dataset.swiped;return;}const y=e.target.closest('[data-yfy]');if(y){Y=+y.dataset.yfy;return draw();}
     if(e.target.closest('#yf-off')){YEAR_PICK=YEAR_PICK?null:{};return draw();}
     const b=e.target.closest('[data-yfd]');if(!b)return;const d=b.dataset.yfd;
     if(!YEAR_PICK){md.close();return setTimeout(()=>go(`agenda?view=day&d=${d}`),160);}
