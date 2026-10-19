@@ -6,6 +6,13 @@
 var YEAR_PICK=null,NAVSTK=[location.hash||'#/today'],SCROLLMEM={},_scT=0,_scLock=0,_shT=0;
 var START_OPTS=[['last','Τελευταία που είχες ανοίξει','↩️'],['today','Σήμερα','🏠'],['day','Ημέρα','📅'],['week','Εβδομάδα','🗓️'],['month','Μήνας','▦'],['year','Έτος','📆'],['list','Λίστα','☰']];
 var LOCK_KEY='imerologio-lock',LOCK_ITER=200000,LOCK_AFTER=[[0,'αμέσως'],[1,'1 λεπτό'],[5,'5 λεπτά'],[15,'15 λεπτά'],[60,'1 ώρα']],LOCKED=false,LOCK_AWAY=0,LOCK_PEND=null;
+/* βιβλιοθήκες τρίτων: φιλοξενούνται στο lib/ και ελέγχονται με integrity (SHA-384) πριν τρέξουν — αν αλλάξει έστω ένα byte, δεν φορτώνονται */
+var LIB_SRI={'lib/leaflet.js':'sha384-tM1WyRnQZLXgeuR/dXHqqQcD5jN9+bgKmZW55OJtM9Bv7zCG4VFwmgdJudAtzIni',
+ 'lib/leaflet.css':'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H',
+ 'lib/MarkerCluster.css':'sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV',
+ 'lib/leaflet.markercluster.js':'sha384-LX47TNczFAfEZHVwAv6z4jjDF8/gxQrpZeJK7RJC/dOTXDwh3eCwsfBOcpn9tyBG',
+ 'lib/xlsx.full.min.js':'sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw',
+ 'lib/html2pdf.bundle.min.js':'sha384-Yv5O+t3uE3hunW8uyrbpPW3iw6/5/Y7HitWJBLgqfMoA36NogMmy+8wWZMpn3HWc'};
 var OFF_REASONS=[['Άδεια','🏖️'],['Κλειστό','🔒'],['Σεμινάριο','🎓'],['Ταξίδι','✈️'],['Προσωπικό','🏠']];
 const APP_VERSION=document.querySelector('meta[name="app-version"]').content;
 const STORE='imerologio-data';
@@ -307,9 +314,9 @@ function certAlertsHTML(){const t=todayISO(),lim=addDays(t,30);const L=allCerts(
 
 /* ---------- χάρτης πελατών (ίδιο στυλ με το «Κοντά μου») ---------- */
 let MAP=null,MAPCL=null,PLACE=null;
-function loadCSS(h){if(document.querySelector(`link[href="${h}"]`))return;const l=document.createElement('link');l.rel='stylesheet';l.href=h;document.head.appendChild(l);}
-async function loadLeaflet(){loadCSS('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css');loadCSS('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css');
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js');await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js');}
+function loadCSS(h){if(document.querySelector(`link[href="${h}"]`))return;const l=document.createElement('link');l.rel='stylesheet';if(LIB_SRI[h])l.integrity=LIB_SRI[h];l.href=h;document.head.appendChild(l);}
+async function loadLeaflet(){loadCSS('lib/leaflet.css');loadCSS('lib/MarkerCluster.css');
+  await loadScript('lib/leaflet.js');await loadScript('lib/leaflet.markercluster.js');}
 let GEOQ=Promise.resolve();
 function geocodePerson(p,say){if(!p.loc||!p.loc.addr||S.data.settings.geoOff)return Promise.resolve(false);GEOQ=GEOQ.then(async()=>{try{
   const r=await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&addressdetails=1&accept-language=el&countrycodes=gr&q='+encodeURIComponent(p.loc.addr));const j=await r.json();
@@ -377,7 +384,7 @@ async function importFile(f,pick){try{const rows=await readImportFile(f);if(!row
   catch(err){toast('Δεν διαβάστηκε το αρχείο: '+(err.message||''),'bad');return[];}}
 const XLS_HEAD=['Ονοματεπώνυμο','Τηλέφωνο','Τηλέφωνο 2','Email','Διεύθυνση','Σημειώσεις','Κωδικός (μην τον αλλάζεις)'];
 /* πρότυπο Excel: οι στήλες μας + όλοι οι πελάτες που υπάρχουν ήδη, ώστε να διορθώνεις και να το ξαναφέρνεις */
-async function xlsTemplate(){try{await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');}catch(e){return toast(e.message,'bad');}
+async function xlsTemplate(){try{await loadScript('lib/xlsx.full.min.js');}catch(e){return toast(e.message,'bad');}
   const X=window.XLSX;const L=S.data.students.filter(p=>!p.demo&&!p.archived).sort((a,b)=>stuName(a).localeCompare(stuName(b),'el'));
   const rows=[XLS_HEAD].concat(L.map(p=>[stuName(p),p.phone||'',p.phone2||'',p.email||'',(p.loc&&p.loc.addr)||'',p.notes||'',p.id]));
   const ws=X.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:28},{wch:15},{wch:15},{wch:26},{wch:32},{wch:30},{wch:14}];ws['!autofilter']={ref:'A1:G'+Math.max(rows.length,2)};
@@ -387,7 +394,7 @@ async function xlsTemplate(){try{await loadScript('https://cdnjs.cloudflare.com/
 async function readImportFile(f){const n=f.name.toLowerCase();
   if(n.endsWith('.vcf')){return{kind:'people',list:parseVcf(await f.text())};}
   if(n.endsWith('.csv')||n.endsWith('.txt')){return{kind:'table',table:parseCsv(await f.text())};}
-  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');const wb=window.XLSX.read(await f.arrayBuffer(),{type:'array'});const sh=wb.Sheets[wb.SheetNames[0]];
+  await loadScript('lib/xlsx.full.min.js');const wb=window.XLSX.read(await f.arrayBuffer(),{type:'array'});const sh=wb.Sheets[wb.SheetNames[0]];
   return{kind:'table',table:window.XLSX.utils.sheet_to_json(sh,{header:1,raw:false,defval:''})};}
 function parseCsv(t){t=t.replace(/^﻿/,'');const first=t.split(/\r?\n/)[0]||'';const sep=[';',',','\t'].map(c=>[c,first.split(c).length]).sort((a,b)=>b[1]-a[1])[0][0];
   const rows=[];let row=[],cur='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
