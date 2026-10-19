@@ -1089,24 +1089,51 @@ async function fsChoose(){if(!fsOK())return toast('Αυτή η συσκευή δ
   await fsPut(h);const ok=await fsSave(h);toast(ok?'Ο φάκελος ορίστηκε και μπήκε το πρώτο αντίγραφο.':'Ο φάκελος ορίστηκε.','ok');render();}
 async function fsDir(root){try{return await root.getDirectoryHandle(BACKUP_SUB,{create:true});}catch(e){return null;}}
 async function fsSave(root){root=root||await fsRoot(false);if(!root)return false;const d=await fsDir(root);if(!d)return false;
-  try{const fh=await d.getFileHandle('imerologio-'+todayISO()+'.json',{create:true});const w=await fh.createWritable();await w.write(backupText());await w.close();
+  try{const fh=await d.getFileHandle('imerologio-'+todayISO()+'.json',{create:true});const out=await backupOut();if(!out)return false;const w=await fh.createWritable();await w.write(out);await w.close();
     const names=[];for await(const[n,h]of d.entries())if(h.kind==='file'&&/^imerologio-\d{4}-\d{2}-\d{2}\.json$/.test(n))names.push(n);names.sort().reverse().slice(30).forEach(n=>d.removeEntry(n).catch(()=>{}));
     S.data.meta.folderLast=Date.now();return true;}catch(e){return false;}}
 async function fsList(){const root=await fsRoot(false);if(!root)return[];const d=await fsDir(root);if(!d)return[];const L=[];try{for await(const[n,h]of d.entries())if(h.kind==='file'&&n.endsWith('.json'))L.push([n,h]);}catch(e){}return L.sort((a,b)=>b[0].localeCompare(a[0])).slice(0,10);}
 // μέσα στην εφαρμογή (ιδιωτικός χώρος του φυλλομετρητή)
 async function opfsDir(){try{const r=await navigator.storage.getDirectory();return await r.getDirectoryHandle('imerologio-antigrafa',{create:true});}catch(e){return null;}}
-async function opfsSave(){const d=await opfsDir();if(!d)return false;try{const fh=await d.getFileHandle('imerologio-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.json',{create:true});const w=await fh.createWritable();await w.write(backupText());await w.close();
+async function opfsSave(){const d=await opfsDir();if(!d)return false;const out=await backupOut();if(!out)return false;try{const fh=await d.getFileHandle('imerologio-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.json',{create:true});const w=await fh.createWritable();await w.write(out);await w.close();
   const L=[];for await(const[n,h]of d.entries())if(h.kind==='file')L.push(n);L.sort().reverse().slice(BK_KEEP).forEach(n=>d.removeEntry(n).catch(()=>{}));S.data.meta.opfsLast=Date.now();return true;}catch(e){return false;}}
 async function opfsList(){const d=await opfsDir();if(!d)return[];const L=[];try{for await(const[n,h]of d.entries())if(h.kind==='file')L.push([n,h]);}catch(e){}return L.sort((a,b)=>b[0].localeCompare(a[0]));}
 function backupText(){return JSON.stringify({app:'imerologio',version:APP_VERSION,savedAt:new Date().toISOString(),data:S.data});}
+/* ---------- κρυπτογράφηση αντιγράφων με κωδικό (AES-GCM 256, κλειδί από τον κωδικό με PBKDF2-SHA256) ----------
+   Το κλειδί (όχι ο κωδικός) φυλάγεται στη συσκευή ως μη εξαγώγιμο, για να γίνονται τα αυτόματα αντίγραφα χωρίς ερώτηση.
+   Αν λείπει το κλειδί ενώ η κρυπτογράφηση είναι ανοιχτή, ΔΕΝ γράφεται αντίγραφο σε απλό κείμενο. */
+const ENC_V='glen-aes-gcm-1',ENC_ITER=310000;
+const encOn=()=>!!(S.data.settings.bkEnc&&S.data.settings.bkEnc.on);
+async function encDerive(pass,salt){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',hash:'SHA-256',salt,iterations:ENC_ITER},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+const encKeyGet=()=>fsDo('readonly',st=>st.get('imerologio-enckey')),encKeyPut=k=>fsDo('readwrite',st=>st.put(k,'imerologio-enckey')),encKeyDel=()=>fsDo('readwrite',st=>st.delete('imerologio-enckey'));
+/* το κείμενο που γράφεται: κρυπτογραφημένο αν είναι ανοιχτή η κρυπτογράφηση· null = δεν πρέπει να γραφτεί τίποτα */
+async function backupOut(){const plain=backupText();if(!encOn())return plain;const K=await encKeyGet();if(!K||!K.key||!K.salt)return null;
+  const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},K.key,new TextEncoder().encode(plain)));
+  return JSON.stringify({app:'imerologio',enc:ENC_V,kdf:{name:'PBKDF2',hash:'SHA-256',iter:ENC_ITER,salt:b64uEnc(K.salt)},iv:b64uEnc(iv),ct:b64uEnc(ct),version:APP_VERSION,savedAt:new Date().toISOString(),count:{people:S.data.students.length,appts:(S.data.appts||[]).length}});}
+async function encDecrypt(o,pass){const salt=b64uDec(o.kdf.salt);const key=await encDerive(pass,salt);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64uDec(o.iv)},key,b64uDec(o.ct));return new TextDecoder().decode(pt);}
+function passDlg(title,{twice=false,note=''}={}){return new Promise(res=>{let done=false;const md=modal(`<h3 style="margin-top:0">${title}</h3>${note?`<p class="small muted" style="margin-top:0">${note}</p>`:''}
+   <form id="pw"><div class="field"><label class="f" for="pw1">Κωδικός</label><input class="in" id="pw1" type="password" autocomplete="new-password" minlength="${twice?8:1}" required></div>
+   ${twice?`<div class="field"><label class="f" for="pw2">Ξανά ο κωδικός</label><input class="in" id="pw2" type="password" autocomplete="new-password" required></div>`:''}
+   <label class="check small"><input type="checkbox" id="pws"> Εμφάνιση κωδικού</label>
+   <div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">${ic('check',16)} Εντάξει</button></div></form>`,{guard:false,onClose:()=>{if(!done)res(null);}});
+  setTimeout(()=>$('#pw1',md.el).focus(),60);$('#pws',md.el).onchange=e=>$$('input[type=password],input.pwv',md.el).forEach(i=>{i.type=e.target.checked?'text':'password';i.classList.add('pwv');});
+  $('#pw',md.el).onsubmit=e=>{e.preventDefault();const a=$('#pw1',md.el).value;if(twice){if(a.length<8)return toast('Τουλάχιστον 8 χαρακτήρες.','bad');if(a!==$('#pw2',md.el).value)return toast('Οι δύο κωδικοί δεν είναι ίδιοι.','bad');}done=true;md.close();res(a);};});}
+async function encSetup(){const p=await passDlg('🔐 Κωδικός για τα αντίγραφα',{twice:true,note:'Με αυτόν κλειδώνουν τα αντίγραφα (φάκελος, σύννεφο, κοινοποίηση, μέσα στην εφαρμογή). <b>Αν τον ξεχάσεις, τα αντίγραφα δεν ανοίγουν με κανέναν τρόπο</b> — γράψ\' τον κάπου ασφαλές. Τουλάχιστον 8 χαρακτήρες.'});if(!p)return false;
+  const salt=crypto.getRandomValues(new Uint8Array(16));const key=await encDerive(p,salt);await encKeyPut({key,salt});
+  S.data.settings.bkEnc={on:true,since:new Date().toISOString()};save();await opfsSave();toast('Τα αντίγραφα κρυπτογραφούνται πλέον με τον κωδικό σου.','ok');return true;}
+async function encOff(){if(!await confirmDlg('Να σταματήσει η κρυπτογράφηση; Τα επόμενα αντίγραφα θα είναι απλό κείμενο και όποιος τα βρει θα τα διαβάζει.',{ok:'Σταμάτησε',danger:true}))return;
+  await encKeyDel();S.data.settings.bkEnc={on:false};save();toast('Η κρυπτογράφηση σταμάτησε.');render();}
+async function encNeedKey(){if(!encOn())return true;const K=await encKeyGet();if(K&&K.key)return true;
+  toast('Λείπει το κλειδί των αντιγράφων σε αυτή τη συσκευή — όρισε ξανά τον κωδικό.','bad');return encSetup();}
 const bkName=()=>'imerologio-'+todayISO()+'.json';
 function bkWays(){return Object.assign({folder:false,cloud:false},S.data.settings.bkWays||{});}
 function markBacked(){S.data.meta.lastBackup=Date.now();S.data.meta.changes=0;try{localStorage.setItem(STORE,JSON.stringify(S.data));}catch(e){}}
 function bkStatusShort(){const m=S.data.meta;return m.lastBackup?'Τελευταίο: '+fmtShort(isoDate(new Date(m.lastBackup)))+(m.changes?' · '+m.changes+' αλλαγές από τότε':''):'Δεν έχει κρατηθεί ακόμα';}
-async function cloudShare(){const f=new File([backupText()],bkName(),{type:'application/json'});
+async function cloudShare(){if(!await encNeedKey())return false;const out=await backupOut();if(!out)return false;const f=new File([out],bkName(),{type:'application/json'});
   if(navigator.canShare&&navigator.canShare({files:[f]})){try{await navigator.share({files:[f],title:'Αντίγραφο Ημερολογίου'});S.data.meta.cloudLast=Date.now();markBacked();toast('Έτοιμο. Αν διάλεξες το σύννεφο, το αρχείο ανέβηκε εκεί.','ok');return true;}catch(e){if(e&&e.name==='AbortError'){toast('Ακυρώθηκε· δεν ανέβηκε τίποτα.');return false;}}}
-  downloadText(bkName(),backupText(),'application/json');markBacked();toast('Το αρχείο κατέβηκε στις λήψεις. Ανέβασέ το στο σύννεφό σου.','ok');return true;}
-async function backupAllNow(){const W=bkWays(),ok=[],no=[];await opfsSave();ok.push('μέσα στην εφαρμογή');
+  downloadText(bkName(),out,'application/json');markBacked();toast('Το αρχείο κατέβηκε στις λήψεις. Ανέβασέ το στο σύννεφό σου.','ok');return true;}
+async function backupAllNow(){if(!await encNeedKey())return;const W=bkWays(),ok=[],no=[];await opfsSave();ok.push('μέσα στην εφαρμογή');
   if(W.folder){(await fsSave(await fsRoot(true)))?ok.push('φάκελος'):no.push('φάκελος');}
   if(W.cloud){(await cloudShare())?ok.push('σύννεφο'):no.push('σύννεφο');}
   markBacked();toast('✓ Αντίγραφο σε: '+ok.join(', ')+'.'+(no.length?' Δεν έγινε σε: '+no.join(', ')+'.':'')+(!W.folder&&!W.cloud?' Διάλεξε και έναν τρόπο έξω από την εφαρμογή.':''),no.length?'bad':'ok');render();}
@@ -1117,6 +1144,9 @@ async function backupPage(el){const W=bkWays(),m=S.data.meta;const root=fsOK()?a
   el.innerHTML=`<div class="card section bkhead"><p class="small" style="margin:0 0 10px">${m.lastBackup?'Τελευταίο αντίγραφο: <b>'+fmtDate(new Date(m.lastBackup).toISOString())+'</b>.':'<b>Δεν έχει κρατηθεί ακόμα αντίγραφο.</b>'} Αλλαγές από τότε: ${m.changes||0}.</p>
    <button class="btn pri wide" id="bk-all">🛟 Κράτα αντίγραφο τώρα</button>
    <p class="tiny muted" style="margin:8px 0 0">Μέσα στην εφαρμογή κρατιέται πάντα αντίγραφο μόνο του. Για ασφάλεια διάλεξε και έναν τρόπο έξω από αυτήν.</p></div>
+  <div class="card section encard ${encOn()?'on':''}"><div class="spread"><b>🔐 Κρυπτογράφηση αντιγράφων</b><span class="small ${encOn()?'':'muted'}">${encOn()?'✓ Ενεργή':'Ανενεργή'}</span></div>
+   <p class="small" style="margin:6px 0 10px">${encOn()?'Όλα τα αντίγραφα (φάκελος, σύννεφο, αρχείο, μέσα στην εφαρμογή) κλειδώνουν με τον κωδικό σου. Χωρίς αυτόν δεν ανοίγουν.':`Τα αντίγραφα έχουν ονόματα, τηλέφωνα${isHealthProf()?' ασθενών':''} και ραντεβού. Με κωδικό, όποιος βρει το αρχείο δεν μπορεί να το διαβάσει.${isHealthProf()?' <b>Για επάγγελμα υγείας το συνιστούμε έντονα.</b>':''}`}</p>
+   ${encOn()?`<div class="row"><button class="btn" id="enc-ch">🔑 Αλλαγή κωδικού</button><button class="btn ghost" id="enc-off">Σταμάτημα</button></div><p class="tiny muted" style="margin:8px 0 0">Τα παλιότερα αντίγραφα ανοίγουν με τον κωδικό που είχαν όταν φτιάχτηκαν.</p>`:`<button class="btn pri" id="enc-on">🔐 Όρισε κωδικό</button>`}</div>
   <details class="bkcard" open><summary><span class="bkic">📁</span><span class="grow"><b>Φάκελος στο κινητό</b><small>${!fsOK()?'δεν υποστηρίζεται σε αυτή τη συσκευή':root?'«'+esc(root.name)+'» / '+BACKUP_SUB+' · '+ago(m.folderLast):'δεν έχει οριστεί'}</small></span></summary>
    ${fsOK()?`<label class="check"><input type="checkbox" data-way="folder" ${W.folder?'checked':''}> Να γίνεται με το «Κράτα αντίγραφο τώρα» και μόνο του κάθε μέρα</label>
    <div class="row" style="margin-top:10px"><button class="btn" id="fs-pick">${ic('folder',16)} ${root?'Άλλαξε φάκελο':'Διάλεξε φάκελο'}</button>${root?`<button class="btn ghost" id="fs-x">${ic('x',15)} Αποσύνδεση</button>`:''}</div>
@@ -1138,14 +1168,19 @@ async function backupPage(el){const W=bkWays(),m=S.data.meta;const root=fsOK()?a
    <label class="btn danger">${ic('history',16)} Επαναφορά από αρχείο<input type="file" id="bk-file" accept="application/json,.json,.txt" hidden></label></details>`;
   const fileRows=(L,attr)=>L.length?`<div class="list" style="margin-top:10px">${L.map(([n],i)=>`<button class="rw" ${attr}="${i}"><span class="ricon">${ic('history',16)}</span><span class="grow"><b>${esc(n.replace('imerologio-','').replace('.json',''))}</b><small>${i===0?'νεότερο · ':''}πάτα για επαναφορά</small></span></button>`).join('')}</div>`:'<p class="small muted">Δεν υπάρχουν ακόμα αντίγραφα.</p>';
   $('#bk-all',el).onclick=backupAllNow;$('#bk-cloud',el).onclick=async()=>{await cloudShare();render();};
-  $('#bk-share',el).onclick=cloudShare;$('#bk-dl',el).onclick=()=>{downloadText(bkName(),backupText(),'application/json');markBacked();toast('Το αρχείο αποθηκεύτηκε στις λήψεις.','ok');};
+  $('#bk-share',el).onclick=cloudShare;$('#bk-dl',el).onclick=async()=>{if(!await encNeedKey())return;const out=await backupOut();if(!out)return;downloadText(bkName(),out,'application/json');markBacked();toast('Το αρχείο αποθηκεύτηκε στις λήψεις.','ok');};
+  if(encOn())encKeyGet().then(K=>{if(K&&K.key)return;const c=$('.encard',el);if(c)c.insertAdjacentHTML('beforeend',`<div class="note small" style="margin-top:10px">⚠️ <b>Σε αυτή τη συσκευή λείπει το κλειδί των αντιγράφων</b>, οπότε δεν κρατιούνται αντίγραφα. Πάτα «Αλλαγή κωδικού» και γράψε κωδικό.</div>`);});
+  {const eo=$('#enc-on',el);if(eo)eo.onclick=async()=>{if(await encSetup())render();};const ec=$('#enc-ch',el);if(ec)ec.onclick=async()=>{if(await encSetup())render();};const ex=$('#enc-off',el);if(ex)ex.onclick=encOff;}
   $('#bk-file',el).onchange=e=>{const f=e.target.files[0];if(f)f.text().then(restoreFrom).catch(()=>toast('Δεν διαβάστηκε το αρχείο.','bad'));e.target.value='';};
   $$('[data-way]',el).forEach(x=>x.onchange=async()=>{const w=bkWays();w[x.dataset.way]=x.checked;S.data.settings.bkWays=w;save();if(x.dataset.way==='folder'&&x.checked&&!await fsGet())fsChoose();});
   const fp=$('#fs-pick',el);if(fp)fp.onclick=async()=>{const w=bkWays();w.folder=true;S.data.settings.bkWays=w;save();fsChoose();};
   const fx=$('#fs-x',el);if(fx)fx.onclick=async()=>{await fsDel();const w=bkWays();w.folder=false;S.data.settings.bkWays=w;save();toast('Ο φάκελος αποσυνδέθηκε. Τα αρχεία του δεν σβήστηκαν.');render();};
   if(fsOK()&&root){const FL=await fsList();const box=$('#fs-list',el);if(box){box.innerHTML=fileRows(FL,'data-fsr');box.onclick=async e=>{const b=e.target.closest('[data-fsr]');if(b)restoreFrom(await(await FL[+b.dataset.fsr][1].getFile()).text());};}}
   const OL=await opfsList();const ob=$('#op-list',el);if(ob){ob.innerHTML=fileRows(OL,'data-opr');ob.onclick=async e=>{const b=e.target.closest('[data-opr]');if(b)restoreFrom(await(await OL[+b.dataset.opr][1].getFile()).text());};}}
-async function restoreFrom(txt){let o=null;try{const t=String(txt||'');o=JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1));}catch(e){}const d=o&&o.app==='imerologio'&&o.data;
+async function restoreFrom(txt){let o=null;try{const t=String(txt||'');o=JSON.parse(t.slice(t.indexOf('{'),t.lastIndexOf('}')+1));}catch(e){}
+  if(o&&o.enc===ENC_V){for(let tries=0;tries<3;tries++){const p=await passDlg('🔐 Κρυπτογραφημένο αντίγραφο',{note:`Γράψε τον κωδικό των αντιγράφων.${o.count?` Έχει ${o.count.people} πρόσωπα και ${o.count.appts} ραντεβού.`:''}`});if(p==null)return;
+      try{o=JSON.parse(await encDecrypt(o,p));break;}catch(e){toast('Λάθος κωδικός.','bad');if(tries===2)return;}}}
+  const d=o&&o.app==='imerologio'&&o.data;
   if(!d||!Array.isArray(d.students))return toast('Το αρχείο δεν είναι αντίγραφο του Ημερολογίου.','bad');
   if(!await confirmDlg(`Επαναφορά αντιγράφου με ${d.students.length} πρόσωπα και ${(d.appts||[]).length} ραντεβού; Ό,τι υπάρχει τώρα θα αντικατασταθεί.`,{ok:'Επαναφορά',danger:true}))return;
   await opfsSave();localStorage.setItem(STORE,JSON.stringify(d));S.data=loadData();applyIdentity();toast('Έγινε επαναφορά.','ok');go('today');render();}
