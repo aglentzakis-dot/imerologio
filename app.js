@@ -13,6 +13,8 @@ var LIB_SRI={'lib/leaflet.js':'sha384-tM1WyRnQZLXgeuR/dXHqqQcD5jN9+bgKmZW55OJtM9
  'lib/leaflet.css':'sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H',
  'lib/MarkerCluster.css':'sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV',
  'lib/leaflet.markercluster.js':'sha384-LX47TNczFAfEZHVwAv6z4jjDF8/gxQrpZeJK7RJC/dOTXDwh3eCwsfBOcpn9tyBG'};
+/* επαγγέλματα υγείας: ΚΛΕΙΔΩΜΕΝΑ (δεν φαίνονται, δεν προσφέρονται). Ο κώδικας μένει· για να ξανανοίξουν: SHOW_HEALTH=true — μόνο μετά από νομικό έλεγχο */
+var SHOW_HEALTH=false;
 var OFF_REASONS=[['Άδεια','🏖️'],['Κλειστό','🔒'],['Σεμινάριο','🎓'],['Ταξίδι','✈️'],['Προσωπικό','🏠']];
 const APP_VERSION=document.querySelector('meta[name="app-version"]').content;
 const STORE='imerologio-data';
@@ -104,7 +106,7 @@ const groupList=g=>g.list.concat(customProfs().filter(c=>c.group===g.g));
 function findProf(id){for(const g of IM_GROUPS)for(const p of groupList(g))if(p.id===id)return{g,p};return null;}
 const PROF_ICONS=['✨','💼','🧰','🔧','🔨','🪚','🎨','🖌️','✂️','💇','💅','🧖','💆','🩺','🦷','🧠','🐾','🐶','📚','🎓','🎹','🎸','🏋️','🧘','⚽','🚗','🚚','🚕','🏠','🔑','⚖️','🧮','📐','💡','🌿','🌸','🧽','🍽️','☕','🍰','📷','🎬','💻','📱','🧵','👗','👶','👵','🙏','🛠️'];
 const HEALTH_G='Υγεία & φροντίδα';const HEALTH_RE=/(ιατρ|γιατρ|θεραπ|ψυχ|νοσηλ|μαι[αά]|οδοντ|διαιτ|ορθοπ|παιδιατ|καρδιο|δερματο|οφθαλμ|γυναικολ|ωρλ|ακτινο|μικροβιο|ρευματο|νευρο|ενδοκριν|ουρολ|ψυχοθερ|συμβουλ.*ψυχ|ποδολ|ομοιοπαθ|βελονισ|χειροπρακ|οστεοπαθ|logo|therap|doctor|clinic|nurse|psych|dent)/;
-function profAddDialog(groupName,old){return new Promise(res=>{const GS=IM_GROUPS.filter(x=>x.g!==OTHER_G);let g=GS.find(x=>x.g===((old&&old.group)||groupName))||null;let icon=old?old.i:'✨';let done=false;
+function profAddDialog(groupName,old){return new Promise(res=>{const GS=IM_GROUPS.filter(x=>x.g!==OTHER_G&&(SHOW_HEALTH||x.g!==HEALTH_G||(old&&old.group===HEALTH_G)));let g=GS.find(x=>x.g===((old&&old.group)||groupName))||null;let icon=old?old.i:'✨';let done=false;
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${old?'Αλλαγή επαγγέλματος':'Νέο επάγγελμα'}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <form id="pa"><div class="field"><label class="f" for="pa-g">Κατηγορία <span class="tiny muted">· υποχρεωτικό</span></label><select class="in" id="pa-g" name="g" required><option value="">— Διάλεξε κατηγορία —</option>${GS.map(x=>`<option value="${esc(x.g)}" ${g&&g.g===x.g?'selected':''}>${esc(x.g)}</option>`).join('')}</select>
     <div class="tiny muted" style="margin-top:4px">Από την κατηγορία παίρνει τις λέξεις, τη διάρκεια, το χρώμα — και για τα επαγγέλματα υγείας, τον τρόπο που δουλεύουν οι κρατήσεις.</div><div id="pa-hh"></div></div><div class="field"><label class="f" for="pa-n">Όνομα επαγγέλματος</label><input class="in" id="pa-n" name="n" required value="${esc(old?old.n:'')}" placeholder="π.χ. Μασέρ, Tattoo artist, Λογοθεραπευτής"></div>
@@ -112,9 +114,9 @@ function profAddDialog(groupName,old){return new Promise(res=>{const GS=IM_GROUP
    <div class="field" style="margin-top:12px"><label class="f" for="pa-t">Συνηθισμένες εργασίες <span class="tiny muted">· προαιρετικό, μία ανά γραμμή</span></label><textarea class="in" id="pa-t" name="t" style="min-height:80px" placeholder="π.χ.&#10;Μασάζ πλάτης&#10;Αθλητικό μασάζ">${esc(old?(old.t||'').split('|').join('\n'):'')}</textarea></div>
    <div class="row" style="justify-content:space-between">${old?`<button type="button" class="btn danger" id="pa-del">${ic('trash',16)}</button>`:'<span></span>'}<span class="row"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">${ic('check',16)} ${old?'Αποθήκευση':'Προσθήκη'}</button></span></div></form>`,{onClose:()=>{if(!done)res(null);}});
   md.el.addEventListener('click',e=>{const b=e.target.closest('[data-pi]');if(b){icon=b.dataset.pi;$$('[data-pi]',md.el).forEach(x=>x.classList.toggle('on',x===b));}});
-  const hh=()=>{const n=normT($('#pa-n',md.el).value),sg=$('#pa-g',md.el).value;const box=$('#pa-hh',md.el);box.innerHTML=n&&HEALTH_RE.test(n)&&sg!==HEALTH_G?`<div class="note small" style="margin-top:6px">🩺 Μοιάζει με επάγγελμα υγείας. Αν είναι, βάλ' το στην κατηγορία «${HEALTH_G}» για να προστατεύονται τα στοιχεία των ασθενών. <button type="button" class="btn sm" id="pa-tohealth">Βάλ' το εκεί</button></div>`:'';const b=$('#pa-tohealth',md.el);if(b)b.onclick=()=>{$('#pa-g',md.el).value=HEALTH_G;hh();};};
+  const hh=()=>{const n=normT($('#pa-n',md.el).value),sg=$('#pa-g',md.el).value;const box=$('#pa-hh',md.el);if(!SHOW_HEALTH){box.innerHTML=n&&HEALTH_RE.test(n)?`<div class="note small warnnote" style="margin-top:6px">⚠️ Το Ημερολόγιο <b>δεν προορίζεται για επαγγέλματα υγείας</b> ούτε για ιατρικά στοιχεία ασθενών.</div>`:'';return;}box.innerHTML=n&&HEALTH_RE.test(n)&&sg!==HEALTH_G?`<div class="note small" style="margin-top:6px">🩺 Μοιάζει με επάγγελμα υγείας. Αν είναι, βάλ' το στην κατηγορία «${HEALTH_G}» για να προστατεύονται τα στοιχεία των ασθενών. <button type="button" class="btn sm" id="pa-tohealth">Βάλ' το εκεί</button></div>`:'';const b=$('#pa-tohealth',md.el);if(b)b.onclick=()=>{$('#pa-g',md.el).value=HEALTH_G;hh();};};
   $('#pa-n',md.el).addEventListener('input',hh);$('#pa-g',md.el).addEventListener('change',hh);hh();
-  $('#pa',md.el).onsubmit=e=>{e.preventDefault();const o=fd(e.target);const n=o.n.trim();if(!n)return;g=GS.find(x=>x.g===o.g);if(!g)return toast('Διάλεξε κατηγορία.','bad');const t=o.t.split('\n').map(x=>x.trim()).filter(Boolean).join('|');
+  $('#pa',md.el).onsubmit=e=>{e.preventDefault();const o=fd(e.target);const n=o.n.trim();if(!n)return;if(!SHOW_HEALTH&&HEALTH_RE.test(normT(n))&&!(old&&old.group===HEALTH_G))return toast('Το Ημερολόγιο δεν προορίζεται για επαγγέλματα υγείας.','bad');g=GS.find(x=>x.g===o.g);if(!g)return toast('Διάλεξε κατηγορία.','bad');const t=o.t.split('\n').map(x=>x.trim()).filter(Boolean).join('|');
     const L=customProfs().slice();if(old){Object.assign(L.find(x=>x.id===old.id),{n,i:icon,t,group:g.g});}else L.push({id:'cp_'+uid().slice(0,8),n,i:icon,t,group:g.g,custom:true});
     S.data.settings.customProfs=L;save();done=true;md.close();res(old?old.id:L[L.length-1].id);};
   const dl=$('#pa-del',md.el);if(dl)dl.onclick=async()=>{if(!await confirmDlg(`Διαγραφή του επαγγέλματος «${esc(old.n)}»;`,{ok:'Διαγραφή',danger:true}))return;S.data.settings.customProfs=customProfs().filter(x=>x.id!==old.id);if(S.data.settings.prof===old.id)S.data.settings.prof='allo';save();done=true;md.close();res('deleted');};});}
@@ -211,7 +213,11 @@ addEventListener('beforeunload',e=>{if(pageDirty()){e.preventDefault();e.returnV
 
 /* ---------- πρώτη χρήση: επάγγελμα και όνομα ---------- */
 const OTHER_G='Άλλο';
-function profPickerHTML(cur,edit){return IM_GROUPS.map(g=>`<div class="pgrp"><i style="background:${g.color}"></i>${esc(g.g)}</div><div class="ptiles">${groupList(g).filter(p=>!(g.g===OTHER_G&&p.id==='allo'&&cur!=='allo')).map(p=>`<button type="button" data-pf="${p.id}" class="ptile ${p.id===cur?'on':''} ${p.custom?'mine':''}" style="--gc:${g.color}"><span class="pti">${p.i||'✨'}</span><span class="ptn">${esc(p.n)}</span>${p.custom&&edit?`<span class="pted" data-pedit="${p.id}" role="button" aria-label="Αλλαγή">${ic('edit',13)}</span>`:''}</button>`).join('')}<button type="button" data-padd="${g.g===OTHER_G?'':esc(g.g)}" class="ptile padd" style="--gc:${g.color}"><span class="pti">${ic('plus',22)}</span><span class="ptn">${g.g===OTHER_G?'Δικό μου επάγγελμα (διαλέγεις κατηγορία)':'Δικό μου επάγγελμα'}</span></button></div>`).join('');}
+/* οι κατηγορίες που φαίνονται: χωρίς «Υγεία» (εκτός αν είναι ήδη το επάγγελμά σου)· ο κτηνίατρος περνά στις «Υπηρεσίες» */
+function visGroups(cur){if(SHOW_HEALTH)return IM_GROUPS;const H=IM_GROUPS.find(g=>g.g===HEALTH_G);const curH=H&&groupList(H).some(p=>p.id===cur&&p.id!=='ktiniatros');
+  return IM_GROUPS.filter(g=>g.g!==HEALTH_G||curH).map(g=>{if(g.g!=='Υπηρεσίες'||!H||curH)return g;const vet=groupList(H).filter(p=>p.id==='ktiniatros');if(!vet.length)return g;
+    return Object.assign(Object.create(Object.getPrototypeOf(g)),g,{list:(g.list||[]).concat(vet.filter(v=>!(g.list||[]).some(x=>x.id===v.id)))});});}
+function profPickerHTML(cur,edit){return visGroups(cur).map(g=>`<div class="pgrp"><i style="background:${g.color}"></i>${esc(g.g)}</div><div class="ptiles">${groupList(g).filter(p=>!(g.g===OTHER_G&&p.id==='allo'&&cur!=='allo')).map(p=>`<button type="button" data-pf="${p.id}" class="ptile ${p.id===cur?'on':''} ${p.custom?'mine':''}" style="--gc:${g.color}"><span class="pti">${p.i||'✨'}</span><span class="ptn">${esc(p.n)}</span>${p.custom&&edit?`<span class="pted" data-pedit="${p.id}" role="button" aria-label="Αλλαγή">${ic('edit',13)}</span>`:''}</button>`).join('')}<button type="button" data-padd="${g.g===OTHER_G?'':esc(g.g)}" class="ptile padd" style="--gc:${g.color}"><span class="pti">${ic('plus',22)}</span><span class="ptn">${g.g===OTHER_G?'Δικό μου επάγγελμα (διαλέγεις κατηγορία)':'Δικό μου επάγγελμα'}</span></button></div>`).join('');}
 function firstRun(){
   const md=modal(`<div class="fr-head">${LOGO}<div><h2 style="margin:0">Καλώς ήρθες!</h2><div class="small muted">Ημερολόγιο ραντεβού για κάθε επάγγελμα</div></div></div>
    <div class="field"><label class="f" for="fr-n">Το όνομά σου</label><input class="in" id="fr-n" autocomplete="name" placeholder="π.χ. Μαρία Παπαδοπούλου"></div>
@@ -1314,6 +1320,19 @@ function holdToggle(date,s,by){const pv=by||'me';const L=blocks();const m=tmin(s
   else L.push({id:uid(),kind:'once',date,s,e:tstr(m+step),by:pv==='me'?undefined:pv,hold:true,cat:'hold',ex:{},created:new Date().toISOString()});
   save();render();}
 window.holdToggle=holdToggle;
+function holdRange(date,s,e,by){const pv=by||'me';if(!date||!s)return;if(!e||tmin(e)<=tmin(s))e=tstr(Math.min(tmin(s)+30,24*60-1));
+  if(occ(date,date,{by:pv}).some(o=>tmin(o.s)<tmin(e)&&tmin(s)<tmin(o.e)))return toast('Εκεί υπάρχει ήδη ραντεβού.','bad');
+  blocks().push({id:uid(),kind:'once',date,s,e,by:pv==='me'?undefined:pv,hold:true,cat:'hold',ex:{},created:new Date().toISOString()});save();render();
+  toast(`🔒 Κρατήθηκε ${WDAYS[wdOf(date)]} ${fmtShort(date)} ${s}–${e} για τους δικούς σου ${LX('whoPlL')}. Δεν φαίνεται στον σύνδεσμο κρατήσεων.`,'ok');}
+/* από το «Νέο ραντεβού» → «🔒 Κράτημα ωρών»: μικρό παράθυρο με μέρα και ώρες */
+function holdAsk(date,s,e,by){if(!e||tmin(e)<=tmin(s))e=tstr(Math.min(tmin(s||'09:00')+60,24*60-1));
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">🔒 Κράτημα ωρών</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <p class="small muted" style="margin-top:0">Οι ώρες μένουν για τους δικούς σου ${esc(LX('whoPlL'))}: εσύ κλείνεις κανονικά ραντεβού, αλλά δεν φαίνονται ελεύθερες στον σύνδεσμο κρατήσεων.</p>
+   <form id="hf"><div class="field"><label class="f" for="hf-d">Ημέρα</label><input class="in" type="date" id="hf-d" name="d" value="${esc(date||todayISO())}" required></div>
+    <div class="row" style="gap:10px"><div class="field grow"><label class="f" for="hf-s">Από</label><input class="in" type="time" id="hf-s" name="s" value="${esc(s||'09:00')}" required></div><div class="field grow"><label class="f" for="hf-e">Έως</label><input class="in" type="time" id="hf-e" name="e" value="${esc(e)}" required></div></div>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">🔒 Κράτησέ τες</button></div></form>`,{guard:false});
+  $('#hf',md.el).onsubmit=ev=>{ev.preventDefault();const o=fd(ev.target);if(tmin(o.e)<=tmin(o.s))return toast('Το «έως» πρέπει να είναι μετά το «από».','bad');md.close();holdRange(o.d,o.s,o.e,by);};}
+window.holdRange=holdRange;window.holdAsk=holdAsk;
 window.IM_BLKTAP=key=>{const[id,date]=key.split('|');const b=blocks().find(x=>x.id===id);if(!b||!b.hold)return false;
   if(window.HOLD_MODE){if(b.kind==='once')S.data.blocks=blocks().filter(x=>x!==b);else{b.ex=b.ex||{};b.ex[date]='skip';}save();render();return true;}
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">🔒 Κρατημένη ώρα</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>

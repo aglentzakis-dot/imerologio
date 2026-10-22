@@ -9,7 +9,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self' https://nominatim.openstreetmap.org; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="same-origin">
-<meta name="app-version" content="1.66">
+<meta name="app-version" content="1.67">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -1792,6 +1792,9 @@ input[type=color]{width:44px;height:36px;border:1px solid var(--line);border-rad
 .bkwhere{padding-bottom:6px}.bkwhere>b{display:block;margin-bottom:4px}.bkwhere .bkw{padding:10px 4px;min-height:52px}.bkwhere .bkw:last-of-type{border-bottom:0}
 .bkw .bkwm{font-weight:700;font-size:1.15rem;width:24px;text-align:center}.bkw.ok .bkwm{color:var(--ok)}.bkw.no .bkwm{color:var(--bad)}
 .flash{animation:bkflash 1.2s ease-out}@keyframes bkflash{0%{box-shadow:0 0 0 3px var(--lilac-d)}100%{box-shadow:0 0 0 0 transparent}}
+.aseg{display:flex;gap:4px;background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:3px;margin:-4px 0 12px}
+.aseg button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 4px;font:inherit;font-size:.8rem;font-weight:600;color:var(--ink2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
+.aseg button.on{background:var(--paper,#fff);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
