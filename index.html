@@ -10,7 +10,7 @@
 <script src="plaisio.js"></script>
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self' https://nominatim.openstreetmap.org; frame-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="same-origin">
-<meta name="app-version" content="1.68">
+<meta name="app-version" content="1.69">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -1796,6 +1796,17 @@ input[type=color]{width:44px;height:36px;border:1px solid var(--line);border-rad
 .aseg{display:flex;gap:4px;background:var(--raise);border:1px solid var(--line);border-radius:12px;padding:3px;margin:-4px 0 12px}
 .aseg button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 4px;font:inherit;font-size:.8rem;font-weight:600;color:var(--ink2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}
 .aseg button.on{background:var(--paper,#fff);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.svtbl{display:flex;flex-direction:column;gap:10px;margin-bottom:8px}
+.svr{border:1px solid var(--line);border-radius:12px;padding:8px}.svr1{display:flex;gap:6px;align-items:center}.svr1 .in{flex:1;padding:8px 10px}
+.svweb{display:flex;align-items:center;gap:2px;font-size:.9rem;white-space:nowrap}.svr2{display:grid;gap:6px;margin-top:6px}
+.svm{display:flex;flex-direction:column;gap:2px;min-width:0}.svm small{font-size:.68rem;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svr .num,.svopt .num{text-align:center;padding:8px 4px}
+.svgrp{border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px}
+.svopt{display:grid;grid-template-columns:1fr 58px auto 30px;gap:6px;align-items:center;margin-top:6px}.svopt .in{padding:8px 9px;min-width:0}
+.svbr{grid-template-columns:1fr 104px 58px 30px}.svap{display:flex;align-items:center;gap:2px;font-size:.9rem}
+.svtot{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--raise);border:1px solid var(--line)}
+.svbtn{width:100%;justify-content:flex-start;gap:8px;text-align:left}.svbtn .grow{flex:1}
+.svlist{display:flex;flex-direction:column;gap:2px}.svchk{align-items:center;margin:2px 0}.svchk .grow{flex:1}
 </style>
 </head>
 <body>

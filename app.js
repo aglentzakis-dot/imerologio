@@ -669,7 +669,7 @@ function viewPerson(r){const fb=$('#fab');if(fb)fb.remove();const isNew=r.id==='
   const dl=$('#p-del');if(dl)dl.onclick=async()=>{const n=appts().filter(a=>a.sid===p0.id).length;if(!await confirmDlg(`Διαγραφή «${esc(stuName(p0))}»${n?` και ${n===1?'του ραντεβού του':'των '+n+' ραντεβού του'}`:''}; Δεν αναιρείται.`,{ok:'Διαγραφή',danger:true}))return;
     clearDraft();S.data.students=S.data.students.filter(x=>x.id!==p0.id);S.data.appts=appts().filter(a=>a.sid!==p0.id);S.data.waitlist=(S.data.waitlist||[]).filter(w=>w.sid!==p0.id);save();toast('Διαγράφηκε.');LEAVE_OK=true;go('people');};
   const nb=$('#p-new');if(nb)nb.onclick=()=>apptDialog({date:todayISO(),sids:[p0.id]});
-  {const pb=$('#p-book');if(pb)pb.onclick=()=>bookShareDialog(p0);}if(rb){scrollTo(0,0);setTimeout(()=>scrollTo(0,0),120);setTimeout(()=>scrollTo(0,0),400);}if(!isNew)consCard(p0);const rbb=$("#p-remback");if(rbb)rbb.onclick=()=>remBackGo();}
+  {const pb=$('#p-book');if(pb)pb.onclick=()=>bookShareDialog(p0);}if(rb){scrollTo(0,0);setTimeout(()=>scrollTo(0,0),120);setTimeout(()=>scrollTo(0,0),400);}if(!isNew)consCard(p0);if(!isNew)petsCard(p0);const rbb=$("#p-remback");if(rbb)rbb.onclick=()=>remBackGo();}
 const PERS_COLORS=['#7462B4','#3A8A61','#2F7FA8','#C77A3A','#B4527A','#8A7A2E','#C46A7A','#5A6ACF','#2E8C8C','#9C5BB5'];
 
 /* ---------- ρυθμίσεις: λίστα κατηγοριών, κάθε κατηγορία σε δική της σελίδα ---------- */
@@ -680,6 +680,7 @@ const SET_SECS=()=>[
   ['info','me',isPrivate()?'👤':'🏢',isPrivate()?'Προσωπικά στοιχεία':'Στοιχεία επιχείρησης',isPrivate()?(S.data.settings.myName||'Όνομα, τηλέφωνο'):(biz().name||'Επωνυμία, τηλέφωνο, ΑΦΜ')],
   ['staff','me',`👥`,'Προσωπικό',(providers().length===1?'1 άτομο κάνει ραντεβού':providers().length+' άτομα κάνουν ραντεβού')],
   ['hours','me','🕘','Ωράριο και αργίες',agCfg().from+'–'+agCfg().to],
+  ['svc','me','✂️','Υπηρεσίες και διάρκειες',svcOn()?(svcCfg().list.length+' υπηρεσίες'+(petMode()?' · κατοικίδια':'')+(svcBuf()?' · '+svcBuf()+'′ καθαρισμός':'')):'Η διάρκεια βγαίνει από τις υπηρεσίες'],
   ['start','view','🚪','Άνοιγμα εφαρμογής','Ανοίγει σε: '+START_OPTS.find(x=>x[0]===(S.data.settings.startView||'last'))[1]],
   ['look','view','🎨','Χρώμα και φόντο','Το χρώμα της εφαρμογής και το υδατογράφημα'],
   ['words','cli','🏷️','Πελάτες ή ασθενείς ή μαθητές;','Τώρα λέγονται «'+LX('whoPl')+'» και κλείνεις «'+LX('one')+'»'],
@@ -779,9 +780,9 @@ function pvPack(P,days){const PV=providers();if(PV.length<2||!bkCfg().pvPick)ret
 function weekTemplate(){const c=agCfg(),du=IM_DEF.dur(),t=todayISO();const W=[[],[],[],[],[],[],[]];
   for(let i=0;i<7;i++){const d=addDays(t,i);const wd=wdOf(d);if(!agCfg().days.includes(wd))continue;const PV=providers();const held=m=>PV.every(p=>blocks().some(b=>b.hold&&b.kind==='weekly'&&(b.days||[]).includes(wd)&&(b.by||'me')===p.id&&tmin(b.s)<m+du&&m<tmin(b.e)));
     for(let m=tmin(c.from);m+du<=tmin(c.to);m+=30)if(inWork(m,du)&&!held(m))W[wd].push(m);}return W;}
-async function bookLinkPerm(){const B=biz(),c=bkCfg();const W=weekTemplate();const all=W.flat();const t0=all.length?Math.floor(Math.min(...all)/15)*15:0;
+async function bookLinkPerm(){const B=biz(),c=bkCfg();const W=svcOn()?svcWeekCells():weekTemplate();const all=W.flat();const t0=all.length?Math.floor(Math.min(...all)/15)*15:0;
   const w=W.map(L=>{if(!L.length)return'';const n=Math.floor((Math.max(...all)-t0)/15)+1;const bits=new Array(Math.ceil(n/4)*4).fill(0);L.forEach(m=>{bits[(m-t0)/15|0]=1;});let h='';for(let k=0;k<bits.length;k+=4)h+=((bits[k]<<3)|(bits[k+1]<<2)|(bits[k+2]<<1)|bits[k+3]).toString(16);return h.replace(/0+$/,'');});
-  const D={v:2,pm:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,dd:c.days,t0,w,x:proState().until||''};if(providers().length>1&&bkCfg().pvPick)D.pv=providers().map(p=>({i:p.id,n:pvPub(p),c:p.color}));
+  const D={v:2,pm:1,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch,dd:c.days,t0,w,x:proState().until||''};if(svcOn())D.sv=svcPub();if(providers().length>1&&bkCfg().pvPick)D.pv=providers().map(p=>({i:p.id,n:pvPub(p),c:p.color}));
   return new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'#k='+await sealTxt('c',D);}
 async function qrDialog(){await loadScript('qr.js');const now=(await bookLink()).url,perm=await bookLinkPerm();const B=biz();const name=(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'';
   let tab='now';const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">🔳 Κωδικός QR για κρατήσεις</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
@@ -799,9 +800,10 @@ function qrPrint(url,name){const w=window.open('','_blank');if(!w)return toast('
    <p>Άνοιξε την κάμερα του κινητού σου, στόχευσε τον κωδικό και πάτα τον σύνδεσμο που εμφανίζεται. Διαλέγεις ώρα και μας τη στέλνεις.</p><p class="s">Ημερολόγιο · GlenApps</p>
    <script>setTimeout(function(){window.print()},400)<\/script></body></html>`);w.document.close();}
 async function bookLink(p){const B=biz(),c=bkCfg();const S2=bookSlots(c.days);
-  const D=Object.assign({v:2,hp:isHealthProf()?1:0,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},p?{pc:{i:p.id,n:stuName(p),ph:p.phone||((p.contacts||[])[0]||{}).phone||''},my:occ(todayISO(),addDays(todayISO(),c.days),{sid:p.id,by:''}).filter(o=>o.st==='').map(o=>[o.date,o.s]).slice(0,20)}:{},slotPack(S2,c.days));Object.assign(D,pvPack(D,c.days));
+  const D=Object.assign({v:2,hp:isHealthProf()?1:0,n:(isPrivate()?S.data.settings.myName:B.name||S.data.settings.myName)||'',ph:B.phone||'',em:B.email||'',o:LX('one'),c:themeColor(),l:window.LANG||'el',u:IM_DEF.dur(),g:Date.now(),ch:c.ch},p?{pc:{i:p.id,n:stuName(p),ph:p.phone||((p.contacts||[])[0]||{}).phone||''},my:occ(todayISO(),addDays(todayISO(),c.days),{sid:p.id,by:''}).filter(o=>o.st==='').map(o=>[o.date,o.s]).slice(0,20)}:{},svcOn()?svcPack(c.days):slotPack(S2,c.days));if(!svcOn())Object.assign(D,pvPack(D,c.days));
+  if(svcOn()&&p&&petMode()&&(p.pets||[]).length)D.pets=p.pets.slice(0,6).map(x=>({n:x.n,sp:x.sp,br:x.br,sz:x.sz,w:x.w,g:x.g}));
   const k=await sealTxt('c',D);
-  return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'#k='+k,slots:S2.reduce((a,x)=>a+x[1].length,0),days:S2.length};}
+  return{url:new URL('kratisi.html',location.href).href.split('#')[0].split('?')[0]+'#k='+k,slots:svcOn()?(D.fc||[]).filter(Boolean).length*4:S2.reduce((a,x)=>a+x[1].length,0),days:svcOn()?(D.fc||[]).filter(Boolean).length:S2.length};}
 /* ---------- Ημερολόγιο Pro (15 € τον χρόνο): ο σύνδεσμος κρατήσεων για τους πελάτες ----------
    Κλειδί «IM2…» (υπογραφή «I|») ή το κλειδί GlenApps Full «GA2…» (υπογραφή «GA|»), δεμένο με το email.
    Δωρεάν μένει μία αποστολή, για να δει κανείς πώς δουλεύει. Όλα τα υπόλοιπα του Ημερολογίου είναι δωρεάν. */
@@ -899,7 +901,9 @@ async function bookShareDialog(p){const B=biz();
 /* το πάτημα του συνδέσμου από το μήνυμα του πελάτη */
 function bookDecode(r){try{if(!r||r[0]!=='j')return null;const o=JSON.parse(new TextDecoder().decode(b64uDec(r.slice(1))));
   if(!o||o.v!==1||!/^\d{4}-\d{2}-\d{2}$/.test(o.d)||!/^\d{2}:\d{2}$/.test(o.s))return null;
-  const c=(x,n)=>String(x||'').replace(/\s+/g,' ').trim().slice(0,n);return{ad:c(o.ad,120),ca:o.ca===undefined?null:!!o.ca,ts:+o.ts||0,sid:c(o.sid,60),d:o.d,s:o.s,u:Math.min(Math.max(+o.u||IM_DEF.dur(),10),480),n:c(o.n,80),ph:c(o.ph,25),no:c(o.no,200),pr:!!o.pr,id:c(o.id,20),pv:c(o.pv,40),pn:c(o.pn,40)};}catch(e){return null;}}
+  const c=(x,n)=>String(x||'').replace(/\s+/g,' ').trim().slice(0,n);return{ad:c(o.ad,120),ca:o.ca===undefined?null:!!o.ca,ts:+o.ts||0,sid:c(o.sid,60),d:o.d,s:o.s,u:Math.min(Math.max(+o.u||IM_DEF.dur(),10),480),n:c(o.n,80),ph:c(o.ph,25),no:c(o.no,200),pr:!!o.pr,id:c(o.id,20),pv:c(o.pv,40),pn:c(o.pn,40),
+    sv:Array.isArray(o.sv)?o.sv.slice(0,12).map(x=>c(x,40)).filter(Boolean):[],svi:Array.isArray(o.svi)?o.svi.slice(0,12).map(x=>c(x,12)):[],ap:o.ap?1:0,apw:c(o.apw,120),
+    pt:o.pt&&typeof o.pt==='object'?{n:c(o.pt.n,40),sp:['dog','cat','other'].includes(o.pt.sp)?o.pt.sp:'dog',br:c(o.pt.br,40),sz:Math.max(0,Math.min(5,+o.pt.sz|0)),w:Math.max(0,Math.min(150,+o.pt.w||0)),g:{ct:Math.max(0,Math.min(9,+(o.pt.g&&o.pt.g.ct)|0)),cc:Math.max(0,Math.min(9,+(o.pt.g&&o.pt.g.cc)|0))},nt:c(o.pt.nt,120)}:null};}catch(e){return null;}}
 function bookImport(code){const q=bookDecode(code);if(!q)return toast('Ο σύνδεσμος κράτησης δεν είναι σωστός.','bad');
   const seen=(S.data.bookSeen=S.data.bookSeen||{});const key=q.id+'|'+q.d+'|'+q.s;
   const e=tstr(tmin(q.s)+q.u);const PV=providers();const isFreeP=p=>!conflicts(q.d,q.s,e,'',p.id).length&&!holdAt(q.d,q.s,e,p.id)&&inWork(tmin(q.s),q.u);
@@ -911,7 +915,7 @@ function bookImport(code){const q=bookDecode(code);if(!q)return toast('Ο σύν
   const when=WDAYS[wdOf(q.d)]+' '+fmtShort(q.d)+' · '+q.s+'–'+e;
   const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📲 Νέα κράτηση</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
    <div class="qsum"><span class="av lg">${esc((q.n||'?')[0].toUpperCase())}</span><div><b>${esc(q.n)}</b><div class="small">${esc(q.ph)}${existing?` · <span style="color:var(--ok)">υπάρχει ήδη στους ${esc(LX('whoPlL'))}</span>`:` · <span class="muted">νέος ${esc(LX('who')).toLowerCase()}</span>`}</div></div></div>
-   <div class="note" style="margin:10px 0"><b>📅 ${esc(when)}</b>${want||q.pn?`<div class="small" style="margin-top:4px">👤 Θέλει: <b>${esc(want?want.short:q.pn)}</b></div>`:''}${q.no?`<div class="small" style="margin-top:4px">📝 ${esc(q.no)}</div>`:''}${q.ad?`<div class="small" style="margin-top:4px">📍 ${esc(q.ad)}</div>`:''}<div class="tiny muted" style="margin-top:4px">Δήλωσε ο ίδιος: μηνύματα ραντεβού <b>${q.ca===false?'ΟΧΙ':'ΝΑΙ'}</b> · προσφορές <b>${q.pr?'ΝΑΙ':'ΟΧΙ'}</b></div></div>
+   <div class="note" style="margin:10px 0"><b>📅 ${esc(when)}</b>${want||q.pn?`<div class="small" style="margin-top:4px">👤 Θέλει: <b>${esc(want?want.short:q.pn)}</b></div>`:''}${q.no?`<div class="small" style="margin-top:4px">📝 ${esc(q.no)}</div>`:''}${q.ad?`<div class="small" style="margin-top:4px">📍 ${esc(q.ad)}</div>`:''}${q.sv.length?`<div class="small" style="margin-top:4px">✂️ <b>${esc(q.sv.join(' + '))}</b> · ⏱ ${esc(minT(q.u))}</div>`:''}${q.pt&&q.pt.n?`<div class="small" style="margin-top:4px">🐾 <b>${esc(q.pt.n)}</b>${esc([q.pt.br,(svcCfg().sz||[])[q.pt.sz],q.pt.w?q.pt.w+' κιλά':''].filter(Boolean).map(x=>' · '+x).join(''))}${q.pt.nt?' · '+esc(q.pt.nt):''}</div>`:''}${q.ap?`<div class="note small warnnote" style="margin-top:6px">🛑 <b>Θέλει έγκριση:</b> ${esc(q.apw||'ειδική περίπτωση')}. Δες το πριν καταχωρήσεις — αν χρειάζεται, πάρε τηλέφωνο.</div>`:''}<div class="tiny muted" style="margin-top:4px">Δήλωσε ο ίδιος: μηνύματα ραντεβού <b>${q.ca===false?'ΟΧΙ':'ΝΑΙ'}</b> · προσφορές <b>${q.pr?'ΝΑΙ':'ΟΧΙ'}</b></div></div>
    ${seen[key]?`<div class="note small warnnote">Αυτή η κράτηση έχει ήδη καταχωρηθεί (${esc(atTxt(seen[key]))}).</div><div class="row" style="justify-content:flex-end;margin-top:10px"><a class="btn pri" href="#/agenda?view=day&d=${q.d}" data-close>Δες τη μέρα</a></div>`
    :past?`<div class="note small warnnote">Η μέρα αυτή έχει περάσει.</div>`
    :(freeP&&!closed)?`${swap?`<div class="note small warnnote">⚠️ ${esc(want.short)} είναι πιασμένος/η εκείνη την ώρα· ελεύθερος/η είναι ${esc(freeP.short)}. Αν θέλεις, ρώτα πρώτα τον ${esc(LX('who')).toLowerCase()}.</div>`:''}<div class="row" style="justify-content:flex-end;gap:8px;margin-top:6px"><button type="button" class="btn" data-close>Όχι τώρα</button><button type="button" class="btn pri" id="bi-ok">${ic('check',16)} Καταχώρηση${PV.length>1?' με '+esc(freeP.short):''}</button></div>`
@@ -923,7 +927,9 @@ function bookImport(code){const q=bookDecode(code);if(!q)return toast('Ο σύν
     if(q.pr)setCons(p,'promo',true,how,at);else if(!p.cons||!p.cons.promo)setCons(p,'promo',false,how,at);
     if(q.ad&&!(p.loc&&p.loc.addr)){p.loc={addr:q.ad,home:true};geocodePerson(p,false);}
     logMsg(p,'Δήλωσε μόνος του: μηνύματα ραντεβού '+(q.ca===false?'ΟΧΙ':'ΝΑΙ')+' · προσφορές '+(q.pr?'ΝΑΙ':'ΟΧΙ')+(q.ad?' · διεύθυνση':''),'σελίδα κρατήσεων',{at:at||new Date().toISOString()});
-    const a={id:uid(),sid,kind:'once',date:q.d,d:wdOf(q.d),s:q.s,e,note:q.no||'',ex:{},by:freeP.id==='me'?undefined:freeP.id,created:new Date().toISOString(),src:'link'};
+    let petId;if(q.pt&&q.pt.n){p.pets=p.pets||[];let pt=p.pets.find(x=>(x.n||'').toLocaleLowerCase('el')===q.pt.n.toLocaleLowerCase('el'));if(!pt){pt={id:uid().slice(0,8)};p.pets.push(pt);}Object.assign(pt,q.pt);petId=pt.id;}
+    const a={id:uid(),sid,kind:'once',date:q.d,d:wdOf(q.d),s:q.s,e,note:[q.pt&&q.pt.n?'🐾 '+q.pt.n:'',q.sv.join(' + '),q.no||''].filter(Boolean).join(' · '),ex:{},by:freeP.id==='me'?undefined:freeP.id,created:new Date().toISOString(),src:'link'};
+    if(q.sv.length)a.svc={n:q.sv,m:q.u,ids:q.svi,pet:petId,ap:q.ap?1:undefined};
     appts().push(a);seen[key]=new Date().toISOString();logMsg(p,'Κράτηση από τον σύνδεσμο: '+fmtShort(q.d)+' '+q.s,'σύνδεσμος');save();md.close();render();
     toast('Καταχωρήθηκε. Στείλε επιβεβαίωση.','ok');setTimeout(()=>{const txt=confText(a);const ph=q.ph;
       const m2=modal(`<h3 style="margin-top:0">✅ Στείλε επιβεβαίωση</h3><p class="small muted" style="margin-top:0">${esc(txt)}</p><div class="row" style="gap:8px;flex-wrap:wrap">${chBtnsHTML({contacts:[{name:q.n,phone:ph}]},txt,'Επιβεβαίωση ραντεβού','data-bcf="1"')}</div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" data-close>Κλείσιμο</button></div>`,{guard:false});
@@ -1575,6 +1581,158 @@ async function agendaPDF(from,to,title){try{const days=[];for(let d=from;d<=to;d
   const ok=L.filter(o=>o.st!=='cancel');blocks.push({t:'p',muted:true,text:`Σύνολο: ${ok.length} ραντεβού · ${hoursNum(ok.reduce((a,o)=>a+sessMin(o.s,o.e),0))} ώρες`});
   await reportPDF({title,sub:(B.name||S.user.name)+(AGF?' · '+provById(AGF).name:''),blocks,filename:`rantevou-${from}${to!==from?'_'+to:''}.pdf`});toast('Το PDF κατέβηκε.','ok');}
   catch(e){console.error(e);toast('Δεν φτιάχτηκε το PDF.','bad');}}
+
+/* ---------- 1.69: Υπηρεσίες με διάρκεια (για όλα τα επαγγέλματα) + προφίλ κατοικιδίου ----------
+   S.data.settings.svc = {on, pets, buf, sz:[μεγέθη], list:[{id,n,m:[λεπτά ανά μέγεθος],web}], groups:[{id,n,o:[{n,m,ap}]}], breeds:[{n,sz,m}], need}
+   Διάρκεια = άθροισμα υπηρεσιών (για το μέγεθος) + επιπλέον από τις επιλογές (τρίχωμα κ.λπ.) + επιπλέον της ράτσας, στρογγυλεμένο στα 5′.
+   Ο χρόνος καθαρισμού (buf) μπαίνει ΜΕΤΑ από κάθε ραντεβού και λογαριάζεται στις ελεύθερες ώρες. Τίποτα δεν είναι γραμμένο σταθερά στον κώδικα:
+   οι αρχικές τιμές είναι μόνο πρόταση και αλλάζουν από τις Ρυθμίσεις. */
+const SVC_SZ=['Μικρό','Μεσαίο','Μεγάλο','Πολύ μεγάλο'];
+function svcCfg(){return S.data.settings.svc||{on:false};}
+function svcOn(){const c=svcCfg();return!!(c.on&&(c.list||[]).length);}
+function petMode(){const c=svcCfg();return!!(c.on&&c.pets);}
+function svcBuf(){const c=svcCfg();return c.on?Math.max(0,+c.buf||0):0;}
+const svcHasSz=c=>!!(c.pets&&(c.sz||[]).length);
+function svcDefaults(){const pid=S.data.settings.prof;const pets=pid==='katoikidia'||pid==='ktiniatros';const sid=()=>uid().slice(0,6);
+  if(pets)return{on:true,pets:true,buf:10,need:true,sz:SVC_SZ.slice(),
+    list:[['Μπάνιο',[30,45,60,75]],['Κούρεμα',[45,60,75,90]],['Μπάνιο και κούρεμα',[60,90,120,150]],['Χτένισμα',[15,20,30,40]],['Ξεμπέρδεμα τριχώματος',[20,30,45,60]],['Κόψιμο νυχιών',[10,10,15,15]],['Καθαρισμός αυτιών',[10,10,10,15]],['Πλήρης περιποίηση',[90,120,150,180]]].map(([n,m])=>({id:sid(),n,m,web:true})),
+    groups:[{id:'ct',n:'Τύπος τριχώματος',o:[{n:'Κοντό',m:0},{n:'Μακρύ',m:15},{n:'Σγουρό',m:15},{n:'Πυκνό',m:10}]},{id:'cc',n:'Κατάσταση τριχώματος',o:[{n:'Κανονικό',m:0},{n:'Με κόμπους',m:15},{n:'Πολύ μπερδεμένο',m:30,ap:true}]}],
+    breeds:[['Ημίαιμο',1,0],['Τσιουάουα',0,0],['Γιορκσάιρ',0,10],['Μαλτέζ',0,10],['Σιχ Τσου',0,15],['Πομεράνιαν',0,15],['Κανίς',1,15],['Κόκερ σπάνιελ',1,15],['Μπιγκλ',1,0],['Γαλλικό μπουλντόγκ',1,0],['Σνάουτσερ',1,15],['Λαμπραντόρ',2,0],['Γκόλντεν ριτρίβερ',2,15],['Γερμανικός ποιμενικός',2,10],['Χάσκι',2,20],['Σαμογιέντ',2,30],['Μπέρνης ορεινός',3,20],['Νέας Γης',3,30],['Γάτα κοινή',0,0],['Γάτα περσική',0,20]].map(([n,sz,m])=>({n,sz,m}))};
+  const notes=(prof().p.t||'').split('|').map(x=>x.trim()).filter(Boolean);const du=IM_DEF.dur();
+  return{on:true,pets:false,buf:0,need:false,sz:[],list:(notes.length?notes:['Υπηρεσία']).map(n=>({id:sid(),n,m:[du],web:true})),groups:[],breeds:[]};}
+/* ο υπολογισμός — ίδιος και στη σελίδα κράτησης (kratisi.js) */
+function svcCalc(c,{sz=0,ids=[],g={},br=''}={}){const hs=svcHasSz(c);let mins=0;const n=[];let ap=false;const why=[];
+  (c.list||[]).forEach(s=>{if(!ids.includes(s.id))return;const m=+((s.m||[])[hs?Math.min(sz,s.m.length-1):0])||0;mins+=m;n.push(s.n);});
+  (c.groups||[]).forEach(gr=>{const o=(gr.o||[])[g[gr.id]];if(!o)return;mins+=+o.m||0;if(o.ap){ap=true;why.push(o.n);}});
+  const b=(c.breeds||[]).find(x=>x.n===br);if(b&&ids.length)mins+=+b.m||0;
+  return{mins:ids.length?Math.ceil(mins/5)*5:0,n,ap,why};}
+const minT=m=>m<60?m+'′':Math.floor(m/60)+' ώρ'+(m>=120?'ες':'α')+(m%60?' '+(m%60)+'′':'');
+
+/* ---------- Ρυθμίσεις → Υπηρεσίες και διάρκειες ---------- */
+function svcPage(el){let W=JSON.parse(JSON.stringify(svcCfg()));if(!W.list)W=Object.assign(svcDefaults(),{on:!!W.on});let dirty=false;
+  const draw=()=>{const hs=svcHasSz(W);const SZ=hs?W.sz:['Λεπτά'];
+    el.innerHTML=`<div class="card section"><label class="check"><input type="checkbox" id="sv-on" ${W.on?'checked':''}> <b>Η διάρκεια βγαίνει από τις υπηρεσίες</b></label>
+     <p class="small muted" style="margin:6px 0 0">Ο ${esc(LX('who')).toLowerCase()} (ή εσύ) διαλέγει υπηρεσίες και η εφαρμογή βρίσκει μόνη της πόση ώρα χρειάζεται. Στον σύνδεσμο κρατήσεων φαίνονται μόνο οι ώρες που χωράνε ολόκληρη τη δουλειά.</p></div>
+    ${W.on?`<div class="card section"><label class="check"><input type="checkbox" id="sv-pets" ${W.pets?'checked':''}> 🐾 <b>Δουλεύω με κατοικίδια</b></label><p class="small muted" style="margin:6px 0 0">Μέγεθος, ράτσα και τρίχωμα αλλάζουν τη διάρκεια· κάθε ${esc(LX('who')).toLowerCase()} έχει τα κατοικίδιά του με ιστορικό.</p></div>
+    <div class="card section"><h3 style="margin-top:0">✂️ Υπηρεσίες</h3><p class="small muted" style="margin-top:0">Λεπτά για κάθε υπηρεσία${hs?' ανά μέγεθος':''}. Αν διαλέξει δύο, προστίθενται — γι' αυτό ένας συνδυασμός (π.χ. «Μπάνιο και κούρεμα») μπορεί να είναι δική του υπηρεσία με λιγότερο χρόνο.</p>
+     <div class="svtbl">${W.list.map((s,i)=>`<div class="svr"><div class="svr1"><input class="in" data-ls="${i}" value="${esc(s.n)}" maxlength="40" placeholder="Όνομα υπηρεσίας" aria-label="Όνομα υπηρεσίας"><label class="svweb" title="Φαίνεται στον σύνδεσμο κρατήσεων"><input type="checkbox" data-lw="${i}" ${s.web!==false?'checked':''}>🌐</label><button type="button" class="iconbtn" data-lx="${i}" aria-label="Διαγραφή">${ic('x',15)}</button></div>
+       <div class="svr2" style="grid-template-columns:repeat(${SZ.length},1fr)">${SZ.map((x,k)=>`<label class="svm"><small>${esc(hs?x:'Λεπτά')}</small><input class="in num" type="number" inputmode="numeric" min="0" max="600" step="5" data-lm="${i}" data-k="${k}" value="${+((s.m||[])[k]??(s.m||[])[0]??0)}"></label>`).join('')}</div></div>`).join('')}</div>
+     <p class="tiny muted" style="margin:0 0 8px">🌐 = φαίνεται στον σύνδεσμο κρατήσεων · τα νούμερα είναι λεπτά.</p>
+     <button type="button" class="btn sm" id="sv-add">${ic('plus',14)} Υπηρεσία</button></div>
+    <div class="card section"><h3 style="margin-top:0">➕ Επιπλέον χρόνος</h3><p class="small muted" style="margin-top:0">Επιλογές που προσθέτουν λεπτά${W.pets?' (π.χ. κόμποι στο τρίχωμα)':''}. Το νούμερο είναι τα επιπλέον λεπτά· με τικ στο 🛑 η κράτηση σημειώνεται ότι θέλει πρώτα την έγκρισή σου.</p>
+     ${(W.groups||[]).map((g,gi)=>`<div class="svgrp"><div class="row" style="gap:6px"><input class="in" data-gn="${gi}" value="${esc(g.n)}" maxlength="40" aria-label="Όνομα ομάδας">${g.id==='ct'||g.id==='cc'?'':`<button type="button" class="iconbtn" data-gx="${gi}" aria-label="Διαγραφή ομάδας">${ic('trash',15)}</button>`}</div>
+      ${(g.o||[]).map((o,oi)=>`<div class="svopt"><input class="in" data-on="${gi}.${oi}" value="${esc(o.n)}" maxlength="40" aria-label="Επιλογή"><input class="in num" type="number" min="0" max="300" step="5" data-om="${gi}.${oi}" value="${+o.m||0}" aria-label="Επιπλέον λεπτά"><label class="svap" title="Θέλει έγκριση"><input type="checkbox" data-oa="${gi}.${oi}" ${o.ap?'checked':''}>🛑</label><button type="button" class="iconbtn" data-ox="${gi}.${oi}" aria-label="Διαγραφή">${ic('x',14)}</button></div>`).join('')}
+      <button type="button" class="linkbtn small" data-oadd="${gi}">+ επιλογή</button></div>`).join('')}
+     <button type="button" class="btn sm" id="sv-gadd">${ic('plus',14)} Ομάδα επιλογών</button></div>
+    ${W.pets?`<div class="card section"><h3 style="margin-top:0">🐕 Ράτσες</h3><p class="small muted" style="margin-top:0">Η ράτσα προτείνει μέγεθος· το νούμερο είναι επιπλέον λεπτά (π.χ. πυκνό τρίχωμα). Όποια λείπει, γράφεται ελεύθερα.</p>
+     ${(W.breeds||[]).map((b,i)=>`<div class="svopt svbr"><input class="in" data-bn="${i}" value="${esc(b.n)}" maxlength="40" aria-label="Ράτσα"><select class="in" data-bs="${i}" aria-label="Μέγεθος">${W.sz.map((x,k)=>`<option value="${k}" ${+b.sz===k?'selected':''}>${esc(x)}</option>`).join('')}</select><input class="in num" type="number" min="0" max="300" step="5" data-bm="${i}" value="${+b.m||0}" aria-label="Επιπλέον λεπτά"><button type="button" class="iconbtn" data-bx="${i}" aria-label="Διαγραφή">${ic('x',14)}</button></div>`).join('')}
+     <button type="button" class="btn sm" id="sv-badd">${ic('plus',14)} Ράτσα</button>
+     <label class="check" style="margin-top:12px"><input type="checkbox" id="sv-need" ${W.need?'checked':''}> 🛑 «Ιδιαίτερη ανάγκη» (π.χ. φοβικό, ηλικιωμένο) → θέλει έγκριση</label></div>`:''}
+    <div class="card section"><div class="field" style="margin:0"><label class="f" for="sv-buf">🧽 Χρόνος καθαρισμού και προετοιμασίας μετά από κάθε ραντεβού</label><select class="in" id="sv-buf">${[0,5,10,15,20,30,45].map(m=>`<option value="${m}" ${+W.buf===m?'selected':''}>${m?m+' λεπτά':'Καθόλου'}</option>`).join('')}</select></div></div>
+    <div class="card section"><h3 style="margin-top:0">🧮 Δοκιμή</h3><div id="sv-try"></div></div>`:''}
+    <div class="savebar"><button type="button" class="btn pri ${dirty?'':'ghost'}" id="sv-save">${ic('check',16)} Αποθήκευση</button>${W.on?`<button type="button" class="btn ghost" id="sv-def">Προτεινόμενες τιμές</button>`:''}</div>`;
+    if(W.on)drawTry();};
+  /* μικρός υπολογιστής για να δεις αμέσως τι βγαίνει */
+  const T0={sz:1,ids:[],g:{},br:''};const drawTry=()=>{const box=$('#sv-try',el);if(!box)return;const hs=svcHasSz(W);T0.ids=T0.ids.filter(id=>W.list.some(s=>s.id===id));if(!T0.ids.length&&W.list[0])T0.ids=[W.list[0].id];const r=svcCalc(W,T0);
+    box.innerHTML=`${hs?`<div class="chips" style="margin-bottom:6px">${W.sz.map((x,k)=>`<button type="button" class="chipt ${T0.sz===k?'on':''}" data-tsz="${k}">${esc(x)}</button>`).join('')}</div>`:''}
+     <div class="chips" style="margin-bottom:6px">${W.list.map(s=>`<button type="button" class="chipt ${T0.ids.includes(s.id)?'on':''}" data-tid="${esc(s.id)}">${esc(s.n)}</button>`).join('')}</div>
+     ${(W.groups||[]).map(g=>`<select class="in" data-tg="${esc(g.id)}" style="margin-bottom:6px">${(g.o||[]).map((o,k)=>`<option value="${k}" ${(T0.g[g.id]|0)===k?'selected':''}>${esc(g.n)}: ${esc(o.n)}${o.m?' (+'+o.m+'′)':''}</option>`).join('')}</select>`).join('')}
+     <div class="svtot">⏱ <b>${r.mins?minT(r.mins):'—'}</b>${svcBuf()||W.buf?` <span class="small muted">+ ${+W.buf}′ καθαρισμός</span>`:''}${r.ap?` <span class="chip bad">🛑 θέλει έγκριση</span>`:''}</div>`;};
+  const touch=()=>{dirty=true;const b=$('#sv-save',el);if(b)b.classList.remove('ghost');};
+  const at=(k,f)=>{const[a,b]=k.split('.').map(Number);return f(a,b);};
+  el.oninput=e=>{const x=e.target,d=x.dataset;let hit=true;
+    if(d.ls!=null)W.list[+d.ls].n=x.value;else if(d.lm!=null){const s=W.list[+d.lm];s.m=s.m||[];s.m[+d.k]=Math.max(0,Math.min(600,+x.value||0));}
+    else if(d.gn!=null)W.groups[+d.gn].n=x.value;else if(d.on!=null)at(d.on,(a,b)=>W.groups[a].o[b].n=x.value);else if(d.om!=null)at(d.om,(a,b)=>W.groups[a].o[b].m=Math.max(0,+x.value||0));
+    else if(d.bn!=null)W.breeds[+d.bn].n=x.value;else if(d.bm!=null)W.breeds[+d.bm].m=Math.max(0,+x.value||0);else hit=false;if(hit){touch();drawTry();}};
+  el.onchange=e=>{const x=e.target,d=x.dataset;
+    if(x.id==='sv-on'){W.on=x.checked;if(W.on&&!(W.list||[]).length)W=Object.assign(svcDefaults(),{on:true});touch();draw();return;}
+    if(x.id==='sv-pets'){W.pets=x.checked;if(W.pets){const D0=svcDefaults();if(!(W.sz||[]).length)W.sz=SVC_SZ.slice();W.list.forEach(s=>{while(s.m.length<W.sz.length)s.m.push(s.m[s.m.length-1]||0);});if(!W.groups.some(g=>g.id==='ct'))W.groups.push({id:'ct',n:'Τύπος τριχώματος',o:[{n:'Κοντό',m:0},{n:'Μακρύ',m:15},{n:'Σγουρό',m:15},{n:'Πυκνό',m:10}]});
+        if(!W.groups.some(g=>g.id==='cc'))W.groups.push({id:'cc',n:'Κατάσταση τριχώματος',o:[{n:'Κανονικό',m:0},{n:'Με κόμπους',m:15},{n:'Πολύ μπερδεμένο',m:30,ap:true}]});
+        if(!(W.breeds||[]).length&&D0.breeds)W.breeds=D0.breeds;}touch();draw();return;}
+    if(x.id==='sv-buf'){W.buf=+x.value;touch();drawTry();return;}if(x.id==='sv-need'){W.need=x.checked;touch();return;}
+    if(d.lw!=null){W.list[+d.lw].web=x.checked;touch();return;}if(d.oa!=null){at(d.oa,(a,b)=>W.groups[a].o[b].ap=x.checked);touch();drawTry();return;}
+    if(d.bs!=null){W.breeds[+d.bs].sz=+x.value;touch();return;}if(d.tg!=null){T0.g[d.tg]=+x.value;drawTry();}};
+  el.onclick=async e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+    if(b.id==='sv-add'){W.list.push({id:uid().slice(0,6),n:'',m:(svcHasSz(W)?W.sz:[0]).map(()=>IM_DEF.dur()),web:true});touch();draw();const L=$$('[data-ls]',el);L[L.length-1].focus();return;}
+    if(d.lx!=null){W.list.splice(+d.lx,1);touch();draw();return;}
+    if(b.id==='sv-gadd'){W.groups.push({id:'g'+uid().slice(0,5),n:'Επιλογή',o:[{n:'Κανονικό',m:0},{n:'Επιπλέον',m:15}]});touch();draw();return;}
+    if(d.gx!=null){W.groups.splice(+d.gx,1);touch();draw();return;}if(d.oadd!=null){W.groups[+d.oadd].o.push({n:'',m:0});touch();draw();return;}
+    if(d.ox!=null){at(d.ox,(a,b2)=>{if(W.groups[a].o.length>1)W.groups[a].o.splice(b2,1);});touch();draw();return;}
+    if(b.id==='sv-badd'){W.breeds.push({n:'',sz:1,m:0});touch();draw();const L=$$('[data-bn]',el);L[L.length-1].focus();return;}if(d.bx!=null){W.breeds.splice(+d.bx,1);touch();draw();return;}
+    if(d.tsz!=null){T0.sz=+d.tsz;drawTry();return;}if(d.tid!=null){const i=T0.ids.indexOf(d.tid);if(i<0)T0.ids.push(d.tid);else T0.ids.splice(i,1);drawTry();return;}
+    if(b.id==='sv-def'){if(!await confirmDlg('Να μπουν οι προτεινόμενες υπηρεσίες και διάρκειες στη θέση των τωρινών;',{ok:'Ναι'}))return;W=svcDefaults();touch();draw();return;}
+    if(b.id==='sv-save'){W.list=W.list.filter(s=>s.n.trim()).map(s=>Object.assign(s,{n:s.n.trim().slice(0,40)}));W.breeds=(W.breeds||[]).filter(x=>x.n.trim());(W.groups||[]).forEach(g=>{g.o=g.o.filter(o=>o.n.trim());});W.groups=(W.groups||[]).filter(g=>g.o.length);
+      if(W.on&&!W.list.length)return toast('Βάλε τουλάχιστον μία υπηρεσία.','bad');S.data.settings.svc=W;save();dirty=false;toast('Αποθηκεύτηκε. Στείλε νέο σύνδεσμο κρατήσεων για να το δουν οι '+LX('whoPlL')+'.','ok');draw();}};
+  draw();}
+SETP.svc=svcPage;
+
+/* ---------- κατοικίδια του πελάτη ---------- */
+const PET_SP=[['dog','🐕 Σκύλος'],['cat','🐈 Γάτα'],['other','🐾 Άλλο']];
+function petLine(pt){const c=svcCfg();const g=k=>{const gr=(c.groups||[]).find(x=>x.id===k);return gr&&gr.o[pt.g&&pt.g[k]]?gr.o[pt.g[k]].n:'';};
+  return[pt.br,(c.sz||[])[pt.sz],pt.w?pt.w+' κιλά':'',g('ct')&&('τρίχωμα '+g('ct').toLowerCase()),g('cc')&&pt.g.cc>0?g('cc').toLowerCase():''].filter(Boolean).join(' · ');}
+function petForm(pt){const c=svcCfg();pt=pt||{sp:'dog',sz:1,g:{}};
+  return`<div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="pt-n">Όνομα</label><input class="in" id="pt-n" maxlength="40" value="${esc(pt.n||'')}"></div><div class="field"><label class="f" for="pt-sp">Είδος</label><select class="in" id="pt-sp">${PET_SP.map(([k,l])=>`<option value="${k}" ${pt.sp===k?'selected':''}>${l}</option>`).join('')}</select></div></div>
+   <div class="grid g2" style="gap:10px"><div class="field"><label class="f" for="pt-br">Ράτσα</label><input class="in" id="pt-br" list="pt-brl" maxlength="40" value="${esc(pt.br||'')}"><datalist id="pt-brl">${(c.breeds||[]).map(b=>`<option value="${esc(b.n)}">`).join('')}</datalist></div><div class="field"><label class="f" for="pt-w">Βάρος (κιλά)</label><input class="in" id="pt-w" type="number" inputmode="decimal" min="0" max="150" step="0.5" value="${pt.w||''}"></div></div>
+   <div class="field"><label class="f">Μέγεθος</label><div class="chips" id="pt-sz">${(c.sz||[]).map((x,k)=>`<button type="button" class="chipt ${+pt.sz===k?'on':''}" data-psz="${k}">${esc(x)}</button>`).join('')}</div></div>
+   ${(c.groups||[]).filter(g=>g.id==='ct'||g.id==='cc').map(g=>`<div class="field"><label class="f">${esc(g.n)}</label><div class="chips">${g.o.map((o,k)=>`<button type="button" class="chipt ${((pt.g||{})[g.id]|0)===k?'on':''}" data-pg="${g.id}" data-pk="${k}">${esc(o.n)}${o.m?' +'+o.m+'′':''}${o.ap?' 🛑':''}</button>`).join('')}</div></div>`).join('')}
+   <div class="field"><label class="f" for="pt-nt">Σημειώσεις <span class="tiny muted">· π.χ. φοβάται το πιστολάκι</span></label><input class="in" id="pt-nt" maxlength="120" value="${esc(pt.nt||'')}"></div>`;}
+function petBind(box,pt){const c=svcCfg();box.addEventListener('click',e=>{const s=e.target.closest('[data-psz]');if(s){pt.sz=+s.dataset.psz;$$('[data-psz]',box).forEach(x=>x.classList.toggle('on',x===s));}
+    const g=e.target.closest('[data-pg]');if(g){pt.g=pt.g||{};pt.g[g.dataset.pg]=+g.dataset.pk;$$(`[data-pg="${g.dataset.pg}"]`,box).forEach(x=>x.classList.toggle('on',x===g));}});
+  const br=$('#pt-br',box);if(br)br.addEventListener('change',()=>{const b=(c.breeds||[]).find(x=>x.n===br.value.trim());if(b){pt.sz=+b.sz;$$('[data-psz]',box).forEach(x=>x.classList.toggle('on',+x.dataset.psz===pt.sz));}});
+  return()=>Object.assign(pt,{n:$('#pt-n',box).value.trim().slice(0,40),sp:$('#pt-sp',box).value,br:$('#pt-br',box).value.trim().slice(0,40),w:+$('#pt-w',box).value||0,nt:$('#pt-nt',box).value.trim().slice(0,120)});}
+function petDialog(p,pt0){return new Promise(res=>{const pt=pt0?JSON.parse(JSON.stringify(pt0)):{id:uid().slice(0,8),sp:'dog',sz:1,g:{}};let done=false;
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">${pt0?'🐾 '+esc(pt0.n||'Κατοικίδιο'):'🐾 Νέο κατοικίδιο'}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <div id="ptb">${petForm(pt)}</div><div class="row" style="justify-content:space-between;margin-top:6px">${pt0?`<button type="button" class="btn danger" id="pt-del">${ic('trash',16)}</button>`:'<span></span>'}<span class="row"><button type="button" class="btn" data-close>Άκυρο</button><button type="button" class="btn pri" id="pt-ok">${ic('check',16)} Αποθήκευση</button></span></div>`,{onClose:()=>{if(!done)res(null);}});
+  const get=petBind($('#ptb',md.el),pt);
+  $('#pt-ok',md.el).onclick=()=>{get();if(!pt.n)return toast('Γράψε όνομα.','bad');p.pets=p.pets||[];const i=p.pets.findIndex(x=>x.id===pt.id);if(i<0)p.pets.push(pt);else p.pets[i]=pt;save();done=true;md.close();res(pt);};
+  const dl=$('#pt-del',md.el);if(dl)dl.onclick=async()=>{if(!await confirmDlg(`Διαγραφή του «${esc(pt0.n)}»; Τα ραντεβού του μένουν.`,{ok:'Διαγραφή',danger:true}))return;p.pets=(p.pets||[]).filter(x=>x.id!==pt0.id);save();done=true;md.close();res('deleted');};});}
+function petsCard(p){if(!petMode())return;const box=document.createElement('div');box.className='card';box.id='p-pets';const anchor=$('#p-cons');if(anchor)anchor.parentNode.insertBefore(box,anchor);else M().appendChild(box);
+  const draw=()=>{const L=p.pets||[];const hist=pt=>appts().filter(a=>a.sid===p.id&&a.svc&&a.svc.pet===pt.id).sort((a,b)=>(b.date+b.s).localeCompare(a.date+a.s));
+    box.innerHTML=`<div class="card-h"><h3>🐾 Κατοικίδια</h3><button class="btn sm" id="pt-add">${ic('plus',15)} Κατοικίδιο</button></div>
+     ${L.length?L.map(pt=>{const H=hist(pt);return`<button type="button" class="rw" data-pt="${esc(pt.id)}"><span class="ricon">${pt.sp==='cat'?'🐈':pt.sp==='dog'?'🐕':'🐾'}</span><span class="grow"><b>${esc(pt.n)}</b><small>${esc(petLine(pt))}${pt.nt?' · '+esc(pt.nt):''}</small>
+       ${H.length?`<small>${H.slice(0,3).map(a=>fmtShort(a.date)+': '+esc(a.svc.n.join(' + '))).join(' · ')}${H.length>3?' · …':''}</small>`:''}</span>${ic('right',16)}</button>`;}).join(''):`<p class="small muted" style="margin:0">Πρόσθεσε τα κατοικίδια για να βγαίνει μόνη της η διάρκεια και να κρατιέται το ιστορικό τους.</p>`}`;
+    $('#pt-add',box).onclick=async()=>{if(await petDialog(p))draw();};
+    $$('[data-pt]',box).forEach(b=>b.onclick=async()=>{const pt=(p.pets||[]).find(x=>x.id===b.dataset.pt);if(await petDialog(p,pt))draw();});};draw();}
+
+/* ---------- υπολογισμός διάρκειας μέσα στο «Νέο ραντεβού» ---------- */
+function svcCalcDialog({sid,pre}={}){return new Promise(res=>{const c=svcCfg();const p=sid&&getStudent(sid);const pets=petMode();let done=false;
+  const st={ids:(pre&&pre.ids)||[],g:Object.assign({},pre&&pre.g),sz:pre&&pre.sz!=null?pre.sz:1,br:(pre&&pre.br)||'',pet:pre&&pre.pet?pre.pet:null};
+  if(pets&&!st.pet&&p&&(p.pets||[]).length===1)st.pet=p.pets[0].id;
+  const usePet=pt=>{if(!pt)return;st.sz=+pt.sz||0;st.br=pt.br||'';['ct','cc'].forEach(k=>{if(pt.g&&pt.g[k]!=null)st.g[k]=pt.g[k];});};
+  if(pets&&st.pet&&p){usePet((p.pets||[]).find(x=>x.id===st.pet));}
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">✂️ Υπηρεσίες</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div><div id="sc"></div>`,{onClose:()=>{if(!done)res(null);}});
+  const draw=()=>{const hs=svcHasSz(c);const r=svcCalc(c,st);const PL=(p&&p.pets)||[];
+    $('#sc',md.el).innerHTML=`${pets?`<label class="f">🐾 Κατοικίδιο</label><div class="chips field">${PL.map(pt=>`<button type="button" class="chipt ${st.pet===pt.id?'on':''}" data-spet="${esc(pt.id)}">${esc(pt.n)}</button>`).join('')}${p?`<button type="button" class="chipt" data-spnew="1">＋ Νέο</button>`:''}</div>
+      ${!p?`<p class="tiny muted" style="margin:-4px 0 8px">Διάλεξε πρώτα ${esc(LX('whoAcc'))} για να κρατηθεί το κατοικίδιο στην καρτέλα του.</p>`:''}`:''}
+     ${hs?`<label class="f">Μέγεθος</label><div class="chips field">${c.sz.map((x,k)=>`<button type="button" class="chipt ${st.sz===k?'on':''}" data-ssz="${k}">${esc(x)}</button>`).join('')}</div>`:''}
+     <label class="f">Τι θα γίνει</label><div class="svlist field">${c.list.map(s=>{const m=+((s.m||[])[hs?Math.min(st.sz,s.m.length-1):0])||0;return`<label class="check svchk"><input type="checkbox" data-sid="${esc(s.id)}" ${st.ids.includes(s.id)?'checked':''}><span class="grow">${esc(s.n)}</span><span class="small muted">${minT(m)}</span></label>`;}).join('')}</div>
+     ${(c.groups||[]).map(g=>`<div class="field"><label class="f">${esc(g.n)}</label><div class="chips">${g.o.map((o,k)=>`<button type="button" class="chipt ${(st.g[g.id]|0)===k?'on':''}" data-sg="${esc(g.id)}" data-sk="${k}">${esc(o.n)}${o.m?' +'+o.m+'′':''}${o.ap?' 🛑':''}</button>`).join('')}</div></div>`).join('')}
+     <div class="svtot">⏱ Διάρκεια <b>${r.mins?minT(r.mins):'—'}</b>${svcBuf()?` <span class="small muted">· μετά ${svcBuf()}′ καθαρισμός</span>`:''}${r.ap?`<div class="note small warnnote" style="margin-top:6px">🛑 ${esc(r.why.join(', '))}: χρειάζεται περισσότερη προσοχή.</div>`:''}</div>
+     <div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn" data-close>Άκυρο</button><button type="button" class="btn pri" id="sc-ok" ${r.mins?'':'disabled'}>${ic('check',16)} Εφαρμογή</button></div>`;
+    $('#sc-ok',md.el).onclick=()=>{const r2=svcCalc(c,st);const pt=pets&&p&&st.pet?(p.pets||[]).find(x=>x.id===st.pet):null;done=true;md.close();
+      res(Object.assign({},st,{mins:r2.mins,n:r2.n,ap:r2.ap,why:r2.why,petName:pt?pt.n:'',txt:(pt?'🐾 '+pt.n+' · ':'')+r2.n.join(' + ')}));};};
+  md.el.addEventListener('change',e=>{const x=e.target.closest('[data-sid]');if(!x)return;const i=st.ids.indexOf(x.dataset.sid);if(x.checked&&i<0)st.ids.push(x.dataset.sid);if(!x.checked&&i>=0)st.ids.splice(i,1);draw();});
+  md.el.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+    if(d.ssz!=null){st.sz=+d.ssz;draw();}else if(d.sg!=null){st.g[d.sg]=+d.sk;draw();}
+    else if(d.spet!=null){st.pet=d.spet;usePet((p.pets||[]).find(x=>x.id===st.pet));draw();}
+    else if(d.spnew){const pt=await petDialog(p);if(pt&&pt!=='deleted'){st.pet=pt.id;usePet(pt);}draw();}});
+  draw();});}
+const svcStore=r=>({n:r.n,m:r.mins,ids:r.ids,sz:r.sz,g:r.g,br:r.br,pet:r.pet||undefined,ap:r.ap?1:undefined});
+
+/* ---------- ελεύθερα 15λεπτα για τον σύνδεσμο κρατήσεων (η διάρκεια βγαίνει στη σελίδα του πελάτη) ---------- */
+function freeCells(date,pv){const c=agCfg();if(!workDay(date)||isClosed(date))return[];const B=svcBuf();
+  const L=occ(date,date,{by:pv}).map(o=>[tmin(o.s),tmin(o.e)+B]).concat(blockOcc(date,date,{by:pv}).map(o=>[tmin(o.s),tmin(o.e)]));const now=date===todayISO()?nowMin():-1;const out=[];
+  for(let m=tmin(c.from);m+15<=tmin(c.to);m+=15){if(m<=now||!inWork(m,15))continue;if(!L.some(([a,b])=>a<m+15&&m<b))out.push(m);}return out;}
+function svcPub(){const c=svcCfg();const hs=svcHasSz(c);return{sz:hs?c.sz:null,l:c.list.filter(s=>s.web!==false).map(s=>[s.id,s.n,(s.m||[]).slice(0,hs?c.sz.length:1)]),
+  g:(c.groups||[]).map(g=>[g.id,g.n,g.o.map(o=>[o.n,+o.m||0,o.ap?1:0])]),br:c.pets?(c.breeds||[]).map(b=>[b.n,+b.sz||0,+b.m||0]):[],pet:c.pets?1:0,need:c.pets&&c.need?1:0,bf:svcBuf(),st:Math.min(30,+agCfg().step||30)};}
+function svcPack(days){const t=todayISO();const PV=providers();const per=PV.map(p=>{const d=[];for(let i=0;i<days;i++)d.push(freeCells(addDays(t,i),p.id));return d;});
+  const all=per.flat(2);const t0=all.length?Math.floor(Math.min(...all)/15)*15:0;const uni=[];for(let i=0;i<days;i++){const s=new Set();per.forEach(P=>P[i].forEach(m=>s.add(m)));uni.push(hexOf([...s].sort((a,b)=>a-b),t0));}
+  while(uni.length&&!uni[uni.length-1])uni.pop();const o={b:t,t0,fc:uni,sv:svcPub()};
+  if(PV.length>1&&bkCfg().pvPick)o.pv=PV.map((p,k)=>{const d=per[k].map(L=>hexOf(L,t0));while(d.length&&!d[d.length-1])d.pop();return{i:p.id,n:pvPub(p),c:p.color,fc:d};});
+  return o;}
+function svcWeekCells(){const c=agCfg(),t=todayISO();const W=[[],[],[],[],[],[],[]];const PV=providers();
+  for(let i=0;i<7;i++){const d=addDays(t,i);const wd=wdOf(d);if(!c.days.includes(wd))continue;const held=m=>PV.every(p=>blocks().some(b=>b.hold&&b.kind==='weekly'&&(b.days||[]).includes(wd)&&(b.by||'me')===p.id&&tmin(b.s)<m+15&&m<tmin(b.e)));
+    for(let m=tmin(c.from);m+15<=tmin(c.to);m+=15)if(inWork(m,15)&&!held(m))W[wd].push(m);}return W;}
 
 /* ---------- έναρξη ---------- */
 S.data=loadData();{const L=S.data&&S.data.settings&&S.data.settings.lex;if(L&&/^Ιδιοκτήτ/.test(L.who||'')){['who','whoAcc','whoGen','whoPl','whoPlL'].forEach(k=>delete L[k]);try{save();}catch(_){}}}applyIdentity();

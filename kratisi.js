@@ -2,7 +2,10 @@
 'use strict';
 /* ---------- γλώσσα ---------- */
 const T={
- el:{title:'Κράτηση ραντεβού',pick:'Διάλεξε μέρα',time:'Διάλεξε ώρα',free:n=>n+(n===1?' ώρα':' ώρες'),none:'Δεν υπάρχουν ελεύθερες ώρες αυτή τη μέρα.',
+ el:{svT:'Τι θα κάνουμε;',svPet:'Το κατοικίδιό σου',svNew:'＋ Νέο',svName:'Όνομα κατοικιδίου',svSp:'Είδος',svSpL:{dog:'🐕 Σκύλος',cat:'🐈 Γάτα',other:'🐾 Άλλο'},svBr:'Ράτσα',svSz:'Μέγεθος',svW:'Βάρος (κιλά, προαιρετικό)',svNeed:'Έχει ιδιαίτερη ανάγκη (π.χ. φοβικό, ηλικιωμένο)',svNeedP:'Γράψε τι χρειάζεται',
+  svTot:'Διάρκεια',svBuf:'',svPick:'Διάλεξε πρώτα τι θα γίνει — μετά θα δεις τις ώρες που χωράνε.',svNoFit:'Δεν υπάρχει αρκετά μεγάλο κενό για αυτή τη διάρκεια. Δοκίμασε λιγότερες υπηρεσίες ή πάρε τηλέφωνο.',svAp:'Λόγω της ειδικής περίπτωσης, το κατάστημα θα δει πρώτα το αίτημα και θα σου απαντήσει.',
+  svKeep:'Τα στοιχεία του κατοικιδίου μένουν μόνο σε αυτό το κινητό, για να μην τα ξαναγράφεις.',svForget:'Σβήσ\' τα από εδώ',svNeedPet:'Γράψε το όνομα του κατοικιδίου.',svMsg:'Υπηρεσίες',svMsgPet:'Κατοικίδιο',svMsgAp:'⚠ Θέλει έγκριση',min:m=>m<60?m+'′':Math.floor(m/60)+' ώρ'+(m>=120?'ες':'α')+(m%60?' '+(m%60)+'′':''),
+  title:'Κράτηση ραντεβού',pick:'Διάλεξε μέρα',time:'Διάλεξε ώρα',free:n=>n+(n===1?' ώρα':' ώρες'),none:'Δεν υπάρχουν ελεύθερες ώρες αυτή τη μέρα.',
   you:'Τα στοιχεία σου',name:'Ονοματεπώνυμο',phone:'Τηλέφωνο',note:'Σημείωση (προαιρετικό)',hpNote:'Μη γράφετε εδώ συμπτώματα ή στοιχεία υγείας — θα τα πείτε από κοντά.',promo:'Θέλω να λαμβάνω και προσφορές και νέα (μπορώ να το σταματήσω όποτε θέλω).',
   sendWith:'Στείλε την κράτηση με',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
   priv:b=>`Τα στοιχεία σου πηγαίνουν μόνο στον/στην «${b}», μέσα από την εφαρμογή μηνυμάτων σου. Η σελίδα αυτή δεν τα αποθηκεύει και δεν τα στέλνει πουθενά αλλού.`,
@@ -16,7 +19,10 @@ const T={
   addMine:'Κράτα το στο δικό μου Ημερολόγιο (εφαρμογή)',calV:'Ημερολόγιο',listV:'Λίστα',legFree:'Ελεύθερο',legBusy:'Πιασμένο',yours:'Το ραντεβού σου',yoursS:'Εσύ',tapGreen:'Πάτα ένα πράσινο κουτάκι για να διαλέξεις ώρα.',
   addCal:'Βάλ\' το στο ημερολόγιο του κινητού μου',pending:'Περιμένει επιβεβαίωση από την επιχείρηση.',ownT:'Θέλεις κι εσύ τέτοιο ημερολόγιο;',ownP:'Για τη δουλειά σου ή για εσένα — δωρεάν, στα ελληνικά, τα δεδομένα μένουν στο κινητό σου.',ownB:'Κατέβασε το Ημερολόγιο',
   at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
- en:{title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
+ en:{svT:'What would you like?',svPet:'Your pet',svNew:'＋ New',svName:'Pet’s name',svSp:'Type',svSpL:{dog:'🐕 Dog',cat:'🐈 Cat',other:'🐾 Other'},svBr:'Breed',svSz:'Size',svW:'Weight (kg, optional)',svNeed:'Has a special need (e.g. anxious, elderly)',svNeedP:'Tell us what is needed',
+  svTot:'Duration',svBuf:'',svPick:'First choose what you need — then you will see the times that fit.',svNoFit:'There is no gap long enough for this. Try fewer services or give us a call.',svAp:'Because this is a special case, the shop will review the request first and reply.',
+  svKeep:'Your pet’s details stay only on this phone, so you don’t have to type them again.',svForget:'Delete them from here',svNeedPet:'Please type your pet’s name.',svMsg:'Services',svMsgPet:'Pet',svMsgAp:'⚠ Needs approval',min:m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+(m%60)+' min':''),
+  title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
   you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',hpNote:'Please don\'t write symptoms or health details here — you\'ll discuss them in person.',promo:'I also want to receive offers and news (I can stop anytime).',
   sendWith:'Send the booking via',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
   priv:b=>`Your details go only to “${b}”, through your own messaging app. This page does not store them or send them anywhere else.`,
@@ -49,10 +55,11 @@ async function openTxt(s){s=String(s||'');if(s[0]!=='e')return s;try{const[a,b]=
   const pt=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},k,buf.slice(12)));return pt[0]+b64uEnc(new TextEncoder().encode(pt.slice(1)));}catch(e){return'';}}
 async function unpack(s){const k=s[0],body=s.slice(1);let bytes=b64uDec(body);
   if(k==='c'){const o=JSON.parse(new TextDecoder().decode(bytes));const out=[];
-    if(o.pm&&Array.isArray(o.w)){if(!o.x||o.x<isoDate(new Date())){o.s=[];o.off=1;o.v=1;return o;}const dec=h=>{const L=[];for(let j=0;j<h.length;j++){const v=parseInt(h[j],16);for(let b=0;b<4;b++)if(v&(8>>b))L.push(o.t0+(j*4+b)*15);}return L;};const W=o.w.map(h=>h?dec(h):[]);
+    if(o.pm&&Array.isArray(o.w)){if(!o.x||o.x<isoDate(new Date())){o.s=[];o.off=1;o.v=1;return o;}const dec=h=>{const L=[];for(let j=0;j<h.length;j++){const v=parseInt(h[j],16);for(let b=0;b<4;b++)if(v&(8>>b))L.push(o.t0+(j*4+b)*15);}return L;};const W=o.w.map(h=>h?dec(h):[]);if(o.sv){const C=[];const t1=new Date();for(let i=0;i<(o.dd||14);i++){const dt=new Date(t1.getFullYear(),t1.getMonth(),t1.getDate()+i,12);const L=W[dt.getDay()]||[];if(L.length)C.push([isoDate(dt),L]);}o.cells=C;o.s=[];o.v=1;return o;}
       const t0=new Date();for(let i=0;i<(o.dd||14);i++){const dt=new Date(t0.getFullYear(),t0.getMonth(),t0.getDate()+i,12);const L=W[dt.getDay()]||[];if(L.length)out.push([isoDate(dt),L]);}o.s=out;o.v=1;return o;}
     const base=new Date(o.b+'T12:00');
     const days=arr=>{const R=[];(arr||[]).forEach((h,i)=>{if(!h)return;const L=[];for(let j=0;j<h.length;j++){const v=parseInt(h[j],16);for(let b=0;b<4;b++)if(v&(8>>b))L.push(o.t0+(j*4+b)*15);}const dt=new Date(base.getTime()+i*864e5);if(L.length)R.push([isoDate(dt),L]);});return R;};
+    if(o.fc&&o.sv){o.cells=days(o.fc);o.s=[];if(Array.isArray(o.pv))o.pv.forEach(p=>{p.cells=days(p.fc);p.s=[];});o.v=1;return o;}
     o.s=days(o.d);if(Array.isArray(o.pv))o.pv.forEach(p=>{if(Array.isArray(p.d))p.s=days(p.d);});o.v=1;return o;}
   if(k==='z'){const ds=new DecompressionStream('deflate-raw');bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer());}
   return JSON.parse(new TextDecoder().decode(bytes));}
@@ -61,6 +68,43 @@ const clip=(s,n)=>String(s||'').replace(/\s+/g,' ').trim().slice(0,n);
 
 /* ---------- κατάσταση ---------- */
 let D=null,day=null,slot=null,PC=null,other=false,mode='cal',wk=0,who='',pvOpen=false;
+/* ---------- υπηρεσίες με διάρκεια (ίδιος υπολογισμός με την εφαρμογή) ---------- */
+let SV={ids:[],g:{},pet:{sp:'dog',sz:1,g:{}},need:false,needT:'',newPet:false},PETS=[];
+const svOn=()=>!!(D&&D.sv&&Array.isArray(D.sv.l)&&D.sv.l.length);
+function svCalc(){const c=D.sv,hs=Array.isArray(c.sz)&&c.sz.length;const sz=SV.pet.sz|0;let m=0,ap=false;const n=[],why=[];
+  c.l.forEach(([id,nm,M])=>{if(!SV.ids.includes(id))return;m+=+(M[hs?Math.min(sz,M.length-1):0])||0;n.push(nm);});
+  (c.g||[]).forEach(([gid,gn,O])=>{const k=c.pet&&(gid==='ct'||gid==='cc')?SV.pet.g[gid]:SV.g[gid];const o=O[k|0];if(!o)return;m+=+o[1]||0;if(o[2]){ap=true;why.push(o[0]);}});
+  const b=c.pet?(c.br||[]).find(x=>x[0]===(SV.pet.br||'')):null;if(b&&n.length)m+=+b[2]||0;if(c.need&&SV.need){ap=true;why.push(SV.needT||t('svNeed'));}
+  return{m:n.length?Math.ceil(m/5)*5:0,n,ap,why};}
+function svStarts(cells,T){const bf=+D.sv.bf||0,st=+D.sv.st||30,out=[];
+  for(const[d,L]of cells||[]){const set=new Set(L),mx=Math.max(...L);const R=[];for(const m of L){if(m%st)continue;let ok=true;for(let x=m;x<m+T;x+=15)if(!set.has(x)){ok=false;break;}
+      if(ok)for(let x=m+T;x<m+T+bf;x+=15)if(!set.has(x)&&x<=mx){ok=false;break;}if(ok)R.push(m);}if(R.length)out.push([d,R]);}return out;}
+function svApply(){if(!svOn())return;const r=svCalc();D.u=r.m||D.u0;D.s=r.m?svStarts(D.cells,r.m):[];if(Array.isArray(D.pv))D.pv.forEach(p=>{p.s=r.m?svStarts(p.cells,r.m):[];});}
+function petsLoad(){let L=[];try{L=JSON.parse(localStorage.getItem('kr-pets')||'[]');}catch(_){}if(!Array.isArray(L))L=[];(D.pets||[]).forEach(p=>{if(p&&p.n&&!L.some(x=>x.n===p.n))L.unshift(p);});return L.slice(0,8);}
+function svBlock(){if(!svOn())return'';const c=D.sv,hs=Array.isArray(c.sz)&&c.sz.length;const r=svCalc();const P=SV.pet;const ch=(on,attr,txt)=>`<button type="button" class="time ${on?'on':''}" ${attr}>${txt}</button>`;
+  return`<div class="card svc"><h2>${esc(t('svT'))}</h2>
+   ${c.pet?`<label class="f">${esc(t('svPet'))}</label><div class="times">${PETS.map((p,i)=>ch(!SV.newPet&&P.n===p.n,`data-kp="${i}"`,esc(p.n))).join('')}${PETS.length?ch(SV.newPet,'data-kpn="1"',esc(t('svNew'))):''}</div>
+    ${!PETS.length||SV.newPet?`<label class="f" for="kp-n">${esc(t('svName'))}</label><input class="in" id="kp-n" maxlength="40" value="${esc(P.n||'')}">
+     <label class="f">${esc(t('svSp'))}</label><div class="times">${['dog','cat','other'].map(k=>ch(P.sp===k,`data-ksp="${k}"`,esc(t('svSpL')[k]))).join('')}</div>
+     <label class="f" for="kp-br">${esc(t('svBr'))}</label><input class="in" id="kp-br" list="kp-brl" maxlength="40" value="${esc(P.br||'')}"><datalist id="kp-brl">${(c.br||[]).map(b=>`<option value="${esc(b[0])}">`).join('')}</datalist>
+     <label class="f" for="kp-w">${esc(t('svW'))}</label><input class="in" id="kp-w" type="number" inputmode="decimal" min="0" max="150" step="0.5" value="${P.w||''}">`:''}`:''}
+   ${hs?`<label class="f">${esc(t('svSz'))}</label><div class="times">${c.sz.map((x,k)=>ch((P.sz|0)===k,`data-ksz="${k}"`,esc(x))).join('')}</div>`:''}
+   ${(c.g||[]).map(([gid,gn,O])=>{const pg=c.pet&&(gid==='ct'||gid==='cc');const cur=(pg?P.g[gid]:SV.g[gid])|0;return`<label class="f">${esc(gn)}</label><div class="times">${O.map((o,k)=>ch(cur===k,`data-kg="${esc(gid)}" data-kk="${k}"`,esc(o[0]))).join('')}</div>`;}).join('')}
+   <label class="f">${esc(t('svMsg'))}</label><div class="svl">${c.l.map(([id,nm,M])=>{const m=+(M[hs?Math.min(P.sz|0,M.length-1):0])||0;return`<label class="chk svk"><input type="checkbox" data-ks="${esc(id)}" ${SV.ids.includes(id)?'checked':''}><span class="grow">${esc(nm)}</span><span class="tiny muted">${esc(t('min')(m))}</span></label>`;}).join('')}</div>
+   ${c.need?`<label class="chk"><input type="checkbox" id="kp-need" ${SV.need?'checked':''}><span>${esc(t('svNeed'))}</span></label>${SV.need?`<input class="in" id="kp-nt" maxlength="120" placeholder="${esc(t('svNeedP'))}" value="${esc(SV.needT)}" style="margin-top:6px">`:''}`:''}
+   <div class="svtot">⏱ ${esc(t('svTot'))}: <b>${r.m?esc(t('min')(r.m)):'—'}</b></div>${r.ap?`<p class="small apn">🛑 ${esc(t('svAp'))}</p>`:''}
+   ${c.pet?`<p class="tiny muted" style="margin:8px 0 0">🔒 ${esc(t('svKeep'))}${PETS.length?` <button type="button" class="linkb" id="kp-forget">${esc(t('svForget'))}</button>`:''}</p>`:''}</div>`;}
+function svBind(){if(!svOn())return;const app=$('#app');const re=()=>{const k=keepF0();svApply();slot=null;draw();backF0(k);};
+  app.querySelectorAll('[data-ks]').forEach(x=>x.onchange=()=>{const i=SV.ids.indexOf(x.dataset.ks);if(x.checked&&i<0)SV.ids.push(x.dataset.ks);if(!x.checked&&i>=0)SV.ids.splice(i,1);re();});
+  app.querySelectorAll('[data-ksz]').forEach(b=>b.onclick=()=>{SV.pet.sz=+b.dataset.ksz;re();});
+  app.querySelectorAll('[data-ksp]').forEach(b=>b.onclick=()=>{SV.pet.sp=b.dataset.ksp;re();});
+  app.querySelectorAll('[data-kg]').forEach(b=>b.onclick=()=>{const g=b.dataset.kg;if(D.sv.pet&&(g==='ct'||g==='cc'))SV.pet.g[g]=+b.dataset.kk;else SV.g[g]=+b.dataset.kk;re();});
+  app.querySelectorAll('[data-kp]').forEach(b=>b.onclick=()=>{const p=PETS[+b.dataset.kp];SV.newPet=false;SV.pet=JSON.parse(JSON.stringify(Object.assign({sp:'dog',sz:1,g:{}},p,{g:Object.assign({},p.g)})));re();});
+  {const n=$('[data-kpn]');if(n)n.onclick=()=>{SV.newPet=true;SV.pet={sp:'dog',sz:1,g:{}};re();};}
+  {const n=$('#kp-n');if(n)n.oninput=()=>{SV.pet.n=n.value;};const w=$('#kp-w');if(w)w.oninput=()=>{SV.pet.w=+w.value||0;};
+   const br=$('#kp-br');if(br){br.oninput=()=>{SV.pet.br=br.value;};br.onchange=()=>{SV.pet.br=br.value.trim();const b=(D.sv.br||[]).find(x=>x[0]===SV.pet.br);if(b)SV.pet.sz=+b[1]||0;re();};}}
+  {const nd=$('#kp-need');if(nd)nd.onchange=()=>{SV.need=nd.checked;re();};const nt=$('#kp-nt');if(nt)nt.oninput=()=>{SV.needT=nt.value;};}
+  {const f=$('#kp-forget');if(f)f.onclick=()=>{try{localStorage.removeItem('kr-pets');}catch(_){}PETS=(D.pets||[]).slice();SV.newPet=!PETS.length;re();};}}
 const pvList=()=>Array.isArray(D&&D.pv)&&D.pv.length>1?D.pv:null;
 const whoObj=()=>who&&pvList()?pvList().find(p=>p.i===who):null;
 function applyColor(c){if(!/^#[0-9a-f]{6}$/i.test(c||''))return;const r=document.documentElement.style;r.setProperty('--brand',c);
@@ -72,13 +116,14 @@ function liveSlots(){const now=new Date(),td=isoDate(now),nm=now.getHours()*60+n
 
 function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');document.documentElement.lang=L;
   if(!D){app.innerHTML=`<div class="card done"><div class="big">🔗</div><p>${esc(window.__err||t('bad'))}</p>${window.__why?`<p class="tiny muted">(${esc(window.__why)})</p>`:''}</div>`;return;}
+  if(svOn()&&!svCalc().m){app.innerHTML=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(t('title'))}</p></div><button class="lang" id="lg" aria-label="Language">${L==='el'?'🇬🇧':'🇬🇷'}</button></div>`+svBlock()+`<div class="card"><p class="small muted" style="margin:0">👆 ${esc(t('svPick'))}</p></div><footer>Ημερολόγιο · GlenApps</footer>`;bindLang();svBind();return;}
   const S=liveSlots();
   const head=`<div class="head"><div class="logo">📅</div><div><h1>${esc(D.n||t('title'))}</h1><p>${esc(PC&&!other?t('hiTop')(PC.n.split(' ')[0]):t('title'))}</p></div><button class="lang" id="lg" aria-label="Language">${L==='el'?'🇬🇧':'🇬🇷'}</button></div>`;
-  if(!S.length){app.innerHTML=head+`<div class="card done"><div class="big">⏳</div><p>${esc(t(D.off?'off':'expired'))}</p>${D.off&&D.ph?`<a class="send" style="display:inline-block;margin-top:10px;background:var(--brand)" href="tel:${esc(intl(D.ph))}">📞 ${esc(t('call'))} ${esc(D.ph)}</a>`:''}</div>`;bindLang();return;}
+  if(!S.length){app.innerHTML=head+svBlock()+`<div class="card done"><div class="big">⏳</div><p>${esc(svOn()&&!D.off&&svCalc().m?t('svNoFit'):t(D.off?'off':'expired'))}</p>${D.off&&D.ph?`<a class="send" style="display:inline-block;margin-top:10px;background:var(--brand)" href="tel:${esc(intl(D.ph))}">📞 ${esc(t('call'))} ${esc(D.ph)}</a>`:''}</div>`;bindLang();svBind();return;}
   if(!day||!S.some(x=>x[0]===day))day=S[0][0];const cur=(S.find(x=>x[0]===day)||[,[]])[1];if(slot&&!cur.includes(slot))slot=null;
   const g=new Date(D.g);const ch=String(D.ch||'svwe');
   const saved=(()=>{try{return JSON.parse(localStorage.getItem('kr-me')||'{}');}catch(_){return{};}})();
-  app.innerHTML=head+`
+  app.innerHTML=head+svBlock()+`
   <div class="card">${pvList()?(!pvOpen&&!who?`<button type="button" class="pvask" id="pvask">👤 ${esc(t('wantWho'))}</button>`:`<div class="pvrow"><b class="small">${esc(t('withWho'))}</b><div class="pvchips"><button type="button" class="pvc ${who?'':'on'}" data-pv="">${esc(t('anyone'))}</button>${pvList().map(p=>`<button type="button" class="pvc ${who===p.i?'on':''}" data-pv="${esc(p.i)}"><i style="background:${/^#[0-9a-f]{6}$/i.test(p.c||'')?p.c:'#999'}"></i>${esc(p.n)}</button>`).join('')}</div></div>`):''}<div class="vtabs"><button class="${mode==='cal'?'on':''}" data-mode="cal">📅 ${esc(t('calV'))}</button><button class="${mode==='list'?'on':''}" data-mode="list">☰ ${esc(t('listV'))}</button></div>
   ${mode==='cal'?weekHTML(S):`<div><h2>${esc(t('pick'))}</h2><div class="days">${S.map(([d,l])=>{const x=dayLabel(d);return`<button class="day ${d===day?'on':''}" data-d="${d}"><small>${esc(x.top)}</small><b>${esc(x.num)}</b><i>${esc(t('free')(l.length))}</i></button>`;}).join('')}</div>
    <h2 style="margin-top:14px">${esc(t('time'))}</h2><div class="times">${cur.map(m=>`<button class="time ${m===slot?'on':''}" data-m="${m}">${tstr(m)}</button>`).join('')||`<p class="muted small">${esc(t('none'))}</p>`}</div>
@@ -100,7 +145,7 @@ function draw(){const app=$('#app');document.title=t('title')+(D?' · '+D.n:'');
    <div class="sends">${D.ph&&ch.includes('v')?`<a class="send viber" data-via="v">${esc(t('viber'))}</a>`:''}${D.ph&&ch.includes('s')?`<a class="send sms" data-via="s">${esc(t('sms'))}</a>`:''}${D.ph&&ch.includes('w')?`<a class="send wa" data-via="w">${esc(t('wa'))}</a>`:''}${D.em&&ch.includes('e')?`<a class="send mail" data-via="e">${esc(t('mail'))}</a>`:''}</div>
    <p class="tiny muted" style="margin:12px 0 0">🔒 ${esc(t('priv')(D.n||''))}</p></div>
   <footer>Ημερολόγιο · GlenApps</footer>`;
-  bindLang();const nm2=$('#notme');if(nm2)nm2.onclick=()=>{other=true;draw();};const um=$('#useme');if(um)um.onclick=()=>{$('#nm').value=saved.n||'';$('#ph').value=saved.p||'';um.remove();};
+  bindLang();svBind();const nm2=$('#notme');if(nm2)nm2.onclick=()=>{other=true;draw();};const um=$('#useme');if(um)um.onclick=()=>{$('#nm').value=saved.n||'';$('#ph').value=saved.p||'';um.remove();};
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{day=b.dataset.d;slot=null;draw();});
   app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;draw();});
   {const pa=$('#pvask');if(pa)pa.onclick=()=>{const k=keepF0();pvOpen=true;draw();backF0(k);};}
@@ -140,10 +185,14 @@ async function send(via){const er=$('#er');er.textContent='';
   if(n.length<2)return er.textContent=t('needName');
   if(ph.replace(/\D/g,'').length<8)return er.textContent=t('needPhone');
   if(!(PC&&!other))try{localStorage.setItem('kr-me',JSON.stringify({n,p:ph}));}catch(_){}
+  let SVR=null;if(svOn()){SVR=svCalc();if(!SVR.m)return er.textContent=t('svPick');if(D.sv.pet){const nmP=String(SV.pet.n||'').trim();if(nmP.length<1)return er.textContent=t('svNeedPet');
+      try{const L=petsLoad().filter(x=>x.n!==nmP);L.unshift({n:nmP.slice(0,40),sp:SV.pet.sp,br:clip(SV.pet.br,40),sz:SV.pet.sz|0,w:+SV.pet.w||0,g:SV.pet.g});localStorage.setItem('kr-pets',JSON.stringify(L.slice(0,8)));}catch(_){}}}
   const req={v:1,d:day,s:tstr(slot),u:D.u,n,ph,no,pr:pr?1:0,ca:ca?1:0,ad,ts:Date.now(),g:D.g,id:Math.random().toString(36).slice(2,10)};if(whoObj()){req.pv=whoObj().i;req.pn=clip(whoObj().n,40);}if(PC&&!other&&PC.i)req.sid=PC.i;
+  if(SVR){req.sv=SVR.n;req.svi=SV.ids.slice(0,12);req.u=SVR.m;if(SVR.ap){req.ap=1;req.apw=clip(SVR.why.join(', '),120);}if(D.sv.pet)req.pt={n:clip(SV.pet.n,40),sp:SV.pet.sp,br:clip(SV.pet.br,40),sz:SV.pet.sz|0,w:+SV.pet.w||0,g:SV.pet.g,nt:SV.need?clip(SV.needT,120):''};}
   const link=new URL(D.a||'./',location.href).href.split('#')[0].split('?')[0].replace(/kratisi\.html$/,'')+'#/book?r='+await sealTxt('j',req);
   const when=dayLabel(day).long+' '+t('at')+' '+tstr(slot)+(whoObj()?' · '+t('with')+' '+whoObj().n:'');
-  const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,no,link,pr,ca,ad);
+  const svTxt=SVR?[(D.sv.pet&&SV.pet.n?t('svMsgPet')+': '+clip(SV.pet.n,40)+(SV.pet.br?' ('+clip(SV.pet.br,40)+')':''):''),t('svMsg')+': '+SVR.n.join(' + ')+' · '+t('min')(SVR.m),SVR.ap?t('svMsgAp')+': '+SVR.why.join(', '):''].filter(Boolean).join('\n'):'';
+  const txt=t('msg')(D.o||'Ραντεβού',when,n,ph,(svTxt?svTxt+(no?'\n':''):'')+no,link,pr,ca,ad);
   let href;const num=intl(D.ph);
   if(via==='s')href=`sms:${num}${/iPhone|iPad|Mac/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(txt)}`;
   else if(via==='w')href=`https://wa.me/${num.replace(/^\+/,'')}?text=${encodeURIComponent(txt)}`;
@@ -189,5 +238,6 @@ function showSent(when){$('#app').innerHTML=`<div class="card done"><div class="
     D.n=clip(D.n,60);D.o=clip(D.o,30);D.ph=clip(D.ph,25);D.em=clip(D.em,80);
     if(D.l==='en'||D.l==='el'){try{if(!localStorage.getItem('glen-lang'))L=String(navigator.language||'').toLowerCase().startsWith('el')?'el':(D.l||L);}catch(_){}}
     if(D.pc&&D.pc.n){PC={i:clip(D.pc.i,60),n:clip(D.pc.n,80),ph:clip(D.pc.ph,25)};}
+    if(svOn()){D.u0=D.u;PETS=petsLoad();if(PETS.length){SV.pet=JSON.parse(JSON.stringify(Object.assign({sp:'dog',sz:1,g:{}},PETS[0],{g:Object.assign({},PETS[0].g)})));}else SV.newPet=true;svApply();}
     applyColor(D.c);}catch(e){D=null;window.__err=/Unterminated|Unexpected end|Bad control|JSON/i.test(String(e&&e.message))?(T[L]||T.el).cut:(T[L]||T.el).bad;window.__why=String(e&&e.message||e).slice(0,80);}
   draw();})();
