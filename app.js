@@ -1595,7 +1595,7 @@ function svcBuf(){const c=svcCfg();return c.on?Math.max(0,+c.buf||0):0;}
 const svcHasSz=c=>!!(c.pets&&(c.sz||[]).length);
 function svcDefaults(){const pid=S.data.settings.prof;const pets=pid==='katoikidia'||pid==='ktiniatros';const sid=()=>uid().slice(0,6);
   if(pets)return{on:true,pets:true,buf:10,need:true,sz:SVC_SZ.slice(),
-    list:[['Μπάνιο',[30,45,60,75]],['Κούρεμα',[45,60,75,90]],['Μπάνιο και κούρεμα',[60,90,120,150]],['Χτένισμα',[15,20,30,40]],['Ξεμπέρδεμα τριχώματος',[20,30,45,60]],['Κόψιμο νυχιών',[10,10,15,15]],['Καθαρισμός αυτιών',[10,10,10,15]],['Πλήρης περιποίηση',[90,120,150,180]]].map(([n,m])=>({id:sid(),n,m,web:true})),
+    list:[['Μπάνιο',[30,45,60,75]],['Κούρεμα',[45,60,75,90]],['Μπάνιο και κούρεμα',[60,90,120,150]],['Χτένισμα',[15,20,30,40]],['Ξεμπέρδεμα τριχώματος',[20,30,45,60]],['Κόψιμο νυχιών',[10,10,15,15]],['Καθαρισμός αυτιών',[10,10,10,15]],['Πλήρης περιποίηση',[90,120,150,180]]].map(([n,m])=>({id:sid(),n,m,web:true})).map((s,i,A)=>(s.inc=i===2?[A[0].id,A[1].id]:i===7?A.slice(0,7).map(x=>x.id):[],s)),
     groups:[{id:'ct',n:'Τύπος τριχώματος',o:[{n:'Κοντό',m:0},{n:'Μακρύ',m:15},{n:'Σγουρό',m:15},{n:'Πυκνό',m:10}]},{id:'cc',n:'Κατάσταση τριχώματος',o:[{n:'Κανονικό',m:0},{n:'Με κόμπους',m:15},{n:'Πολύ μπερδεμένο',m:30,ap:true}]}],
     breeds:[['Ημίαιμο',1,0],['Τσιουάουα',0,0],['Γιορκσάιρ',0,10],['Μαλτέζ',0,10],['Σιχ Τσου',0,15],['Πομεράνιαν',0,15],['Κανίς',1,15],['Κόκερ σπάνιελ',1,15],['Μπιγκλ',1,0],['Γαλλικό μπουλντόγκ',1,0],['Σνάουτσερ',1,15],['Λαμπραντόρ',2,0],['Γκόλντεν ριτρίβερ',2,15],['Γερμανικός ποιμενικός',2,10],['Χάσκι',2,20],['Σαμογιέντ',2,30],['Μπέρνης ορεινός',3,20],['Νέας Γης',3,30],['Γάτα κοινή',0,0],['Γάτα περσική',0,20]].map(([n,sz,m])=>({n,sz,m}))};
   const notes=(prof().p.t||'').split('|').map(x=>x.trim()).filter(Boolean);const du=IM_DEF.dur();
@@ -1606,6 +1606,23 @@ function svcCalc(c,{sz=0,ids=[],g={},br=''}={}){const hs=svcHasSz(c);let mins=0;
   (c.groups||[]).forEach(gr=>{const o=(gr.o||[])[g[gr.id]];if(!o)return;mins+=+o.m||0;if(o.ap){ap=true;why.push(o.n);}});
   const b=(c.breeds||[]).find(x=>x.n===br);if(b&&ids.length)mins+=+b.m||0;
   return{mins:ids.length?Math.ceil(mins/5)*5:0,n,ap,why};}
+/* συνδυασμοί υπηρεσιών: L=[{id,n,inc:[id…]}]. Μια υπηρεσία που «περιλαμβάνει» άλλες τις αντικαθιστά·
+   αν διαλεχτούν όλα τα κομμάτια ενός συνδυασμού, γίνεται μόνος του ο συνδυασμός (π.χ. Μπάνιο + Κούρεμα → «Μπάνιο και κούρεμα»). */
+function svNorm(L,sel,added){const B={};L.forEach(s=>B[s.id]=s);
+  const clo=id=>{const o=new Set(),st=((B[id]||{}).inc||[]).slice();while(st.length){const x=st.pop();if(o.has(x)||x===id||!B[x])continue;o.add(x);((B[x]||{}).inc||[]).forEach(y=>st.push(y));}return o;};
+  let S=sel.filter(x=>B[x]);if(added&&S.includes(added)){const C=clo(added);S=S.filter(x=>!C.has(x));}
+  S=S.filter(x=>!S.some(y=>y!==x&&clo(y).has(x)));const merged=[];
+  for(let k=0;k<20;k++){const cov=new Set(S);S.forEach(x=>clo(x).forEach(y=>cov.add(y)));
+    const C=L.filter(s=>!cov.has(s.id)&&(s.inc||[]).filter(x=>B[x]).length>=2&&s.inc.filter(x=>B[x]).every(x=>cov.has(x))).sort((a,b)=>clo(b.id).size-clo(a.id).size)[0];
+    if(!C)break;const cl=clo(C.id);const from=S.filter(x=>cl.has(x));S=S.filter(x=>!cl.has(x)).concat(C.id);merged.push([C.id,from]);}
+  const inside={};S.forEach(x=>clo(x).forEach(y=>{if(!inside[y])inside[y]=x;}));return{sel:S,merged,inside};}
+/* παλιές ρυθμίσεις χωρίς «περιλαμβάνει»: βγαίνει από το όνομα («Μπάνιο και κούρεμα», «Πλήρης …») */
+function svIncGuess(L){const nm=s=>String(s.n||'').trim().toLocaleLowerCase('el');
+  return L.map(s=>{if(Array.isArray(s.inc))return s;const n=nm(s);let inc=[];
+    if(/^πλήρ|^full|^όλα/.test(n))inc=L.filter(x=>x!==s).map(x=>x.id);
+    else{const parts=n.split(/\s+(?:και|&|\+|με)\s+|\s*\+\s*|,\s*/).map(x=>x.trim()).filter(Boolean);if(parts.length>=2){const ids=parts.map(p=>(L.find(x=>x!==s&&nm(x)===p)||{}).id);if(ids.every(Boolean))inc=ids;}}
+    return Object.assign({},s,{inc});});}
+function svcList(c){return svIncGuess((c&&c.list)||[]);}
 const minT=m=>m<60?m+'′':Math.floor(m/60)+' ώρ'+(m>=120?'ες':'α')+(m%60?' '+(m%60)+'′':'');
 
 /* ---------- Ρυθμίσεις → Υπηρεσίες και διάρκειες ---------- */
@@ -1616,6 +1633,7 @@ function svcPage(el){let W=JSON.parse(JSON.stringify(svcCfg()));if(!W.list)W=Obj
     ${W.on?`<div class="card section"><label class="check"><input type="checkbox" id="sv-pets" ${W.pets?'checked':''}> 🐾 <b>Δουλεύω με κατοικίδια</b></label><p class="small muted" style="margin:6px 0 0">Μέγεθος, ράτσα και τρίχωμα αλλάζουν τη διάρκεια· κάθε ${esc(LX('who')).toLowerCase()} έχει τα κατοικίδιά του με ιστορικό.</p></div>
     <div class="card section"><h3 style="margin-top:0">✂️ Υπηρεσίες</h3><p class="small muted" style="margin-top:0">Λεπτά για κάθε υπηρεσία${hs?' ανά μέγεθος':''}. Αν διαλέξει δύο, προστίθενται — γι' αυτό ένας συνδυασμός (π.χ. «Μπάνιο και κούρεμα») μπορεί να είναι δική του υπηρεσία με λιγότερο χρόνο.</p>
      <div class="svtbl">${W.list.map((s,i)=>`<div class="svr"><div class="svr1"><input class="in" data-ls="${i}" value="${esc(s.n)}" maxlength="40" placeholder="Όνομα υπηρεσίας" aria-label="Όνομα υπηρεσίας"><label class="svweb" title="Φαίνεται στον σύνδεσμο κρατήσεων"><input type="checkbox" data-lw="${i}" ${s.web!==false?'checked':''}>🌐</label><button type="button" class="iconbtn" data-lx="${i}" aria-label="Διαγραφή">${ic('x',15)}</button></div>
+       ${(()=>{const L2=svIncGuess(W.list);const inc=L2[i].inc||[];const others=W.list.filter(x=>x.id!==s.id&&x.n.trim());return others.length?`<details class="svinc"><summary class="tiny">Περιλαμβάνει: ${inc.length?esc(inc.map(id=>(W.list.find(x=>x.id===id)||{}).n).filter(Boolean).join(', ')):'—'}</summary><div class="chips">${others.map(x=>`<button type="button" class="chipt ${inc.includes(x.id)?'on':''}" data-inc="${i}" data-incid="${esc(x.id)}">${esc(x.n)}</button>`).join('')}</div></details>`:'';})()}
        <div class="svr2" style="grid-template-columns:repeat(${SZ.length},1fr)">${SZ.map((x,k)=>`<label class="svm"><small>${esc(hs?x:'Λεπτά')}</small><input class="in num" type="number" inputmode="numeric" min="0" max="600" step="5" data-lm="${i}" data-k="${k}" value="${+((s.m||[])[k]??(s.m||[])[0]??0)}"></label>`).join('')}</div></div>`).join('')}</div>
      <p class="tiny muted" style="margin:0 0 8px">🌐 = φαίνεται στον σύνδεσμο κρατήσεων · τα νούμερα είναι λεπτά.</p>
      <button type="button" class="btn sm" id="sv-add">${ic('plus',14)} Υπηρεσία</button></div>
@@ -1635,7 +1653,7 @@ function svcPage(el){let W=JSON.parse(JSON.stringify(svcCfg()));if(!W.list)W=Obj
   /* μικρός υπολογιστής για να δεις αμέσως τι βγαίνει */
   const T0={sz:1,ids:[],g:{},br:''};const drawTry=()=>{const box=$('#sv-try',el);if(!box)return;const hs=svcHasSz(W);T0.ids=T0.ids.filter(id=>W.list.some(s=>s.id===id));if(!T0.ids.length&&W.list[0])T0.ids=[W.list[0].id];const r=svcCalc(W,T0);
     box.innerHTML=`${hs?`<div class="chips" style="margin-bottom:6px">${W.sz.map((x,k)=>`<button type="button" class="chipt ${T0.sz===k?'on':''}" data-tsz="${k}">${esc(x)}</button>`).join('')}</div>`:''}
-     <div class="chips" style="margin-bottom:6px">${W.list.map(s=>`<button type="button" class="chipt ${T0.ids.includes(s.id)?'on':''}" data-tid="${esc(s.id)}">${esc(s.n)}</button>`).join('')}</div>
+     <div class="chips" style="margin-bottom:6px">${(()=>{const IN=svNorm(svIncGuess(W.list),T0.ids).inside;return W.list.map(s=>`<button type="button" class="chipt ${T0.ids.includes(s.id)?'on':''} ${IN[s.id]?'svin':''}" data-tid="${esc(s.id)}" ${IN[s.id]?'disabled':''}>${esc(s.n)}</button>`).join('');})()}</div>
      ${(W.groups||[]).map(g=>`<select class="in" data-tg="${esc(g.id)}" style="margin-bottom:6px">${(g.o||[]).map((o,k)=>`<option value="${k}" ${(T0.g[g.id]|0)===k?'selected':''}>${esc(g.n)}: ${esc(o.n)}${o.m?' (+'+o.m+'′)':''}</option>`).join('')}</select>`).join('')}
      <div class="svtot">⏱ <b>${r.mins?minT(r.mins):'—'}</b>${svcBuf()||W.buf?` <span class="small muted">+ ${+W.buf}′ καθαρισμός</span>`:''}${r.ap?` <span class="chip bad">🛑 θέλει έγκριση</span>`:''}</div>`;};
   const touch=()=>{dirty=true;const b=$('#sv-save',el);if(b)b.classList.remove('ghost');};
@@ -1659,9 +1677,10 @@ function svcPage(el){let W=JSON.parse(JSON.stringify(svcCfg()));if(!W.list)W=Obj
     if(d.gx!=null){W.groups.splice(+d.gx,1);touch();draw();return;}if(d.oadd!=null){W.groups[+d.oadd].o.push({n:'',m:0});touch();draw();return;}
     if(d.ox!=null){at(d.ox,(a,b2)=>{if(W.groups[a].o.length>1)W.groups[a].o.splice(b2,1);});touch();draw();return;}
     if(b.id==='sv-badd'){W.breeds.push({n:'',sz:1,m:0});touch();draw();const L=$$('[data-bn]',el);L[L.length-1].focus();return;}if(d.bx!=null){W.breeds.splice(+d.bx,1);touch();draw();return;}
-    if(d.tsz!=null){T0.sz=+d.tsz;drawTry();return;}if(d.tid!=null){const i=T0.ids.indexOf(d.tid);if(i<0)T0.ids.push(d.tid);else T0.ids.splice(i,1);drawTry();return;}
+    if(d.inc!=null){const L2=svIncGuess(W.list);const s=W.list[+d.inc];const inc=(L2[+d.inc].inc||[]).slice();const k=inc.indexOf(d.incid);if(k<0)inc.push(d.incid);else inc.splice(k,1);s.inc=inc;W.list.forEach((x,j)=>{if(!Array.isArray(x.inc))x.inc=L2[j].inc;});touch();draw();const dt=$$('.svr',el)[+d.inc].querySelector('details');if(dt)dt.open=true;return;}
+    if(d.tsz!=null){T0.sz=+d.tsz;drawTry();return;}if(d.tid!=null){const on=!T0.ids.includes(d.tid);let sel=T0.ids.filter(x=>x!==d.tid);if(on)sel.push(d.tid);T0.ids=svNorm(svIncGuess(W.list),sel,on?d.tid:null).sel;drawTry();return;}
     if(b.id==='sv-def'){if(!await confirmDlg('Να μπουν οι προτεινόμενες υπηρεσίες και διάρκειες στη θέση των τωρινών;',{ok:'Ναι'}))return;W=svcDefaults();touch();draw();return;}
-    if(b.id==='sv-save'){W.list=W.list.filter(s=>s.n.trim()).map(s=>Object.assign(s,{n:s.n.trim().slice(0,40)}));W.breeds=(W.breeds||[]).filter(x=>x.n.trim());(W.groups||[]).forEach(g=>{g.o=g.o.filter(o=>o.n.trim());});W.groups=(W.groups||[]).filter(g=>g.o.length);
+    if(b.id==='sv-save'){W.list=svIncGuess(W.list.filter(s=>s.n.trim()).map(s=>Object.assign(s,{n:s.n.trim().slice(0,40)})));const ids=new Set(W.list.map(s=>s.id));W.list.forEach(s=>{s.inc=(s.inc||[]).filter(x=>ids.has(x)&&x!==s.id);});W.breeds=(W.breeds||[]).filter(x=>x.n.trim());(W.groups||[]).forEach(g=>{g.o=g.o.filter(o=>o.n.trim());});W.groups=(W.groups||[]).filter(g=>g.o.length);
       if(W.on&&!W.list.length)return toast('Βάλε τουλάχιστον μία υπηρεσία.','bad');S.data.settings.svc=W;save();dirty=false;toast('Αποθηκεύτηκε. Στείλε νέο σύνδεσμο κρατήσεων για να το δουν οι '+LX('whoPlL')+'.','ok');draw();}};
   draw();}
 SETP.svc=svcPage;
@@ -1705,13 +1724,15 @@ function svcCalcDialog({sid,pre}={}){return new Promise(res=>{const c=svcCfg();c
     $('#sc',md.el).innerHTML=`${pets?`<label class="f">🐾 Κατοικίδιο</label><div class="chips field">${PL.map(pt=>`<button type="button" class="chipt ${st.pet===pt.id?'on':''}" data-spet="${esc(pt.id)}">${esc(pt.n)}</button>`).join('')}${p?`<button type="button" class="chipt" data-spnew="1">＋ Νέο</button>`:''}</div>
       ${!p?`<p class="tiny muted" style="margin:-4px 0 8px">Διάλεξε πρώτα ${esc(LX('whoAcc'))} για να κρατηθεί το κατοικίδιο στην καρτέλα του.</p>`:''}`:''}
      ${hs?`<label class="f">Μέγεθος</label><div class="chips field">${c.sz.map((x,k)=>`<button type="button" class="chipt ${st.sz===k?'on':''}" data-ssz="${k}">${esc(x)}</button>`).join('')}</div>`:''}
-     <label class="f">Τι θα γίνει</label><div class="svlist field">${c.list.map(s=>{const m=+((s.m||[])[hs?Math.min(st.sz,s.m.length-1):0])||0;return`<label class="check svchk"><input type="checkbox" data-sid="${esc(s.id)}" ${st.ids.includes(s.id)?'checked':''}><span class="grow">${esc(s.n)}</span><span class="small muted">${minT(m)}</span></label>`;}).join('')}</div>
+     <label class="f">Τι θα γίνει</label><div class="svlist field">${(()=>{const IN=svNorm(svcList(c),st.ids).inside;return c.list.map(s=>{const m=+((s.m||[])[hs?Math.min(st.sz,s.m.length-1):0])||0;const by=IN[s.id]&&c.list.find(x=>x.id===IN[s.id]);
+       return`<label class="check svchk ${by?'svin':''}"><input type="checkbox" data-sid="${esc(s.id)}" ${st.ids.includes(s.id)||by?'checked':''} ${by?'disabled':''}><span class="grow">${esc(s.n)}${by?`<small class="muted"> · μέσα στο «${esc(by.n)}»</small>`:''}</span><span class="small muted">${by?'':minT(m)}</span></label>`;}).join('');})()}</div>${MSG?`<div class="note small" style="margin:-4px 0 10px">${esc(MSG)}</div>`:''}
      ${(c.groups||[]).map(g=>`<div class="field"><label class="f">${esc(g.n)}</label><div class="chips">${g.o.map((o,k)=>`<button type="button" class="chipt ${(st.g[g.id]|0)===k?'on':''}" data-sg="${esc(g.id)}" data-sk="${k}">${esc(o.n)}${o.m?' +'+o.m+'′':''}${o.ap?' 🛑':''}</button>`).join('')}</div></div>`).join('')}
      <div class="svtot">⏱ Διάρκεια <b>${r.mins?minT(r.mins):'—'}</b>${svcBuf()?` <span class="small muted">· μετά ${svcBuf()}′ καθαρισμός</span>`:''}${r.ap?`<div class="note small warnnote" style="margin-top:6px">🛑 ${esc(r.why.join(', '))}: χρειάζεται περισσότερη προσοχή.</div>`:''}</div>
      <div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn" data-close>Άκυρο</button><button type="button" class="btn pri" id="sc-ok" ${r.mins?'':'disabled'}>${ic('check',16)} Εφαρμογή</button></div>`;
     $('#sc-ok',md.el).onclick=()=>{const r2=svcCalc(c,st);const pt=pets&&p&&st.pet?(p.pets||[]).find(x=>x.id===st.pet):null;done=true;md.close();
       res(Object.assign({},st,{mins:r2.mins,n:r2.n,ap:r2.ap,why:r2.why,petName:pt?pt.n:'',txt:(pt?'🐾 '+pt.n+' · ':'')+r2.n.join(' + ')}));};};
-  md.el.addEventListener('change',e=>{const x=e.target.closest('[data-sid]');if(!x)return;const i=st.ids.indexOf(x.dataset.sid);if(x.checked&&i<0)st.ids.push(x.dataset.sid);if(!x.checked&&i>=0)st.ids.splice(i,1);draw();});
+  let MSG='';md.el.addEventListener('change',e=>{const x=e.target.closest('[data-sid]');if(!x)return;const id=x.dataset.sid;let sel=st.ids.filter(y=>y!==id);if(x.checked)sel.push(id);
+    const R=svNorm(svcList(c),sel,x.checked?id:null);st.ids=R.sel;const nm=k=>(c.list.find(s=>s.id===k)||{}).n||'';MSG=R.merged.map(([k,f])=>`👍 ${f.map(nm).join(' + ')} → «${nm(k)}»`).join(' · ');draw();MSG='';});
   md.el.addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;
     if(d.ssz!=null){st.sz=+d.ssz;draw();}else if(d.sg!=null){st.g[d.sg]=+d.sk;draw();}
     else if(d.spet!=null){st.pet=d.spet;usePet((p.pets||[]).find(x=>x.id===st.pet));draw();}
@@ -1723,7 +1744,7 @@ const svcStore=r=>({n:r.n,m:r.mins,ids:r.ids,sz:r.sz,g:r.g,br:r.br,pet:r.pet||un
 function freeCells(date,pv){const c=agCfg();if(!workDay(date)||isClosed(date))return[];const B=svcBuf();
   const L=occ(date,date,{by:pv}).map(o=>[tmin(o.s),tmin(o.e)+B]).concat(blockOcc(date,date,{by:pv}).map(o=>[tmin(o.s),tmin(o.e)]));const now=date===todayISO()?nowMin():-1;const out=[];
   for(let m=tmin(c.from);m+15<=tmin(c.to);m+=15){if(m<=now||!inWork(m,15))continue;if(!L.some(([a,b])=>a<m+15&&m<b))out.push(m);}return out;}
-function svcPub(){const c=svcCfg();const hs=svcHasSz(c);return{sz:hs?c.sz:null,l:c.list.filter(s=>s.web!==false).map(s=>[s.id,s.n,(s.m||[]).slice(0,hs?c.sz.length:1)]),
+function svcPub(){const c=svcCfg();const hs=svcHasSz(c);return{sz:hs?c.sz:null,l:svcList(c).filter(s=>s.web!==false).map(s=>[s.id,s.n,(s.m||[]).slice(0,hs?c.sz.length:1),(s.inc||[]).filter(x=>c.list.some(y=>y.id===x&&y.web!==false))]),
   g:(c.groups||[]).map(g=>[g.id,g.n,g.o.map(o=>[o.n,+o.m||0,o.ap?1:0])]),br:c.pets?(c.breeds||[]).map(b=>[b.n,+b.sz||0,+b.m||0]):[],pet:c.pets?1:0,need:c.pets&&c.need?1:0,bf:svcBuf(),st:Math.min(30,+agCfg().step||30)};}
 function svcPack(days){const t=todayISO();const PV=providers();const per=PV.map(p=>{const d=[];for(let i=0;i<days;i++)d.push(freeCells(addDays(t,i),p.id));return d;});
   const all=per.flat(2);const t0=all.length?Math.floor(Math.min(...all)/15)*15:0;const uni=[];for(let i=0;i<days;i++){const s=new Set();per.forEach(P=>P[i].forEach(m=>s.add(m)));uni.push(hexOf([...s].sort((a,b)=>a-b),t0));}

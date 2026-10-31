@@ -4,7 +4,7 @@
 const T={
  el:{svT:'Τι θα κάνουμε;',svPet:'Το κατοικίδιό σου',svNew:'＋ Νέο',svName:'Όνομα κατοικιδίου',svSp:'Είδος',svSpL:{dog:'🐕 Σκύλος',cat:'🐈 Γάτα',other:'🐾 Άλλο'},svBr:'Ράτσα',svSz:'Μέγεθος',svW:'Βάρος (κιλά, προαιρετικό)',svNeed:'Έχει ιδιαίτερη ανάγκη (π.χ. φοβικό, ηλικιωμένο)',svNeedP:'Γράψε τι χρειάζεται',
   svTot:'Διάρκεια',svBuf:'',svPick:'Διάλεξε πρώτα τι θα γίνει — μετά θα δεις τις ώρες που χωράνε.',svNoFit:'Δεν υπάρχει αρκετά μεγάλο κενό για αυτή τη διάρκεια. Δοκίμασε λιγότερες υπηρεσίες ή πάρε τηλέφωνο.',svAp:'Λόγω της ειδικής περίπτωσης, το κατάστημα θα δει πρώτα το αίτημα και θα σου απαντήσει.',
-  svKeep:'Τα στοιχεία του κατοικιδίου μένουν μόνο σε αυτό το κινητό, για να μην τα ξαναγράφεις.',svForget:'Σβήσ\' τα από εδώ',svNeedPet:'Γράψε το όνομα του κατοικιδίου.',svMsg:'Υπηρεσίες',svMsgPet:'Κατοικίδιο',svMsgAp:'⚠ Θέλει έγκριση',min:m=>m<60?m+'′':Math.floor(m/60)+' ώρ'+(m>=120?'ες':'α')+(m%60?' '+(m%60)+'′':''),
+  svKeep:'Τα στοιχεία του κατοικιδίου μένουν μόνο σε αυτό το κινητό, για να μην τα ξαναγράφεις.',svForget:'Σβήσ\' τα από εδώ',svNeedPet:'Γράψε το όνομα του κατοικιδίου.',svMsg:'Υπηρεσίες',svMsgPet:'Κατοικίδιο',svMsgAp:'⚠ Θέλει έγκριση',svIn:n=>`μέσα στο «${n}»`,svMerged:(a,b)=>`👍 ${a} → «${b}»`,min:m=>m<60?m+'′':Math.floor(m/60)+' ώρ'+(m>=120?'ες':'α')+(m%60?' '+(m%60)+'′':''),
   title:'Κράτηση ραντεβού',pick:'Διάλεξε μέρα',time:'Διάλεξε ώρα',free:n=>n+(n===1?' ώρα':' ώρες'),none:'Δεν υπάρχουν ελεύθερες ώρες αυτή τη μέρα.',
   you:'Τα στοιχεία σου',name:'Ονοματεπώνυμο',phone:'Τηλέφωνο',note:'Σημείωση (προαιρετικό)',hpNote:'Μη γράφετε εδώ συμπτώματα ή στοιχεία υγείας — θα τα πείτε από κοντά.',promo:'Θέλω να λαμβάνω και προσφορές και νέα (μπορώ να το σταματήσω όποτε θέλω).',
   sendWith:'Στείλε την κράτηση με',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
@@ -21,7 +21,7 @@ const T={
   at:'στις',subj:'Κράτηση ραντεβού',wd:['Κυρ','Δευ','Τρί','Τετ','Πέμ','Παρ','Σάβ'],wdL:['Κυριακή','Δευτέρα','Τρίτη','Τετάρτη','Πέμπτη','Παρασκευή','Σάββατο'],today:'Σήμερα',tomorrow:'Αύριο'},
  en:{svT:'What would you like?',svPet:'Your pet',svNew:'＋ New',svName:'Pet’s name',svSp:'Type',svSpL:{dog:'🐕 Dog',cat:'🐈 Cat',other:'🐾 Other'},svBr:'Breed',svSz:'Size',svW:'Weight (kg, optional)',svNeed:'Has a special need (e.g. anxious, elderly)',svNeedP:'Tell us what is needed',
   svTot:'Duration',svBuf:'',svPick:'First choose what you need — then you will see the times that fit.',svNoFit:'There is no gap long enough for this. Try fewer services or give us a call.',svAp:'Because this is a special case, the shop will review the request first and reply.',
-  svKeep:'Your pet’s details stay only on this phone, so you don’t have to type them again.',svForget:'Delete them from here',svNeedPet:'Please type your pet’s name.',svMsg:'Services',svMsgPet:'Pet',svMsgAp:'⚠ Needs approval',min:m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+(m%60)+' min':''),
+  svKeep:'Your pet’s details stay only on this phone, so you don’t have to type them again.',svForget:'Delete them from here',svNeedPet:'Please type your pet’s name.',svMsg:'Services',svMsgPet:'Pet',svMsgAp:'⚠ Needs approval',svIn:n=>`included in “${n}”`,svMerged:(a,b)=>`👍 ${a} → “${b}”`,min:m=>m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+(m%60)+' min':''),
   title:'Book an appointment',pick:'Choose a day',time:'Choose a time',free:n=>n+(n===1?' slot':' slots'),none:'No free times on this day.',
   you:'Your details',name:'Full name',phone:'Phone',note:'Note (optional)',hpNote:'Please don\'t write symptoms or health details here — you\'ll discuss them in person.',promo:'I also want to receive offers and news (I can stop anytime).',
   sendWith:'Send the booking via',sms:'SMS',viber:'Viber',wa:'WhatsApp',mail:'Email',
@@ -71,6 +71,17 @@ let D=null,day=null,slot=null,PC=null,other=false,mode='cal',wk=0,who='',pvOpen=
 /* ---------- υπηρεσίες με διάρκεια (ίδιος υπολογισμός με την εφαρμογή) ---------- */
 let SV={ids:[],g:{},pet:{sp:'dog',sz:1,g:{}},need:false,needT:'',newPet:false},PETS=[];
 const svOn=()=>!!(D&&D.sv&&Array.isArray(D.sv.l)&&D.sv.l.length);
+/* συνδυασμοί υπηρεσιών: L=[{id,n,inc:[id…]}]. Μια υπηρεσία που «περιλαμβάνει» άλλες τις αντικαθιστά·
+   αν διαλεχτούν όλα τα κομμάτια ενός συνδυασμού, γίνεται μόνος του ο συνδυασμός (π.χ. Μπάνιο + Κούρεμα → «Μπάνιο και κούρεμα»). */
+function svNorm(L,sel,added){const B={};L.forEach(s=>B[s.id]=s);
+  const clo=id=>{const o=new Set(),st=((B[id]||{}).inc||[]).slice();while(st.length){const x=st.pop();if(o.has(x)||x===id||!B[x])continue;o.add(x);((B[x]||{}).inc||[]).forEach(y=>st.push(y));}return o;};
+  let S=sel.filter(x=>B[x]);if(added&&S.includes(added)){const C=clo(added);S=S.filter(x=>!C.has(x));}
+  S=S.filter(x=>!S.some(y=>y!==x&&clo(y).has(x)));const merged=[];
+  for(let k=0;k<20;k++){const cov=new Set(S);S.forEach(x=>clo(x).forEach(y=>cov.add(y)));
+    const C=L.filter(s=>!cov.has(s.id)&&(s.inc||[]).filter(x=>B[x]).length>=2&&s.inc.filter(x=>B[x]).every(x=>cov.has(x))).sort((a,b)=>clo(b.id).size-clo(a.id).size)[0];
+    if(!C)break;const cl=clo(C.id);const from=S.filter(x=>cl.has(x));S=S.filter(x=>!cl.has(x)).concat(C.id);merged.push([C.id,from]);}
+  const inside={};S.forEach(x=>clo(x).forEach(y=>{if(!inside[y])inside[y]=x;}));return{sel:S,merged,inside};}
+const svL=()=>D.sv.l.map(([id,n,M,inc])=>({id,n,inc:inc||[]}));let SVMSG='';
 function svCalc(){const c=D.sv,hs=Array.isArray(c.sz)&&c.sz.length;const sz=SV.pet.sz|0;let m=0,ap=false;const n=[],why=[];
   c.l.forEach(([id,nm,M])=>{if(!SV.ids.includes(id))return;m+=+(M[hs?Math.min(sz,M.length-1):0])||0;n.push(nm);});
   (c.g||[]).forEach(([gid,gn,O])=>{const k=c.pet&&(gid==='ct'||gid==='cc')?SV.pet.g[gid]:SV.g[gid];const o=O[k|0];if(!o)return;m+=+o[1]||0;if(o[2]){ap=true;why.push(o[0]);}});
@@ -90,12 +101,14 @@ function svBlock(){if(!svOn())return'';const c=D.sv,hs=Array.isArray(c.sz)&&c.sz
      <label class="f" for="kp-w">${esc(t('svW'))}</label><input class="in" id="kp-w" type="number" inputmode="decimal" min="0" max="150" step="0.5" value="${P.w||''}">`:''}`:''}
    ${hs?`<label class="f">${esc(t('svSz'))}</label><div class="times">${c.sz.map((x,k)=>ch((P.sz|0)===k,`data-ksz="${k}"`,esc(x))).join('')}</div>`:''}
    ${(c.g||[]).map(([gid,gn,O])=>{const pg=c.pet&&(gid==='ct'||gid==='cc');const cur=(pg?P.g[gid]:SV.g[gid])|0;return`<label class="f">${esc(gn)}</label><div class="times">${O.map((o,k)=>ch(cur===k,`data-kg="${esc(gid)}" data-kk="${k}"`,esc(o[0]))).join('')}</div>`;}).join('')}
-   <label class="f">${esc(t('svMsg'))}</label><div class="svl">${c.l.map(([id,nm,M])=>{const m=+(M[hs?Math.min(P.sz|0,M.length-1):0])||0;return`<label class="chk svk"><input type="checkbox" data-ks="${esc(id)}" ${SV.ids.includes(id)?'checked':''}><span class="grow">${esc(nm)}</span><span class="tiny muted">${esc(t('min')(m))}</span></label>`;}).join('')}</div>
+   <label class="f">${esc(t('svMsg'))}</label><div class="svl">${(()=>{const IN=svNorm(svL(),SV.ids).inside;return c.l.map(([id,nm,M])=>{const m=+(M[hs?Math.min(P.sz|0,M.length-1):0])||0;const by=IN[id]&&c.l.find(x=>x[0]===IN[id]);
+     return`<label class="chk svk ${by?'svin':''}"><input type="checkbox" data-ks="${esc(id)}" ${SV.ids.includes(id)||by?'checked':''} ${by?'disabled':''}><span class="grow">${esc(nm)}${by?`<small class="muted"> · ${esc(t('svIn')(by[1]))}</small>`:''}</span><span class="tiny muted">${by?'':esc(t('min')(m))}</span></label>`;}).join('');})()}</div>${SVMSG?`<p class="small svmsg">${esc(SVMSG)}</p>`:''}
    ${c.need?`<label class="chk"><input type="checkbox" id="kp-need" ${SV.need?'checked':''}><span>${esc(t('svNeed'))}</span></label>${SV.need?`<input class="in" id="kp-nt" maxlength="120" placeholder="${esc(t('svNeedP'))}" value="${esc(SV.needT)}" style="margin-top:6px">`:''}`:''}
    <div class="svtot">⏱ ${esc(t('svTot'))}: <b>${r.m?esc(t('min')(r.m)):'—'}</b></div>${r.ap?`<p class="small apn">🛑 ${esc(t('svAp'))}</p>`:''}
    ${c.pet?`<p class="tiny muted" style="margin:8px 0 0">🔒 ${esc(t('svKeep'))}${PETS.length?` <button type="button" class="linkb" id="kp-forget">${esc(t('svForget'))}</button>`:''}</p>`:''}</div>`;}
 function svBind(){if(!svOn())return;const app=$('#app');const re=()=>{const k=keepF0();svApply();slot=null;draw();backF0(k);};
-  app.querySelectorAll('[data-ks]').forEach(x=>x.onchange=()=>{const i=SV.ids.indexOf(x.dataset.ks);if(x.checked&&i<0)SV.ids.push(x.dataset.ks);if(!x.checked&&i>=0)SV.ids.splice(i,1);re();});
+  app.querySelectorAll('[data-ks]').forEach(x=>x.onchange=()=>{const id=x.dataset.ks;let sel=SV.ids.filter(y=>y!==id);if(x.checked)sel.push(id);const R=svNorm(svL(),sel,x.checked?id:null);SV.ids=R.sel;
+    const nm=k=>(D.sv.l.find(y=>y[0]===k)||[])[1]||'';SVMSG=R.merged.map(([k,f])=>t('svMerged')(f.map(nm).join(' + '),nm(k))).join(' · ');re();SVMSG='';});
   app.querySelectorAll('[data-ksz]').forEach(b=>b.onclick=()=>{SV.pet.sz=+b.dataset.ksz;re();});
   app.querySelectorAll('[data-ksp]').forEach(b=>b.onclick=()=>{SV.pet.sp=b.dataset.ksp;re();});
   app.querySelectorAll('[data-kg]').forEach(b=>b.onclick=()=>{const g=b.dataset.kg;if(D.sv.pet&&(g==='ct'||g==='cc'))SV.pet.g[g]=+b.dataset.kk;else SV.g[g]=+b.dataset.kk;re();});
