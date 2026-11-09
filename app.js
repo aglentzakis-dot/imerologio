@@ -1292,12 +1292,14 @@ function installAsk(){if(!INST||isStandalone()||topModal()||!S.data.settings.pro
 let swReg=null;
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js').then(r=>{swReg=r;r.update();}).catch(()=>{});
   let reloaded=false,hadCtl=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadCtl){hadCtl=true;return;}if(reloaded)return;try{const t=+localStorage.getItem('imer-fspick')||0;if(t&&Date.now()-t<10*6e4)return;}catch(_){}reloaded=true;_wrQ.then(()=>location.reload());});}
+// νεότερη μόνο: αν το version.json μείνει πίσω, δεν ζητά «αναβάθμιση» σε παλαιότερη (έτσι κόλλησε στην 1.72)
+function verNewer(a,b){const x=String(a||'').split('.').map(n=>parseInt(n,10)||0),y=String(b||'').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<Math.max(x.length,y.length);i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0);}return false;}
 async function checkUpdate(){try{const r=await fetch('version.json?v='+Date.now(),{cache:'no-store'});const v=(await r.json()).version;
-  if(v&&v!==APP_VERSION){toast('Βρέθηκε νέα έκδοση '+v+'. Αναβάθμιση…','ok');if(swReg)await swReg.update();try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('imerologio-')).map(k=>caches.delete(k)));}catch(e){}setTimeout(()=>location.reload(),900);}else toast('Έχεις την τελευταία έκδοση ('+APP_VERSION+').');}
+  if(v&&verNewer(v,APP_VERSION)){toast('Βρέθηκε νέα έκδοση '+v+'. Αναβάθμιση…','ok');if(swReg)await swReg.update();try{const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('imerologio-')).map(k=>caches.delete(k)));}catch(e){}setTimeout(()=>location.reload(),900);}else toast('Έχεις την τελευταία έκδοση ('+APP_VERSION+').');}
   catch(e){toast('Χρειάζεται σύνδεση στο διαδίκτυο για τον έλεγχο.','bad');}}
 // αυτόματος έλεγχος κάθε φορά που ανοίγει η εφαρμογή: αν υπάρχει νέα έκδοση, βγαίνει κουμπί «Ενημέρωση τώρα»
 let UPV=null;
-async function autoUpdCheck(){try{const r=await fetch('version.json?v='+Date.now(),{cache:'no-store'});const v=(await r.json()).version;if(!v||v===APP_VERSION||UPV===v)return;UPV=v;if(swReg)swReg.update().catch(()=>{});
+async function autoUpdCheck(){try{const r=await fetch('version.json?v='+Date.now(),{cache:'no-store'});const v=(await r.json()).version;if(!v||!verNewer(v,APP_VERSION)||UPV===v)return;UPV=v;if(swReg)swReg.update().catch(()=>{});
   const b=document.createElement('div');b.className='updbar';b.innerHTML=`<span>Νέα έκδοση <b>${esc(v)}</b></span><button type="button">Ενημέρωση τώρα</button>`;document.body.appendChild(b);
   b.querySelector('button').onclick=async()=>{b.querySelector('button').textContent='Ενημέρωση…';try{if(swReg)await swReg.update();const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('imerologio-')).map(k=>caches.delete(k)));}catch(e){}location.reload();};}catch(e){}}
 setTimeout(autoUpdCheck,2500);
