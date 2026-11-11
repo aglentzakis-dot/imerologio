@@ -1976,8 +1976,11 @@ function notesAgenda(view,sel){try{
   const mk=()=>{box.innerHTML=`<div class="card-h"><h3>📝 Σημειώσεις · ${WDAYS[wdOf(sel)]} ${fmtShort(sel)}</h3><button type="button" class="btn sm" data-nnew>${ic('plus',14)} Σημείωση</button></div>${noteRowsHTML(sel)||'<p class="small muted" style="margin:0">Καμία σημείωση αυτή τη μέρα.</p>'}`;$('[data-nnew]',box).onclick=()=>noteDialog({date:sel});noteBind(box);};
   if(view==='day'){const tl=$('.tl');if(tl&&(dayNotes(sel).length||simpleCal())){mk();tl.parentNode.insertBefore(box,tl);}}
   else if(view==='month'){const g=$('.mgrid');const c=g&&g.parentNode.querySelector('.card.section');if(c&&(dayNotes(sel).length||simpleCal())){mk();c.parentNode.insertBefore(box,c);}}
-  else if(view==='week'){/* στην εβδομάδα: οι σημειώσεις κάθε μέρας πάνω από τη στήλη της */
-    $$('.tl-col').forEach(col=>{const N=dayNotes(col.dataset.col);if(!N.length)return;const w=document.createElement('div');w.className='wknotes';w.innerHTML=N.map(n=>`<button type="button" class="mchip mnote" data-note="${esc(n.id)}">${n.s?`<em>${esc(n.s)}</em> `:''}${esc(n.t)}</button>`).join('');col.insertBefore(w,col.firstChild);noteBind(w);});}
+  if(view==='day'||view==='week'){const[rf,rt]=agRange();
+    $$('.tl-col').forEach(col=>{const N=dayNotes(col.dataset.col);if(!N.length)return;
+      const U=N.filter(n=>!n.s||tmin(n.s)<rf||tmin(n.s)>=rt);if(U.length&&view==='week'){const w=document.createElement('div');w.className='wknotes';w.innerHTML=U.map(n=>`<button type="button" class="mchip mnote" data-note="${esc(n.id)}">${n.s?`<em>${esc(n.s)}</em> `:''}${esc(n.t)}</button>`).join('');col.insertBefore(w,col.firstChild);noteBind(w);}
+      N.filter(n=>n.s&&tmin(n.s)>=rf&&tmin(n.s)<rt).forEach(n=>{const b=document.createElement('button');b.type='button';b.className='tlnote';b.dataset.note=n.id;b.style.top=((tmin(n.s)-rf)*PPM)+'px';b.style.height=Math.max(22,30*PPM-2)+'px';b.innerHTML=`<em>${esc(n.s)}</em> ${esc(n.t)}`;col.appendChild(b);});
+      noteBind(col);});}
 }catch(e){}}
 SETP.simple=function(el){const on=simpleCal();
   el.innerHTML=`<div class="card"><div class="row" style="gap:10px;align-items:center;margin-bottom:10px"><span class="smstate ${on?'on':''}">${on?'✅ Ενεργό':'⚪ Ανενεργό'}</span></div>
