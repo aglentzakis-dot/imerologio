@@ -1980,8 +1980,12 @@ function notesAgenda(view,sel){try{
     $$('.tl-col').forEach(col=>{const N=dayNotes(col.dataset.col);if(!N.length)return;const w=document.createElement('div');w.className='wknotes';w.innerHTML=N.map(n=>`<button type="button" class="mchip mnote" data-note="${esc(n.id)}">${n.s?`<em>${esc(n.s)}</em> `:''}${esc(n.t)}</button>`).join('');col.insertBefore(w,col.firstChild);noteBind(w);});}
 }catch(e){}}
 SETP.simple=function(el){const on=simpleCal();
-  el.innerHTML=`<div class="card"><p class="small" style="margin-top:0">Για όποιον θέλει το Ημερολόγιο ως <b>απλό ημερολόγιο</b>, για τον εαυτό του: γράφεις σημειώσεις με <b>τίτλο</b> και, αν θέλεις, <b>ώρα</b>, και φαίνονται κατευθείαν μέσα στο κουτάκι της μέρας στον μήνα, π.χ. «10:30 Οδοντίατρος».</p>
-   <label class="row" style="gap:10px;align-items:center;cursor:pointer"><input type="checkbox" id="sm-on" ${on?'checked':''} style="width:22px;height:22px"><b>Απλό ημερολόγιο</b></label>
-   <p class="tiny muted" style="margin:10px 0 0">Όταν είναι ενεργό: το κύριο κουμπί γίνεται «📝 Σημείωση», ο μήνας δεν δείχνει ωράριο και ρεπό, και κρύβονται τα κουμπιά για επαγγελματίες. Τα ραντεβού και οι ${esc(LX('whoPlL'))} σου δεν σβήνονται και μπορείς να το γυρίσεις πίσω όποτε θέλεις.</p>
+  el.innerHTML=`<div class="card"><div class="row" style="gap:10px;align-items:center;margin-bottom:10px"><span class="smstate ${on?'on':''}">${on?'✅ Ενεργό':'⚪ Ανενεργό'}</span></div>
+   <p class="small" style="margin-top:0">Για όποιον θέλει το Ημερολόγιο ως <b>απλό ημερολόγιο</b>, για τον εαυτό του: γράφεις σημειώσεις με <b>τίτλο</b> και, αν θέλεις, <b>ώρα</b>, και φαίνονται μέσα στο κουτάκι της μέρας στον μήνα, π.χ. «10:30 Οδοντίατρος».</p>
+   <button type="button" class="btn ${on?'':'pri'} smbig" id="sm-go">${on?'Επιστροφή σε επαγγελματικό ημερολόγιο':'📝 Γύρνα το σε απλό ημερολόγιο'}</button>
+   ${on?'<button type="button" class="btn pri smbig" id="sm-cal" style="margin-top:8px">📅 Άνοιξε το ημερολόγιο</button>':''}
+   <p class="tiny muted" style="margin:12px 0 0">Στο απλό ημερολόγιο: το κύριο κουμπί και το «+» γράφουν σημείωση, ο μήνας δεν δείχνει ωράριο και ρεπό και κρύβονται τα κουμπιά για επαγγελματίες. Τα ραντεβού και οι ${esc(LX('whoPlL'))} σου δεν σβήνονται· το γυρνάς πίσω όποτε θέλεις.</p>
    <p class="tiny muted" style="margin:6px 0 0">🔒 Οι σημειώσεις μένουν μόνο στη συσκευή σου και μπαίνουν στα αντίγραφα ασφαλείας· δεν φαίνονται στον σύνδεσμο κρατήσεων.</p></div>`;
-  $('#sm-on',el).onchange=e=>{S.data.settings.simple=!!e.target.checked;save();toast(e.target.checked?'Απλό ημερολόγιο: ενεργό.':'Απλό ημερολόγιο: ανενεργό.','ok');};};
+  const toMonth=()=>{location.hash='#/agenda?view=month';};
+  $('#sm-go',el).onclick=()=>{const v=!simpleCal();S.data.settings.simple=v;save();toast(v?'Έγινε απλό ημερολόγιο.':'Επέστρεψε το επαγγελματικό ημερολόγιο.','ok');if(v)toMonth();else SETP.simple(el);};
+  const oc=$("#sm-cal",el);if(oc)oc.onclick=toMonth;};
