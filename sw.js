@@ -1,5 +1,5 @@
 /* Ημερολόγιο — © 2026 Ανδρέας Μ. Γλεντζάκης. Άλλαξε το VER σε κάθε νέα έκδοση. */
-const VER="imerologio-1.76";
+const VER="imerologio-1.77";
 const FILES=["./","index.html","metafora-rythmisi.js","metafora-lipsi.js","plaisio.js","en.js","glossa.js","kratisi.html","kratisi.js","qr.js","efarmoges-mas.js","epaggelmata.js","imerologio.js","app.js","manifest.json","icon-192.png","icon-512.png","icon-512-maskable.png","apple-touch-icon.png"];
 /* ⚠️ ΜΗΝ αφαιρεθεί — κανόνας GlenApps (10/11/2026): η εφαρμογή ανοίγει ΑΜΕΣΩΣ από το αντίγραφο της συσκευής
    και ελέγχει για νέα έκδοση στο παρασκήνιο· όπου χρειάζεται δίκτυο περιμένει το πολύ 3 δευτερόλεπτα και μετά

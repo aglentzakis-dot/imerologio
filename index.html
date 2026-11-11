@@ -12,7 +12,7 @@
 <script src="metafora-lipsi.js"></script>
 <script src="plaisio.js"></script>
 <meta name="referrer" content="same-origin">
-<meta name="app-version" content="1.76">
+<meta name="app-version" content="1.77">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#17324D">
 <meta name="description" content="Ημερολόγιο ραντεβού για κάθε επάγγελμα: πάγια ραντεβού, ελεύθερα κενά, προσωπικό, υπενθυμίσεις.">
@@ -1076,6 +1076,16 @@ body.on-tm .main{padding-bottom:0}
 .mchip.done{background:var(--mint);color:var(--mint-d)}.mchip.absent{text-decoration:line-through;opacity:.6}
 .mmore{font-size:.66rem;color:var(--ink3);padding-left:4px}
 @media(max-width:700px){.mday{min-height:62px;padding:4px}.mev{display:none}.mtop b{font-size:.8rem}}
+.newdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#F5C400;box-shadow:0 0 0 2px var(--paper);margin-left:6px;vertical-align:middle}
+.mchip.mnote{background:#FFF4C2;color:#5a4a00;border-left:3px solid #F5C400}.mchip.mnote em{font-style:normal;font-weight:700}
+.notelist{display:flex;flex-direction:column;gap:6px}
+.noterow{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;padding:9px 11px;border:1px solid var(--line);border-left:4px solid #F5C400;border-radius:12px;background:var(--paper);color:var(--ink);font:inherit;cursor:pointer}
+.noterow .nt{font-weight:700;min-width:52px;font-size:.88rem}.noterow small{display:block;color:var(--ink2);font-size:.8rem;white-space:pre-wrap}
+.wknotes{position:relative;z-index:2;display:flex;flex-direction:column;gap:2px;padding:2px}.wknotes .mchip{border:0;text-align:left;cursor:pointer;font:inherit;font-size:.68rem}
+@media(max-width:700px){.mev.hasn,.mgrid.simple .mev{display:flex}.mev.hasn .mchip:not(.mnote){display:none}.mgrid.simple .mev .mchip:not(.mnote){display:block}
+ .mev .mchip.mnote{font-size:.58rem;padding:1px 3px;line-height:1.3;display:block}.mev .mchip.mnote em{display:block}.mev .mmore{font-size:.55rem}}
+@media(prefers-color-scheme:dark){.mchip.mnote{background:#4a3f00;color:#ffe680}}
+
 .tl{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:8px 8px 10px;margin-bottom:16px}
 .tl-head,.tl-body{display:grid;grid-template-columns:48px repeat(var(--cols),minmax(0,1fr));gap:4px}
 .tl-dh{display:flex;flex-direction:column;align-items:center;padding:6px 0;border-radius:10px;color:var(--ink)}

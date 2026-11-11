@@ -27,6 +27,7 @@ function loadData(){let d=null;try{d=JSON.parse(localStorage.getItem(STORE));}ca
   return normData(d);}
 function normData(d){if(!d||typeof d!=='object')d={};
   d.students=Array.isArray(d.students)?d.students:[];
+  d.notes=Array.isArray(d.notes)?d.notes:[];
   d.settings=Object.assign({prof:null,lex:{},myName:''},d.settings||{});
   d.meta=Object.assign({created:new Date().toISOString(),changes:0,lastBackup:0},d.meta||{});
   return d;}
@@ -203,7 +204,7 @@ function shellHTML(sec){
   ${fab?`<button class="fab noprint" id="fab" aria-label="${sec==='people'?'Νέος':'Νέο ραντεβού'}">${ic('plus',26)}</button>`:''}</div>`;
   document.body.classList.toggle('hidenames',!!S.data.settings.hideNames);
   const de=$('#demoEnd');if(de)de.onclick=demoClear;const tl=$('#tbLang');if(tl)tl.onclick=langDialog;
-  const f=$('#fab');if(f)f.onclick=()=>sec==='people'?go('person/new'):apptDialog({date:(parseRoute().q.d)||todayISO()});
+  const f=$('#fab');if(f)f.onclick=()=>sec==='people'?go('person/new'):(sec!=='people'&&simpleCal()?noteDialog:apptDialog)({date:(parseRoute().q.d)||todayISO()});
 }
 addEventListener('hashchange',async()=>{
   if(LEAVE_OK||location.hash===S.curHash||!pageDirty()){LEAVE_OK=false;return render();}
@@ -681,6 +682,7 @@ const SET_SECS=()=>[
   ['staff','me',`👥`,'Προσωπικό',(providers().length===1?'1 άτομο κάνει ραντεβού':providers().length+' άτομα κάνουν ραντεβού')],
   ['hours','me','🕘','Ωράριο και αργίες',agCfg().from+'–'+agCfg().to],
   ['svc','me','✂️','Υπηρεσίες και διάρκειες',svcOn()?(svcCfg().list.length+' υπηρεσίες'+(petMode()?' · κατοικίδια':'')+(svcBuf()?' · '+svcBuf()+'′ καθαρισμός':'')):'Η διάρκεια βγαίνει από τις υπηρεσίες'],
+  ['simple','view','📝','Απλό ημερολόγιο',simpleCal()?'Ενεργό — σημειώσεις με ώρα και τίτλο στον μήνα':'Για ιδιώτη: οι σημειώσεις σου με ώρα και τίτλο'],
   ['start','view','🚪','Άνοιγμα εφαρμογής','Ανοίγει σε: '+START_OPTS.find(x=>x[0]===(S.data.settings.startView||'last'))[1]],
   ['look','view','🎨','Χρώμα και φόντο','Το χρώμα της εφαρμογής και το υδατογράφημα'],
   ['words','cli','🏷️','Πελάτες ή ασθενείς ή μαθητές;','Τώρα λέγονται «'+LX('whoPl')+'» και κλείνεις «'+LX('one')+'»'],
@@ -694,8 +696,8 @@ const SET_SECS=()=>[
   ['about','gl','ℹ️','Εγκατάσταση και έκδοση','Έκδοση '+APP_VERSION]];
 const SET_GRPS=[['me','💼','Η δουλειά σου'],['cli','📇','Πελάτες και μηνύματα'],['view','🎨','Εμφάνιση και γλώσσα'],['data','🛟','Δεδομένα και ασφάλεια'],['gl','⭐','GlenApps']];
 function viewSettingsPage(r){const id=r.id==='business'?'info':r.id;const L=SET_SECS();const sec=L.find(x=>x[0]===id);
-  if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}${SET_GRPS.map(([g,gi,gt])=>{const R=L.filter(x=>x[1]===g);return R.length?`<h4 class="setgrp"><span>${gi}</span>${esc(g==='cli'?LX('whoPl')+' και μηνύματα':gt)}</h4><div class="setlist grp">${R.map(([k,,i,t,d])=>`<a class="setrow${k==='pro'&&!isPro()?' prorow':''}" href="#/${k==='stats'?'stats':'settings/'+k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div>`:'';}).join('')}<p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
-  M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
+  if(!sec){M().innerHTML=`${pageHead('Ρυθμίσεις','')}${SET_GRPS.map(([g,gi,gt])=>{const R=L.filter(x=>x[1]===g);return R.length?`<h4 class="setgrp"><span>${gi}</span>${esc(g==='cli'?LX('whoPl')+' και μηνύματα':gt)}</h4><div class="setlist grp">${R.map(([k,,i,t,d])=>`<a class="setrow${k==='pro'&&!isPro()?' prorow':''}" href="#/${k==='stats'?'stats':'settings/'+k}"><span class="seti">${i}</span><span class="grow"><b>${esc(t)}${newSet(k)?'<i class="newdot" title="Νέο"></i>':''}</b><small>${esc(d)}</small></span>${ic('right',18)}</a>`).join('')}</div>`:'';}).join('')}<p class="tiny muted" style="text-align:center;margin-top:18px">© 2026 Ανδρέας Μ. Γλεντζάκης · Ημερολόγιο ${APP_VERSION}</p>`;return;}
+  newSeen(id);M().innerHTML=`<a class="setback" href="#/settings">${ic('left',18)} Ρυθμίσεις</a>${pageHead(esc(sec[3]),'')}<div id="sb"></div>`;SETP[id]($('#sb'));}
 
 /* Viber «forward» κόβει τα μεγάλα κείμενα (π.χ. συνδέσμους): για μεγάλα κείμενα πάμε από το μενού κοινοποίησης */
 document.addEventListener('click',e=>{const a=e.target.closest('a[href^="viber://forward"]');if(!a)return;let txt='';try{txt=decodeURIComponent(a.getAttribute('href').split('text=')[1]||'');}catch(_){}
@@ -1151,8 +1153,8 @@ async function opfsDir(){try{const r=await navigator.storage.getDirectory();retu
    1 ποτέ αντίγραφο χωρίς εγγραφές · 2 αν το νέο έχει λιγότερες από αυτό που αντικαθιστά, το παλιό φυλάγεται πρώτα ως «…-prin-ΩΩΛΛΔΔ» (αλλιώς δεν γράφεται τίποτα)
    · κρατιούνται τα 10 νεότερα «prin» και το πιο γεμάτο κάθε μέρας για 30 μέρες · 6 ένα αντίγραφο τη φορά */
 var _bkQ=Promise.resolve();function bkSerial(fn){const p=_bkQ.then(fn,fn);_bkQ=p.catch(()=>{});return p;}
-const recCount=d=>((d&&d.students)||[]).length+((d&&d.appts)||[]).length;
-function bkCountTxt(t){try{const o=JSON.parse(t);if(o.enc&&o.count)return(+o.count.people||0)+(+o.count.appts||0);if(o.data)return recCount(o.data);}catch(e){}return -1;}
+const recCount=d=>((d&&d.students)||[]).length+((d&&d.appts)||[]).length+((d&&d.notes)||[]).length;
+function bkCountTxt(t){try{const o=JSON.parse(t);if(o.enc&&o.count)return(+o.count.people||0)+(+o.count.appts||0)+(+o.count.notes||0);if(o.data)return recCount(o.data);}catch(e){}return -1;}
 const hms=()=>new Date().toTimeString().slice(0,8).replace(/:/g,'');
 async function bkPrune(d,isPrin,keepNew){const L=[];for await(const[n,h]of d.entries())if(h.kind==='file'&&/^imerologio-.*\.json$/.test(n))L.push([n,h]);
   const prin=L.filter(x=>/-prin-/.test(x[0])).sort((a,b)=>b[0].localeCompare(a[0]));prin.slice(10).forEach(([n])=>d.removeEntry(n).catch(()=>{}));
@@ -1190,7 +1192,7 @@ async function bkReseal(){const K=await encKeyGet();if(!K||!K.key)return;const d
   for(const d of dirs){if(!d)continue;try{for await(const[n,h]of d.entries()){if(h.kind!=='file'||!/\.json$/.test(n))continue;try{const t=await(await h.getFile()).text();let o=null;try{o=JSON.parse(t);}catch(_){continue;}
       if(!o||o.enc||o.app!=='imerologio'||!o.data)continue;const out=await sealBackup(t,K,o.data);const w=await h.createWritable();await w.write(out);await w.close();}catch(e){}}}catch(e){}}}
 async function sealBackup(plain,K,data){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},K.key,new TextEncoder().encode(plain)));
-  return JSON.stringify({app:'imerologio',enc:ENC_V,kdf:{name:'PBKDF2',hash:'SHA-256',iter:ENC_ITER,salt:b64uEnc(K.salt)},iv:b64uEnc(iv),ct:b64uEnc(ct),version:APP_VERSION,savedAt:new Date().toISOString(),count:{people:(data.students||[]).length,appts:(data.appts||[]).length}});}
+  return JSON.stringify({app:'imerologio',enc:ENC_V,kdf:{name:'PBKDF2',hash:'SHA-256',iter:ENC_ITER,salt:b64uEnc(K.salt)},iv:b64uEnc(iv),ct:b64uEnc(ct),version:APP_VERSION,savedAt:new Date().toISOString(),count:{people:(data.students||[]).length,appts:(data.appts||[]).length,notes:(data.notes||[]).length}});}
 /* το κείμενο που γράφεται: κρυπτογραφημένο αν είναι ανοιχτή η κρυπτογράφηση· null = δεν πρέπει να γραφτεί τίποτα */
 async function backupOut(){if(DATA_LOCKED)return null;const plain=backupText();if(!encOn()){if(lockCfg())return null;return plain;}/* με κλείδωμα ποτέ αντίγραφο σε απλό κείμενο */
   const K=await encKeyGet();if(!K||!K.key||!K.salt)return null;return sealBackup(plain,K,S.data);}
@@ -1939,3 +1941,47 @@ function holReset(){const B=biz();const C=closedDays();const n=Object.keys(B.hol
   if(!n){toast('Οι αργίες είναι ήδη οι βασικές.','ok');return;}
   confirmDlg('Να γυρίσουν οι αργίες στις βασικές; Ξανακλείνουν όλες οι επίσημες αργίες (και Καθαρά Δευτέρα, Πάσχα, Αγίου Πνεύματος). Οι άδειες και οι κλειστές μέρες που δήλωσες εσύ μένουν όπως είναι.',{ok:'Επαναφορά'}).then(ok=>{if(!ok)return;
     delete B.hol;B.holOff=false;Object.keys(C).forEach(d=>{if(C[d]===false)delete C[d];});save();toast('Οι αργίες γύρισαν στις βασικές.','ok');render();if(window._yfsDraw)_yfsDraw();});}
+
+/* ---------- 1.77: Απλό ημερολόγιο (για ιδιώτη) — σημειώσεις με ώρα και τίτλο ----------
+   Οι σημειώσεις μένουν μόνο στη συσκευή (μέσα στα στοιχεία της εφαρμογής, κρυπτογραφημένα αν υπάρχει κλείδωμα)·
+   δεν στέλνονται πουθενά και δεν φαίνονται στον σύνδεσμο κρατήσεων. */
+function simpleCal(){const s=S.data.settings||{};return s.simple!=null?!!s.simple:s.prof==='prosopiko';}
+function notesAll(){return S.data.notes=Array.isArray(S.data.notes)?S.data.notes:[];}
+function dayNotes(d){return notesAll().filter(n=>n.date===d).sort((a,b)=>(a.s||'').localeCompare(b.s||'')||String(a.t).localeCompare(String(b.t)));}
+/* νέες επιλογές στις ρυθμίσεις: κίτρινη τελεία μέχρι να ανοιχτούν μία φορά */
+var NEW_SET=['simple'];
+function newSeenList(){try{return JSON.parse(localStorage.getItem('im-new-seen')||'[]')||[];}catch(e){return[];}}
+function newSet(k){return NEW_SET.includes(k)&&!newSeenList().includes(k);}
+function newSeen(k){if(!NEW_SET.includes(k))return;const L=newSeenList();if(L.includes(k))return;L.push(k);try{localStorage.setItem('im-new-seen',JSON.stringify(L));}catch(e){}}
+function noteDialog({date,s,n}={}){const edit=!!n;
+  const md=modal(`<div class="spread" style="margin-bottom:6px"><h3 style="margin:0">📝 ${edit?'Σημείωση':'Νέα σημείωση'}</h3><button class="iconbtn" data-close aria-label="Κλείσιμο">${ic('x',18)}</button></div>
+   <form id="nf"><div class="row" style="gap:10px"><div class="field grow"><label class="f" for="nf-d">Ημέρα</label><input class="in" type="date" id="nf-d" name="d" required value="${esc(n?n.date:date||todayISO())}"></div>
+     <div class="field grow"><label class="f" for="nf-s">Ώρα <span class="tiny muted">· προαιρετικά</span></label><input class="in" type="time" id="nf-s" name="s" value="${esc(n?n.s||'':s||'')}"></div></div>
+    <div class="field"><label class="f" for="nf-t">Τίτλος</label><input class="in" id="nf-t" name="t" maxlength="80" required value="${esc(n?n.t:'')}" placeholder="π.χ. Οδοντίατρος"></div>
+    <div class="field"><label class="f" for="nf-x">Σημείωση <span class="tiny muted">· προαιρετικά</span></label><textarea class="in" id="nf-x" name="x" rows="3" maxlength="2000">${esc(n?n.x||'':'')}</textarea></div>
+    <div class="row" style="justify-content:space-between;gap:8px">${edit?`<button type="button" class="btn" id="nf-del" style="color:var(--bad)">${ic('trash',15)} Διαγραφή</button>`:'<span></span>'}<span class="row" style="gap:8px"><button type="button" class="btn" data-close>Άκυρο</button><button class="btn pri">Αποθήκευση</button></span></div></form>`);
+  const f=$('#nf',md.el);setTimeout(()=>{try{if(!edit)f.t.focus();}catch(e){}},60);
+  f.onsubmit=ev=>{ev.preventDefault();const t=f.t.value.trim();if(!t)return toast('Γράψε έναν τίτλο.','bad');const o={date:f.d.value,s:f.s.value||'',t:t.slice(0,80),x:f.x.value.trim().slice(0,2000),ts:Date.now()};
+    if(!o.date)return toast('Διάλεξε ημέρα.','bad');
+    if(edit)Object.assign(n,o);else notesAll().push(Object.assign({id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)},o));
+    md.close();save();render();toast(edit?'Η σημείωση άλλαξε.':'Η σημείωση μπήκε στο ημερολόγιο.','ok');};
+  const del=$('#nf-del',md.el);if(del)del.onclick=async()=>{if(!await confirmDlg('Να σβηστεί η σημείωση «'+n.t+'»;',{ok:'Διαγραφή',danger:true}))return;S.data.notes=notesAll().filter(x=>x!==n);md.close();save();render();toast('Η σημείωση σβήστηκε.');};}
+function noteRowsHTML(d){const N=dayNotes(d);return N.length?`<div class="notelist">${N.map(n=>`<button type="button" class="noterow" data-note="${esc(n.id)}"><span class="nt">${n.s?esc(n.s):'Όλη μέρα'}</span><span class="grow"><b>${esc(n.t)}</b>${n.x?`<small>${esc(n.x)}</small>`:''}</span></button>`).join('')}</div>`:'';}
+function noteBind(root){$$('[data-note]',root).forEach(b=>b.onclick=ev=>{ev.preventDefault();ev.stopPropagation();const n=notesAll().find(x=>x.id===b.dataset.note);if(n)noteDialog({n});});}
+function notesAgenda(view,sel){try{
+  const nb=document.createElement('button');nb.type='button';nb.className='btn'+(simpleCal()?' pri':'');nb.id='agNote';nb.innerHTML='📝 Σημείωση';nb.onclick=()=>noteDialog({date:sel});
+  const an=$('#agNew');if(an){an.parentNode.insertBefore(nb,simpleCal()?an:an.nextSibling);if(simpleCal()){an.classList.remove('pri');['#agBlk','#agHold'].forEach(q=>{const x=$(q);if(x)x.style.display='none';});}}
+  if(simpleCal()){const lg=$('.aglegend');if(lg)lg.style.display='none';const h=$('.page-head h1');if(h)h.textContent='Ημερολόγιο';const fb=$('#fab');if(fb)fb.setAttribute('aria-label','Νέα σημείωση');}
+  const box=document.createElement('div');box.className='card section notecard';
+  const mk=()=>{box.innerHTML=`<div class="card-h"><h3>📝 Σημειώσεις · ${WDAYS[wdOf(sel)]} ${fmtShort(sel)}</h3><button type="button" class="btn sm" data-nnew>${ic('plus',14)} Σημείωση</button></div>${noteRowsHTML(sel)||'<p class="small muted" style="margin:0">Καμία σημείωση αυτή τη μέρα.</p>'}`;$('[data-nnew]',box).onclick=()=>noteDialog({date:sel});noteBind(box);};
+  if(view==='day'){const tl=$('.tl');if(tl&&(dayNotes(sel).length||simpleCal())){mk();tl.parentNode.insertBefore(box,tl);}}
+  else if(view==='month'){const g=$('.mgrid');const c=g&&g.parentNode.querySelector('.card.section');if(c&&(dayNotes(sel).length||simpleCal())){mk();c.parentNode.insertBefore(box,c);}}
+  else if(view==='week'){/* στην εβδομάδα: οι σημειώσεις κάθε μέρας πάνω από τη στήλη της */
+    $$('.tl-col').forEach(col=>{const N=dayNotes(col.dataset.col);if(!N.length)return;const w=document.createElement('div');w.className='wknotes';w.innerHTML=N.map(n=>`<button type="button" class="mchip mnote" data-note="${esc(n.id)}">${n.s?`<em>${esc(n.s)}</em> `:''}${esc(n.t)}</button>`).join('');col.insertBefore(w,col.firstChild);noteBind(w);});}
+}catch(e){}}
+SETP.simple=function(el){const on=simpleCal();
+  el.innerHTML=`<div class="card"><p class="small" style="margin-top:0">Για όποιον θέλει το Ημερολόγιο ως <b>απλό ημερολόγιο</b>, για τον εαυτό του: γράφεις σημειώσεις με <b>τίτλο</b> και, αν θέλεις, <b>ώρα</b>, και φαίνονται κατευθείαν μέσα στο κουτάκι της μέρας στον μήνα, π.χ. «10:30 Οδοντίατρος».</p>
+   <label class="row" style="gap:10px;align-items:center;cursor:pointer"><input type="checkbox" id="sm-on" ${on?'checked':''} style="width:22px;height:22px"><b>Απλό ημερολόγιο</b></label>
+   <p class="tiny muted" style="margin:10px 0 0">Όταν είναι ενεργό: το κύριο κουμπί γίνεται «📝 Σημείωση», ο μήνας δεν δείχνει ωράριο και ρεπό, και κρύβονται τα κουμπιά για επαγγελματίες. Τα ραντεβού και οι ${esc(LX('whoPlL'))} σου δεν σβήνονται και μπορείς να το γυρίσεις πίσω όποτε θέλεις.</p>
+   <p class="tiny muted" style="margin:6px 0 0">🔒 Οι σημειώσεις μένουν μόνο στη συσκευή σου και μπαίνουν στα αντίγραφα ασφαλείας· δεν φαίνονται στον σύνδεσμο κρατήσεων.</p></div>`;
+  $('#sm-on',el).onchange=e=>{S.data.settings.simple=!!e.target.checked;save();toast(e.target.checked?'Απλό ημερολόγιο: ενεργό.':'Απλό ημερολόγιο: ανενεργό.','ok');};};
